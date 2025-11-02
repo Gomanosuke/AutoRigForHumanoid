@@ -30,7 +30,8 @@ def create_window():
     main_layout = cmds.scrollLayout(horizontalScrollBarThickness=16, verticalScrollBarThickness=16, childResizable=True)
 
     #各レイアウト読み込み
-    humanoid_setup(main_layout)
+    setup_list = humanoid_setup(main_layout)
+    autorig_frame(main_layout,setup_list[1],setup_list[0])
     
     #タブの表示
     cmds.showWindow(windowname)
@@ -45,7 +46,7 @@ def humanoid_setup(parent_layout:str):
 
     Returns
     -------
-        無し
+        list [character_name,textField_dic]
     """
     #フレーム
     setup_frame = cmds.frameLayout(label="初期設定",parent=parent_layout,collapsable=True)
@@ -64,6 +65,8 @@ def humanoid_setup(parent_layout:str):
     textField_dic |= righthand_frame(setup_frame,str_cw)
 
     auto_apply_frame(setup_frame,textField_dic)
+
+    return [character_name,textField_dic]
 
 def body_frame(setup_frame:str, str_cw:int):
     """
@@ -569,20 +572,24 @@ def auto_apply_frame(setup_frame:str,textField_dic:dict):
     fullpath_checkBox = cmds.checkBox(label="FullPath",v=True)
     cmds.button(label="Apply",command=lambda *_:auto_apply.auto(fullpath=cmds.checkBox(fullpath_checkBox,q=True,v=True), textfield=textField_dic))
 
-def autorig_preparation(textField_dic:dict):
+def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
     """
     ・エラーのある入力がないか確認
 
     Parameters
     ----------
-        string setup_frame : 親のレイアウト名
+    string parent_layout : 親のレイアウト名
         dictionary textfield : Joint名のテキストボックスが入った辞書
+        string character_name : 名前を入れるテキストボックス
 
     Returns
     -------
         無し
     """
-    cmds.button(label="Apply",command=lambda *_:autorig_preparation.do(textfield=textField_dic))
+    #フレーム
+    setup_frame = cmds.frameLayout(label="リグ制作",parent=parent_layout,collapsable=True)
+
+    cmds.button(label="Apply",command=lambda *_:autorig_preparation.do(textField_dic=textField_dic,character_name=character_name))
 
 
 
