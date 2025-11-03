@@ -32,7 +32,7 @@ def auto(fullpath:bool, textfield:dict):
         match_condition = []
         for j in joint_list:
             for n in joint_name[k]:
-                if(n in j.rsplit("|",maxsplit=1)[-1].lower()):
+                if(n.lower() in j.rsplit("|",maxsplit=1)[-1].lower()):
                     match_name.append(j)
         #名前が合うのが一つだけ
         if(len(match_name)==1):

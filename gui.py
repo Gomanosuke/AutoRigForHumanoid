@@ -56,7 +56,7 @@ def humanoid_setup(parent_layout:str):
     #名前
     cmds.rowLayout(nc=2,adjustableColumn=2,p=setup_frame)
     cmds.text(label="キャラクター名 : ")
-    character_name = cmds.textField()
+    character_name = cmds.textField(tx="name")
 
     textField_dic:dict
     textField_dic = body_frame(setup_frame,str_cw)
@@ -589,7 +589,12 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
     #フレーム
     setup_frame = cmds.frameLayout(label="リグ制作",parent=parent_layout,collapsable=True)
 
-    cmds.button(label="Apply",command=lambda *_:autorig_preparation.do(textField_dic=textField_dic,character_name=character_name))
+    cmds.rowLayout(nc=2,p=setup_frame)
+    primary_option = cmds.optionMenu(label="Primary Axis")
+    cmds.menuItem( label="X", )
+    cmds.menuItem( label="Y", )
+    cmds.menuItem( label="Z")
+    cmds.button(label="Orient Joint",command=lambda *_:autorig_preparation.do(textField_dic=textField_dic,character_name=character_name,primary_axis=cmds.optionMenu(primary_option,q=True,sl=True)))
 
 
 
