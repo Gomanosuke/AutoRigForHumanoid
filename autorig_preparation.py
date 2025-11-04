@@ -33,6 +33,7 @@ def do(textField_dic:dict,character_name:str,primary_axis:str):
     character_name = cmds.textField(character_name,q=True,tx=True)
     if(check_bool==True):
         joint_orientation(joint_dic,character_name,primary_axis_str)
+        joint_pos(joint_dic,character_name)
 
 def check_textfield(textField_dic:dict,character_name:str):
     """
@@ -77,7 +78,7 @@ def check_textfield(textField_dic:dict,character_name:str):
 
 def joint_orientation(joint_dic:dict,character_name:str,primary_axis:str):
     """
-    回転軸決定
+    回転軸決定用のオブジェクト作成
 
     Parameters
     ----------
@@ -124,4 +125,101 @@ def joint_orientation(joint_dic:dict,character_name:str,primary_axis:str):
         cmds.setAttr(f"{nurvs}.s",*(1,1,1), type="double3")
         cmds.setAttr(f"{nurvs}.t",lock=True)
         cmds.setAttr(f"{nurvs}.s",lock=True)
+
+def rotate_90(axis:str):
+    """
+    選択90°回転
+
+    Parameters
+    ----------
+        str axis : "X""Y""Z"でそれぞれの軸回転
+
+    Returns
+    -------
+        無し
+    """
+    if(axis=="X"):
+        rotate_matrix = [1,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,1]
+    elif(axis=="Y"):
+        rotate_matrix = [0,0,-1,0,0,1,0,0,1,0,0,0,0,0,0,1]
+    elif(axis=="Z"):
+        rotate_matrix = [0,1,0,0,-1,0,0,0,0,0,1,0,0,0,0,1]
+
+    select_obj = cmds.ls(sl=True)
+    for i in select_obj:
+        matrix = cmds.xform(i, q=True, m=True, ws=False)
+        matrix=list(OpenMaya.MMatrix(rotate_matrix)*OpenMaya.MMatrix(matrix))
+        matrix = cmds.xform(i, m=matrix, ws=False)
+
+def joint_pos(joint_dic:dict,character_name:str):
+    """
+    回転軸決定用のオブジェクト作成
+
+    Parameters
+    ----------
+        dictionary joint_dic: Jointのフルパス
+        string character_name : 名前
+
+    Returns
+        なし
+    """
+    if("l_foot" in joint_dic or "r_foot" in joint_dic):
+        #親グループ
+        root_grp = cmds.group(em=True,n=f"Position_C_{character_name}")
+        cmds.setAttr(f"{root_grp}.t",lock=True)
+        cmds.setAttr(f"{root_grp}.r",lock=True)
+        cmds.setAttr(f"{root_grp}.s",lock=True)
+        l_grp = cmds.group(em=True,n=f"FeetPosition_L_{character_name}")
+        cmds.setAttr(f"{l_grp}.t",lock=True)
+        cmds.setAttr(f"{l_grp}.r",lock=True)
+        cmds.setAttr(f"{l_grp}.s",lock=True)
+        cmds.parent(l_grp,root_grp,r=True)
+        r_grp = cmds.group(em=True,n=f"FeetPosition_R_{character_name}")
+        cmds.setAttr(f"{r_grp}.t",lock=True)
+        cmds.setAttr(f"{r_grp}.r",lock=True)
+        cmds.setAttr(f"{r_grp}.sx",-1)
+        cmds.setAttr(f"{r_grp}.s",lock=True)
+        cmds.parent(r_grp,root_grp,r=True)
+        if("l_foot" in joint_dic):
+            foot_pos(l_grp,"L",cmds.xform(joint_dic["l_foot"],q=True,ws=True,t=True))
+        if("r_foot" in joint_dic):
+            foot_pos(r_grp,"R",cmds.xform(joint_dic["r_foot"],q=True,ws=True,t=True))
+
+def foot_pos(parent_grp:str,clr,translation):
+    if(clr=="L"):
+        scl=1
+    elif(clr=="R"):
+        scl=-1
+        print(scl)
+    nurvs_list = []
+    for n in range(4):
+        nurvs = cmds.curve(degree=1,point=[(0,3,0),(0,0,0),(3,0,0),(2,0,0),(1.827091,0.813473,0),(1.338261,1.48629,0),(0.618034,1.902113,0),(0,2,0)],knot=[0,1,2,3,4,5,6,7])
+        nurvs_list.append(nurvs)
+        cmds.setAttr(f"{nurvs}.overrideEnabled", 1)
+        cmds.setAttr(f"{nurvs}.overrideRGBColors", 1)  # RGBを有効に
+        cmds.setAttr(f"{nurvs}.overrideColorRGB", 0,1,1)  # R, G, B
+        cmds.parent(nurvs,parent_grp,r=True)
+
+    #つま先
+    nurvs_list[0]=cmds.rename(nurvs_list[0],f"Position_{clr}_ToesTip")
+    cmds.xform(nurvs_list[0],ws=True,t=(translation[0],0,translation[2]+10))
+    cmds.setAttr(f"{nurvs_list[0]}.ry",90)
+    cmds.makeIdentity(nurvs_list[0],a=True,t=False,r=True,s=False,n=False,pn=True)
+    #つま先
+    nurvs_list[1]=cmds.rename(nurvs_list[1],f"Position_{clr}_Heel")
+    cmds.xform(nurvs_list[1],ws=True,t=(translation[0],0,translation[2]-5))
+    cmds.setAttr(f"{nurvs_list[1]}.ry",-90)
+    cmds.makeIdentity(nurvs_list[1],a=True,t=False,r=True,s=False,n=False,pn=True)
+    #内側
+    nurvs_list[2]=cmds.rename(nurvs_list[2],f"Position_{clr}_FootInside")
+    cmds.xform(nurvs_list[2],ws=True,t=(translation[0],0,translation[2]+4))
+    cmds.setAttr(f"{nurvs_list[2]}.tx",cmds.getAttr(f"{nurvs_list[2]}.tx")-4)
+    cmds.makeIdentity(nurvs_list[2],a=True,t=False,r=True,s=False,n=False,pn=True)
+    #外側
+    nurvs_list[3]=cmds.rename(nurvs_list[3],f"Position_{clr}_FootOutside")
+    cmds.xform(nurvs_list[3],ws=True,t=(translation[0],0,translation[2]+5))
+    cmds.setAttr(f"{nurvs_list[3]}.tx",cmds.getAttr(f"{nurvs_list[3]}.tx")+4)
+    cmds.setAttr(f"{nurvs_list[3]}.ry",180)
+    cmds.makeIdentity(nurvs_list[3],a=True,t=False,r=True,s=False,n=False,pn=True)
+
 
