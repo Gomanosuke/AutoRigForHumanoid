@@ -2166,7 +2166,40 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
     return create_obj_dic
 
+def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,orientation_dic:dict):
+    """
+    リグ作成
 
+    Parameters
+    ----------
+        string character_name : 名前
+        string parent : 親になるオブジェクト
+        dictionary obj_dic : 作成済みのオブジェクト
+        dictionary joint_dic : ダミーのHUmanoidジョイント
+        dictionary orientation_dic : 回転オブジェ
+        dictionary pos_dic : 位置の基準
+
+    Returns
+    -------
+        作成したオブジェ入った辞書
+    """
+    create_obj_dic={}
+    unity_setting = obj_dic[('Con','C','UnitySetting')]
+
+    #親作成
+    root_center_obj = cmds.group(em=True,n=f"Grp_C_Hand",p=parent)
+    cmds.setAttr( f"{root_center_obj}.t", lock=True, keyable=False, channelBox=False)
+    cmds.setAttr( f"{root_center_obj}.r", lock=True, keyable=False, channelBox=False)
+    cmds.setAttr( f"{root_center_obj}.s", lock=True, keyable=False, channelBox=False)
+    cmds.setAttr(f"{root_center_obj}.v",keyable=False,channelBox=True)
+
+    #左右繰り返し
+    for clr in ("L","R"):
+        clr_lower = clr.lower()
+        root_obj = cmds.group(em=True,n=f"Grp_{clr}_Hand",p=root_center_obj)
+
+
+    return create_obj_dic
 
 
 
