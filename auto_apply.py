@@ -107,21 +107,22 @@ def select(textfield:str):
     else:
         cmds.select(object[0],r=True)
 
-def attach(textfield:str):
+def attach(textfield:str,typ="joint"):
     """
     選択jointをテキストボックスにいれる
 
     Parameters
     ----------
         string textfield : Joint名のテキストボックス
+        string typ : 選択対象のタイプ
 
     Returns
     -------
         無し
     """
-    object = cmds.ls(selection=True,typ="joint",l=True)
+    object = cmds.ls(selection=True,typ=typ,l=True)
     if(object==[]):
-        cmds.warning("Jointを選択してください")
+        cmds.warning("対象オブジェクトを選択してください")
     else:
         cmds.textField(textfield,e=True,tx=object[0])
     cmds.select(cl=True)

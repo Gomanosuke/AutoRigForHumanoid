@@ -192,7 +192,7 @@ def foot_pos(parent_grp:str,clr,translation):
         scl=-1
         print(scl)
     nurvs_list = []
-    for n in range(4):
+    for n in range(5):
         nurvs = cmds.curve(degree=1,point=[(0,3,0),(0,0,0),(3,0,0),(2,0,0),(1.827091,0.813473,0),(1.338261,1.48629,0),(0.618034,1.902113,0),(0,2,0)],knot=[0,1,2,3,4,5,6,7])
         nurvs_list.append(nurvs)
         cmds.setAttr(f"{nurvs}.overrideEnabled", 1)
@@ -221,5 +221,10 @@ def foot_pos(parent_grp:str,clr,translation):
     cmds.setAttr(f"{nurvs_list[3]}.tx",cmds.getAttr(f"{nurvs_list[3]}.tx")+4)
     cmds.setAttr(f"{nurvs_list[3]}.ry",180)
     cmds.makeIdentity(nurvs_list[3],a=True,t=False,r=True,s=False,n=False,pn=True)
+    #裏側
+    nurvs_list[4]=cmds.rename(nurvs_list[4],f"Position_{clr}_Sole")
+    cmds.xform(nurvs_list[4],ws=True,t=(translation[0],0,translation[2]+7))
+    cmds.setAttr(f"{nurvs_list[4]}.ry",90)
+    cmds.makeIdentity(nurvs_list[4],a=True,t=False,r=True,s=False,n=False,pn=True)
 
 

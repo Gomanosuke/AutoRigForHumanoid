@@ -8,6 +8,10 @@ from . import autorig_preparation
 importlib.reload(autorig_preparation)
 from . import autorig_createBase
 importlib.reload(autorig_createBase)
+from . import blendshape
+importlib.reload(blendshape)
+from . import fbx_shape_rename
+importlib.reload(fbx_shape_rename)
 
 def create_window():
     """
@@ -32,11 +36,57 @@ def create_window():
     main_layout = cmds.scrollLayout(horizontalScrollBarThickness=16, verticalScrollBarThickness=16, childResizable=True)
 
     #各レイアウト読み込み
+    fbx_frame(main_layout)
     setup_list = humanoid_setup(main_layout)
     autorig_frame(main_layout,setup_list[1],setup_list[0])
+    blendshape_frame(main_layout,setup_list[0])
     
     #タブの表示
     cmds.showWindow(windowname)
+
+def fbx_frame(parent_layout:str):
+    """
+    FBXから日本語削除
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+
+    Returns
+    -------
+        list [character_name,textField_dic]
+    """
+    #フレーム
+    fbx_frame = cmds.frameLayout(label="FBX Shapeリネーム",parent=parent_layout,collapsable=True)
+
+    path_list=[]
+
+    cmds.rowLayout(nc=3,adjustableColumn=2,p=fbx_frame)
+    cmds.text(label="Import FBX :")
+    import_fbx_path = cmds.textField()
+    path_list.append(import_fbx_path)
+    cmds.button(label="参照",command=lambda *_:fbx_shape_rename.import_path(path_list))
+
+    cmds.rowLayout(nc=3,adjustableColumn=2,p=fbx_frame)
+    cmds.text(label="Json :")
+    json_path = cmds.textField()
+    path_list.append(json_path)
+    cmds.button(label="参照",command=lambda *_:fbx_shape_rename.json_path(path_list))
+
+    cmds.rowLayout(nc=3,adjustableColumn=2,p=fbx_frame)
+    cmds.text(label="Export FBX :")
+    export_fbx_path = cmds.textField()
+    path_list.append(export_fbx_path)
+    cmds.button(label="参照",command=lambda *_:fbx_shape_rename.export_path(path_list))
+
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=fbx_frame)
+    cmds.button(label="Json出力",command=lambda *_:fbx_shape_rename.export_json(path_list))
+
+    cmds.rowLayout(nc=2,adjustableColumn=3,p=fbx_frame)
+    option = cmds.optionMenu(label="モード")
+    cmds.menuItem( label="Kay To Value", )
+    cmds.menuItem( label="Value To Kay", )
+    cmds.button(label="FBX出力",command=lambda *_:fbx_shape_rename.export_fbx_init(path_list,cmds.optionMenu(option,q=True,sl=True)))
 
 def humanoid_setup(parent_layout:str):
     """
@@ -607,6 +657,117 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
 
     cmds.button(label="リグ作成",command=lambda *_:autorig_createBase.create_rig(textField_dic=textField_dic,character_name=character_name),p=setup_frame)
 
+def blendshape_frame(parent_layout:str,character_name:str):
+    """
+    リグ制作のGUI
 
+    Parameters
+    ----------
+    string parent_layout : 親のレイアウト名
+        string character_name : 名前を入れるテキストボックス
 
+    Returns
+    -------
+        無し
+    """
+    #フレーム
+    blendshape_frame = cmds.frameLayout(label="ブレンドシェイプコントローラー",parent=parent_layout,collapsable=True)
+
+    width=360
+
+    #メッシュ
+    cmds.rowLayout(nc=4,adjustableColumn=2,p=blendshape_frame)
+    cmds.text(label="オブジェクト : ")
+    obj = cmds.textField()
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(obj,"transform"))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(obj))
+
+    cmds.rowLayout(nc=4,adjustableColumn=2,p=blendshape_frame)
+    cmds.text(label="シェイプ : ")
+    shape = cmds.textField()
+    cmds.button(label="自動割り当て",command=lambda *_:blendshape.meshattach(shape,obj))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(shape))
+
+    cmds.rowLayout(nc=4,adjustableColumn=2,p=blendshape_frame)
+    cmds.text(label="スキンクラスター : ")
+    skinCluster = cmds.textField()
+    cmds.button(label="自動割り当て",command=lambda *_:blendshape.sourcenodeattach(skinCluster,shape,"skinCluster"))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(skinCluster))
+
+    cmds.rowLayout(nc=4,adjustableColumn=2,p=blendshape_frame)
+    cmds.text(label="ブレンドシェイプ : ")
+    blendShape = cmds.textField()
+    cmds.button(label="自動割り当て",command=lambda *_:blendshape.sourcenodeattach(blendShape,skinCluster,"blendShape"))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(blendShape))
+    
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=blendshape_frame)
+    optionMenus = []
+    cmds.button(label="適用",command=lambda *_:blendshape.setOptionMenu(optionMenus,blendShape))
+
+    #1*1コントローラー
+    frame1x1 = cmds.frameLayout(label="1*1コントローラー",parent=blendshape_frame,collapsable=True)
+    cmds.rowLayout(nc=2,adjustableColumn=2,p=frame1x1)
+    cmds.text(label="名前 : ")
+    name1x1 = cmds.textField()
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x1)
+    color1x1 = cmds.colorSliderGrp(label="カラー",rgbValue=[1,0.5,0])
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x1)
+    blendshape1_1x1 = cmds.optionMenu(label="ブレンドシェイプ", w=width)
+    optionMenus.append(blendshape1_1x1)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x1)
+    cmds.button(label="作成",command=lambda *_:blendshape.create1x1con(blendShape,name1x1,color1x1,blendshape1_1x1))
+
+    #2*1コントローラー
+    frame2x1 = cmds.frameLayout(label="2*1コントローラー",parent=blendshape_frame,collapsable=True)
+    cmds.rowLayout(nc=2,adjustableColumn=2,p=frame2x1)
+    cmds.text(label="名前 : ")
+    name2x1 = cmds.textField()
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x1)
+    color2x1 = cmds.colorSliderGrp(label="カラー",rgbValue=[1,0.5,0])
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x1)
+    blendshape1_2x1 = cmds.optionMenu(label="ブレンドシェイプ プラス", w=width)
+    optionMenus.append(blendshape1_2x1)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x1)
+    blendshape2_2x1 = cmds.optionMenu(label="ブレンドシェイプ マイナス", w=width)
+    optionMenus.append(blendshape2_2x1)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x1)
+    cmds.button(label="作成",command=lambda *_:blendshape.create2x1con(blendShape,name2x1,color2x1,blendshape1_2x1,blendshape2_2x1))
+
+    #1*2コントローラー
+    frame1x2 = cmds.frameLayout(label="1*2コントローラー",parent=blendshape_frame,collapsable=True)
+    cmds.rowLayout(nc=2,adjustableColumn=2,p=frame1x2)
+    cmds.text(label="名前 : ")
+    name1x2 = cmds.textField()
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x2)
+    color1x2 = cmds.colorSliderGrp(label="カラー",rgbValue=[1,0.5,0])
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x2)
+    blendshape1_1x2 = cmds.optionMenu(label="ブレンドシェイプ1", w=width)
+    optionMenus.append(blendshape1_1x2)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x2)
+    blendshape2_1x2 = cmds.optionMenu(label="ブレンドシェイプ2", w=width)
+    optionMenus.append(blendshape2_1x2)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame1x2)
+    cmds.button(label="作成",command=lambda *_:blendshape.create1x2con(blendShape,name1x2,color1x2,blendshape1_1x2,blendshape2_1x2))
+
+    #2*2コントローラー
+    frame2x2 = cmds.frameLayout(label="2*2コントローラー",parent=blendshape_frame,collapsable=True)
+    cmds.rowLayout(nc=2,adjustableColumn=2,p=frame2x2)
+    cmds.text(label="名前 : ")
+    name2x2 = cmds.textField()
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
+    color2x2 = cmds.colorSliderGrp(label="カラー",rgbValue=[1,0.5,0])
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
+    blendshape1_2x2 = cmds.optionMenu(label="ブレンドシェイプ1 プラス", w=width)
+    optionMenus.append(blendshape1_2x2)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
+    blendshape2_2x2 = cmds.optionMenu(label="ブレンドシェイプ1 マイナス", w=width)
+    optionMenus.append(blendshape2_2x2)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
+    blendshape3_2x2 = cmds.optionMenu(label="ブレンドシェイプ2 プラス", w=width)
+    optionMenus.append(blendshape3_2x2)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
+    blendshape4_2x2 = cmds.optionMenu(label="ブレンドシェイプ2 マイナス", w=width)
+    optionMenus.append(blendshape4_2x2)
+    cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
+    cmds.button(label="作成",command=lambda *_:blendshape.create2x2con(blendShape,name2x2,color2x2,blendshape1_2x2,blendshape2_2x2,blendshape3_2x2,blendshape4_2x2))
 

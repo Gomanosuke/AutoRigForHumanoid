@@ -21,7 +21,7 @@ def create_nurvs(name="", shape="", position=(0,0,0), rotate=(0,0,0), size=(1,1,
         string shape : シェイプの形状 クラスに詳細
         (0,0,0) position : 位置
         (0,0,0) rotate : 回転
-        (0,0,0) size : スケール
+        (1,1,1) size : スケール
         string pos_CLR : "C", "L", "R"のどれかを指定して右左中央指定
 
     Returns
@@ -30,7 +30,7 @@ def create_nurvs(name="", shape="", position=(0,0,0), rotate=(0,0,0), size=(1,1,
 
     コントローラー形状
     -------
-        円1:circle, 正方形:scuare, 三角形:triangle, バツ:cross, 太いバツ:fatCross, 五角形:pentagon, 
+        円1:circle, 正方形:scuare, 三角形:triangle, バツ:cross, 太いバツ:fatCross, 五角形:pentagon,
         六角形:hexagon1, ピラミッド:triangular, 立方体:cube, 六角柱:hexagon2, ダイヤ:dia1, 横長ダイヤ:dia2, コーン:cone
         単体矢印:arrorSingle, 双方向矢印:arrorDouble, 四方向矢印:arrorFour, 90回転:rot90, 180回転:rot180 UnityLOgo:unity
     """
@@ -131,7 +131,7 @@ def create_controller(  con_name="",
     parent = GrpObj
     if(dvn_count!=0):
         parent = obj_dic[("Dvn",pos_CLR,con_name,dvn_count)]
-    nurvs = create_nurvs(con_name,con_shape,con_position,con_rotate,con_size)
+    nurvs = create_nurvs(con_name,con_shape,con_position,con_rotate,con_size,pos_CLR)
     nurvs = cmds.parent(nurvs,parent,r=True)[0]
     obj_dic[("Con",pos_CLR,con_name)]=cmds.ls(nurvs,l=True)[0]
     #color

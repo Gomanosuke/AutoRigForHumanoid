@@ -65,6 +65,29 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
     cmds.setAttr(f"{root_grp}.t",lock=True)
     cmds.setAttr(f"{root_grp}.r",lock=True)
     cmds.setAttr(f"{root_grp}.s",lock=True)
+    cmds.setAttr(f"{root_grp}.v",0,lock=False,k=False)
+
+    #元のジョイントの正規化
+    for key in joint_dic:
+        joint = joint_dic[key]
+        eulerToQuat01 = cmds.createNode("eulerToQuat")
+        eulerToQuat02 = cmds.createNode("eulerToQuat")
+        quatProd = cmds.createNode("quatProd")
+        quatToEuler = cmds.createNode("quatToEuler")
+        cmds.connectAttr(f"{joint}.r",f"{eulerToQuat01}.inputRotate")
+        cmds.connectAttr(f"{joint}.rotateOrder",f"{eulerToQuat01}.inputRotateOrder")
+        cmds.connectAttr(f"{joint}.jointOrient",f"{eulerToQuat02}.inputRotate")
+        cmds.connectAttr(f"{eulerToQuat01}.outputQuat",f"{quatProd}.input1Quat")
+        cmds.connectAttr(f"{eulerToQuat02}.outputQuat",f"{quatProd}.input2Quat")
+        cmds.connectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
+        cmds.disconnectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
+        cmds.connectAttr(f"{quatToEuler}.outputRotate",f"{joint}.r")
+        cmds.setAttr(f"{joint}.jointOrientX",0)
+        cmds.setAttr(f"{joint}.jointOrientY",0)
+        cmds.setAttr(f"{joint}.jointOrientZ",0)
+        cmds.delete(eulerToQuat01)
+        cmds.delete(eulerToQuat02)
+        cmds.delete(quatToEuler)
 
     #親にほかのjointないjoint取得
     joint_dic_parent = {}
@@ -100,7 +123,7 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
                         if(child_old_path not in joint_dic.values()):
                             if(cmds.ls(i)!=[]):
                                 cmds.delete(i)
-                else:
+                elif(cmds.ls(i,uid=True)!=[]):
                     #HumanoidJointだったら
                     duplicate_joint_dic[[k for k, v in joint_dic.items() if v == old_path][0]]=cmds.ls(i,uid=True)[0]
             else:
@@ -178,6 +201,9 @@ def get_orientation(character_name:str):
         for i in orient_obj_list:
             if(i == target_name):
                 orientation_dic[k]=cmds.ls(i,l=True)[0]
+    
+    
+    cmds.setAttr(f"{root_grp}.v",0,lock=False,k=False)
 
     return orientation_dic
 
@@ -198,8 +224,10 @@ def get_pos(character_name:str):
     for i in pos_obj_list:
         fullpass=cmds.ls(i,l=True)[0]
         for clr in ["L","R"]:
-            for name in ["ToesTip","Heel","FootInside","FootOutside"]:
+            for name in ["ToesTip","Heel","FootInside","FootOutside","Sole"]:
                 if(i==f"Position_{clr}_{name}"):
                     pos_dic[f"{clr.lower()}_{name.lower()}"]=fullpass
+
+    cmds.setAttr(f"{root_grp}.v",0,lock=False,k=False)
 
     return pos_dic
