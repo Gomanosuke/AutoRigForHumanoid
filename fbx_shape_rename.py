@@ -2,6 +2,11 @@ from maya import cmds
 from maya import OpenMaya
 import importlib
 import json
+from pathlib import Path
+
+#json読み込み
+with open(f"{Path(__file__).resolve().parent}/blendshape_name.json", mode="rt", encoding="utf-8") as f:
+    preset_dict = json.load(f)
 
 def import_path(path_list:list):
     path = cmds.fileDialog2(
@@ -10,7 +15,7 @@ def import_path(path_list:list):
         fileFilter="FBX Files (*.fbx)"
     )
 
-    if len(path)!=0:
+    if path:
         cmds.textField(path_list[0],edit=True,tx=path[0])
         file_name=path[0]
         file_name=file_name.replace("."+file_name.split(".")[-1],"")
@@ -28,7 +33,7 @@ def json_path(path_list:list):
         fileFilter="Json Files (*.json)"
     )
 
-    if len(path)!=0:
+    if path:
         cmds.textField(path_list[1],edit=True,tx=path[0])
 
 def export_path(path_list:list):
@@ -38,7 +43,7 @@ def export_path(path_list:list):
         fileFilter="FBX Files (*.fbx)"
     )
 
-    if len(path)!=0:
+    if path:
         cmds.textField(path_list[2],edit=True,tx=path[0])
 
 def export_json(path_list:list):
@@ -58,7 +63,16 @@ def export_json(path_list:list):
                 shape_name = parts[1].split('"')[0]
                 shape_name_list.append(shape_name)
 
-    shape_name_dict = {name: name for name in shape_name_list}
+
+    shape_name_dict = {}
+    for shape_name in shape_name_list:
+        if shape_name in preset_dict:
+            shape_name_dict[shape_name]=preset_dict[shape_name]
+        else:
+            name=shape_name
+            name=name.replace(".","_").replace("-","_")
+            shape_name_dict[shape_name]=name
+
 
     with open(json_path, "w", encoding='utf-8') as f:
         json.dump(shape_name_dict, f, ensure_ascii=False, indent=4, sort_keys=True)
@@ -74,7 +88,7 @@ def check_json(path_list:list, mode:int):
             for i in json_load:
                 if value == json_load[i] and i!=key and value not in error:
                     error.append(value)
-                    print(f"{value} は {key} と {i} で重複しています")
+                    cmds.warning(f"{value} は {key} と {i} で重複しています")
 
         if len(error) == 0:
             main(json_load, path_list, mode)
@@ -90,7 +104,13 @@ def main(blendshape_dict:dict, path_list:list, mode:int):
                               f'"Geometry::{key}", "Shape"' : f'"Geometry::{blendshape_dict[key]}", "Shape"',
                               f' "SubDeformer::{key}", "BlendShapeChannel" ' : f' "SubDeformer::{blendshape_dict[key]}", "BlendShapeChannel" ',
                               f';SubDeformer::{key}, Deformer::' : f';SubDeformer::{blendshape_dict[key]}, Deformer::',
-                              f';Geometry::{key}, SubDeformer::{key}' : f';Geometry::{blendshape_dict[key]}, SubDeformer::{blendshape_dict[key]}'}
+                              f';Geometry::{key}, SubDeformer::' : f';Geometry::{blendshape_dict[key]}, SubDeformer::',
+                              f'Channel: "{key}" ' : f'Channel: "{blendshape_dict[key]}" ',
+                              f'Shape: "{key}" ' : f'Shape: "{blendshape_dict[key]}" ',
+                              f'Property: "{key}", "Number", "A+N",0' : f'Property: "{blendshape_dict[key]}", "Number", "A+N",0',
+                              f'P: "RootGroup|{key}", "KString", "", "", ""' : f'P: "RootGroup|{blendshape_dict[key]}", "KString", "", "", ""',
+                              f'Property: "{key}", "Number", "AN",0' : f'Property: "{blendshape_dict[key]}", "Number", "AN",0'}
+                            
 
                 for word in check_dict:
                     if mode==1:
@@ -111,3 +131,13 @@ def export_fbx_init(path_list:list,mode:int):
     path.append(cmds.textField(path_list[1],q=True,tx=True))
     path.append(cmds.textField(path_list[2],q=True,tx=True))
     check_json(path, mode)
+
+def import_fbx():
+    path = cmds.fileDialog2(
+    fileMode=1,
+    caption="Select FBX",
+    fileFilter="FBX Files (*.fbx)"
+    )[0]
+    cmds.file(path,i=True,typ="FBX")
+
+        

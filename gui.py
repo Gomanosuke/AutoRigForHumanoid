@@ -12,6 +12,8 @@ from . import blendshape
 importlib.reload(blendshape)
 from . import fbx_shape_rename
 importlib.reload(fbx_shape_rename)
+from . import picker
+importlib.reload(picker)
 
 def create_window():
     """
@@ -36,13 +38,32 @@ def create_window():
     main_layout = cmds.scrollLayout(horizontalScrollBarThickness=16, verticalScrollBarThickness=16, childResizable=True)
 
     #各レイアウト読み込み
+    show_picker(main_layout)
     fbx_frame(main_layout)
-    setup_list = humanoid_setup(main_layout)
-    autorig_frame(main_layout,setup_list[1],setup_list[0])
+    create_frame = cmds.frameLayout(label="リギング",parent=main_layout,collapsable=True)
+    setup_list = humanoid_setup(create_frame)
+    autorig_frame(create_frame,setup_list[1],setup_list[0])
     blendshape_frame(main_layout,setup_list[0])
     
     #タブの表示
     cmds.showWindow(windowname)
+
+def show_picker(parent_layout:str):
+    """
+    ピッカー表示
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+
+    Returns
+    -------
+        list [character_name,textField_dic]
+    """
+    #フレーム
+    picker_frame = cmds.frameLayout(label="Picker",parent=parent_layout,collapsable=True)
+    
+    cmds.button(label="Picker表示",h=50,command=lambda *_:picker.show_ui())
 
 def fbx_frame(parent_layout:str):
     """
@@ -87,6 +108,9 @@ def fbx_frame(parent_layout:str):
     cmds.menuItem( label="Kay To Value", )
     cmds.menuItem( label="Value To Kay", )
     cmds.button(label="FBX出力",command=lambda *_:fbx_shape_rename.export_fbx_init(path_list,cmds.optionMenu(option,q=True,sl=True)))
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=fbx_frame)
+    cmds.button(label="Import FBX",command=lambda *_:fbx_shape_rename.import_fbx())
 
 def humanoid_setup(parent_layout:str):
     """
