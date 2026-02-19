@@ -78,7 +78,7 @@ def fbx_frame(parent_layout:str):
         list [character_name,textField_dic]
     """
     #フレーム
-    fbx_frame = cmds.frameLayout(label="FBX Shapeリネーム",parent=parent_layout,collapsable=True)
+    fbx_frame = cmds.frameLayout(label="Edit FBX",parent=parent_layout,collapsable=True)
 
     path_list=[]
 
@@ -111,6 +111,9 @@ def fbx_frame(parent_layout:str):
 
     cmds.rowLayout(nc=1,adjustableColumn=1,p=fbx_frame)
     cmds.button(label="Import FBX",command=lambda *_:fbx_shape_rename.import_fbx())
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=fbx_frame)
+    cmds.button(label="Freeze Scale",command=lambda *_:fbx_shape_rename.fix_skin_scale_offset())
 
 def humanoid_setup(parent_layout:str):
     """

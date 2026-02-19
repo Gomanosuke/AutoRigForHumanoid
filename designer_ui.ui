@@ -3880,6 +3880,44 @@ QPushButton:pressed {
     <string>FK&gt;&gt;IK</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="flat_shade">
+   <property name="geometry">
+    <rect>
+     <x>425</x>
+     <y>465</y>
+     <width>70</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color:rgb(255, 85, 127);
+    border-radius:5px;
+    color: white; 
+    font-size: 7pt;
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(255, 105, 147);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(215, 45, 87);
+}</string>
+   </property>
+   <property name="text">
+    <string>Flat Shade</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

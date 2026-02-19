@@ -1331,7 +1331,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.connectAttr(F"{floatMath11}.outFloat",f"{floatMath3}.floatB")
         cmds.connectAttr(f"{foot_ik_dummy}.WorldBindMatrix",f"{distanceBetween1}.inMatrix1")
         cmds.connectAttr(f"{lowerLeg_ik_dummy}.WorldBindMatrix",f"{distanceBetween1}.inMatrix2")
-        cmds.connectAttr(f"{foot_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix1")
+        cmds.connectAttr(f"{upperLeg_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix1")
         cmds.connectAttr(f"{lowerLeg_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix2")
         cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{distanceBetween2}.inMatrix1")
         cmds.connectAttr(f"{ikHandle_parent}.parentMatrix",f"{distanceBetween2}.inMatrix2")

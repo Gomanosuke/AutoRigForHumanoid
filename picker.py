@@ -142,6 +142,9 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         self.ui_content.fktoik_l_leg.clicked.connect(lambda: self.leg_fktoik_l())
         self.ui_content.fktoik_r_leg.clicked.connect(lambda: self.leg_fktoik_r())
 
+        #シェーダー
+        self.ui_content.flat_shade.clicked.connect(lambda: self.flat_shade())
+
 
 
 
@@ -152,6 +155,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
 
         select_obj = f"('Con', '{pos}', '{name}')"
         obj=cmds.ls(obj_dic[select_obj])
+        print(obj_dic[select_obj])
         if(len(obj)==0):
             cmds.error(f"{pos}_{name}が見つかりません")
         else:
@@ -555,6 +559,10 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         cmds.setAttr(F"{toesIK_con}.sz",abs(cmds.getAttr(F"{toesIK_con}.sz")))
         cmds.xform(toesIK_con,ro=(180,0,0),r=True,eu=True)
 
+    def flat_shade(self):
+        viewport_panels = cmds.getPanel(type="modelPanel")
+        for panel in viewport_panels:
+            cmds.modelEditor(panel, edit=True, displayTextures=True, dl="flat", displayAppearance="smoothShaded")
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
         zoom_in_factor = 1.1
