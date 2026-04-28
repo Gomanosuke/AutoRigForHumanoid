@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>501</width>
+    <width>500</width>
     <height>500</height>
    </rect>
   </property>
@@ -3916,6 +3916,82 @@ QPushButton:pressed {
    </property>
    <property name="text">
     <string>Flat Shade</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_l_allfinger">
+   <property name="geometry">
+    <rect>
+     <x>392</x>
+     <y>190</y>
+     <width>64</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 85, 255);
+    border-radius: 4px;
+    color: white; 
+    font-size: 5pt;
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 105, 255);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:   rgb(0, 45, 215);
+}</string>
+   </property>
+   <property name="text">
+    <string>All Finger</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_r_allfinger">
+   <property name="geometry">
+    <rect>
+     <x>44</x>
+     <y>190</y>
+     <width>64</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 85, 255);
+    border-radius: 4px;
+    color: white; 
+    font-size: 5pt;
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 105, 255);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:   rgb(0, 45, 215);
+}</string>
+   </property>
+   <property name="text">
+    <string>All Finger</string>
    </property>
   </widget>
  </widget>

@@ -114,6 +114,9 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         self.ui_content.select_r_littleintermediate.clicked.connect(lambda: self.select_con("LittleIntermediate", "R"))
         self.ui_content.select_r_littledistal.clicked.connect(lambda: self.select_con("LittleDistal", "R"))
 
+        self.ui_content.select_l_allfinger.clicked.connect(lambda: self.select_allfinger("L"))
+        self.ui_content.select_r_allfinger.clicked.connect(lambda: self.select_allfinger("R"))
+
         #表示切替
         self.ui_content.vis_body.clicked.connect(lambda: self.switch_vis("BodyV"))
         self.ui_content.vis_head.clicked.connect(lambda: self.switch_vis("HeadV"))
@@ -145,9 +148,6 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         #シェーダー
         self.ui_content.flat_shade.clicked.connect(lambda: self.flat_shade())
 
-
-
-
     def select_con(self, name:str,pos:str):
         character_name=cmds.getAttr(F"ARFH_information.characterName")
         obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
@@ -155,10 +155,11 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
 
         select_obj = f"('Con', '{pos}', '{name}')"
         obj=cmds.ls(obj_dic[select_obj])
-        print(obj_dic[select_obj])
         if(len(obj)==0):
             cmds.error(f"{pos}_{name}が見つかりません")
         else:
+            print(f"Select {obj[0]}")
+
             modifiers = QtWidgets.QApplication.keyboardModifiers()
 
             if modifiers == QtCore.Qt.ShiftModifier:
@@ -166,19 +167,39 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             else:
                 cmds.select(obj[0],r=True,add=False)
 
+    def select_allfinger(self,pos:str):
+        character_name=cmds.getAttr(F"ARFH_information.characterName")
+        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
+        obj_dic=json.loads(obj_dic_text)
+
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+
+        if modifiers != QtCore.Qt.ShiftModifier:
+            cmds.select(cl=True)
+
+        fingers = ["ThumbProximal","ThumbIntermediate","ThumbDistal","IndexProximal","IndexIntermediate","IndexDistal","IndexDistal","MiddleProximal","MiddleIntermediate","MiddleDistal","RingProximal","RingIntermediate","RingDistal","LittleProximal","LittleIntermediate","LittleDistal"]
+        for finger in fingers:
+            select_obj = f"('Con', '{pos}', '{finger}')"
+            obj=cmds.ls(obj_dic[select_obj])
+            if(len(obj)==0):
+                cmds.error(f"{pos}_{finger}が見つかりません スキップします")
+            else:
+                print(f"Select {obj[0]}")
+                cmds.select(obj[0],r=False,add=True)
+
     def switch_vis(self,attr):
         character_name=cmds.getAttr(F"ARFH_information.characterName")
         obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
         obj_dic=json.loads(obj_dic_text)
 
-        root_con = cmds.ls(obj_dic["('Con', 'C', 'Root1')"])[0]
+        setting = cmds.ls(obj_dic["('Con', 'C', 'Setting')"])[0]
 
-        vis = cmds.getAttr(f"{root_con}.{attr}")
+        vis = cmds.getAttr(f"{setting}.{attr}")
 
         if(vis==False):
-            cmds.setAttr(f"{root_con}.{attr}",1)
+            cmds.setAttr(f"{setting}.{attr}",1)
         else:
-            cmds.setAttr(f"{root_con}.{attr}",0)
+            cmds.setAttr(f"{setting}.{attr}",0)
 
     def select_all(self):
         character_name=cmds.getAttr(F"ARFH_information.characterName")
@@ -215,6 +236,9 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                             data=cmds.getAttr(F"{obj}.{attr}")
                             cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
                         if(keyable==1 and data_type == "float"):
+                            data=cmds.getAttr(F"{obj}.{attr}")
+                            cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
+                        if(keyable==1 and data_type == "long"):
                             data=cmds.getAttr(F"{obj}.{attr}")
                             cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
 
@@ -565,6 +589,9 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             cmds.modelEditor(panel, edit=True, displayTextures=True, dl="flat", displayAppearance="smoothShaded")
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
+
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        
         zoom_in_factor = 1.1
         zoom_out_factor = 0.9
 

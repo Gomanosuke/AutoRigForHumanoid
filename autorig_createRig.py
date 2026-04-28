@@ -66,49 +66,23 @@ def create_root(character_name:str, parent:str):
     cmds.setAttr( f"{root_obj}.r", lock=True, keyable=False, channelBox=False)
     cmds.setAttr( f"{root_obj}.s", lock=True, keyable=False, channelBox=False)
     cmds.setAttr(f"{root_obj}.v",keyable=False,channelBox=True)
-    #Unityアトリビュート
-    create_obj_dic = autorig_utility.create_controller("UnitySetting",root_obj,pos_CLR="C",con_shape="unity",con_color=[0.9,0.9,0.9],pos=(0,0,20),
-                                                        con_pos_lock=(False,False,False),con_rot_lock=(False,False,False),con_scl_lock=(False,False,False),
-                                                        create_drv=False,keyable_rotateOrder=False)
-    cmds.addAttr(create_obj_dic[("Con","C","UnitySetting")],ln="UnitySupport",at="bool")
-    cmds.addAttr(create_obj_dic[("Con","C","UnitySetting")],ln="HumanoidSupport",at="bool")
-    cmds.setAttr(f"{create_obj_dic[('Con','C','UnitySetting')]}.UnitySupport",1,k=True)
-    cmds.setAttr(f"{create_obj_dic[('Con','C','UnitySetting')]}.HumanoidSupport",1,k=True)
-    cmds.addAttr(create_obj_dic[("Con","C","UnitySetting")],ln="Moveable",at="double",dv=False)
-    cmds.addAttr(create_obj_dic[("Con","C","UnitySetting")],ln="Scalable",at="double",dv=False)
-    #scalable,moveable用の計算
-    floatMath01=cmds.shadingNode("floatMath",asUtility=True)
-    cmds.setAttr(f"{floatMath01}.operation",2)
-    cmds.connectAttr(f"{create_obj_dic[('Con','C','UnitySetting')]}.HumanoidSupport",f"{floatMath01}.floatA",f=True)
-    cmds.connectAttr(f"{create_obj_dic[('Con','C','UnitySetting')]}.UnitySupport",f"{floatMath01}.floatB",f=True)
-    floatMath02=cmds.shadingNode("floatMath",asUtility=True)
-    cmds.setAttr(f"{floatMath02}.operation",2)
-    cmds.setAttr(f"{floatMath02}.floatB",-1)
-    cmds.connectAttr(f"{floatMath01}.outFloat",f"{floatMath02}.floatA",f=True)
-    floatMath03=cmds.shadingNode("floatMath",asUtility=True)
-    cmds.setAttr(f"{floatMath03}.floatB",1)
-    cmds.connectAttr(f"{floatMath02}.outFloat",f"{floatMath03}.floatA",f=True)
-    cmds.connectAttr(f"{floatMath03}.outFloat",f"{create_obj_dic[('Con','C','UnitySetting')]}.Moveable",f=True)
-    floatMath04=cmds.shadingNode("floatMath",asUtility=True)
-    cmds.setAttr(f"{floatMath04}.operation",2)
-    cmds.setAttr(f"{floatMath04}.floatB",-1)
-    cmds.connectAttr(f"{create_obj_dic[('Con','C','UnitySetting')]}.UnitySupport",f"{floatMath04}.floatA",f=True)
-    floatMath05=cmds.shadingNode("floatMath",asUtility=True)
-    cmds.setAttr(f"{floatMath05}.floatB",1)
-    cmds.connectAttr(f"{floatMath05}.outFloat",f"{create_obj_dic[('Con','C','UnitySetting')]}.Scalable",f=True)
-    cmds.connectAttr(f"{floatMath04}.outFloat",f"{floatMath05}.floatA",f=True)
+    #SettingObj
+    create_obj_dic = autorig_utility.create_controller("Setting",root_obj,pos_CLR="C",con_shape="unity",con_color=[0.9,0.9,0.9],pos=(0,0,20),
+                                                        con_pos_lock=(True,True,True),con_rot_lock=(True,True,True),con_scl_lock=(True,True,True))
+    cmds.addAttr(create_obj_dic[("Con","C","Setting")],ln="advance",at="float",max=1,min=0)
+    cmds.setAttr(f"{create_obj_dic[('Con','C','Setting')]}.advance",0,k=True)
 
-    #Rootコントローラ
-    create_obj_dic |= autorig_utility.create_controller("Root1",root_obj,pos_CLR="C",con_shape="scuare",con_color=[0.8,0.2,0.2],con_size=(40,40,40),uniform_scale=True,
-                                                        scale_unable=True,unity_setting=create_obj_dic[("Con","C","UnitySetting")])
-    create_obj_dic |= autorig_utility.create_controller("Root2",root_obj,pos_CLR="C",con_shape="scuare",con_color=[0.2,0.8,0.2],con_size=(36,36,36),uniform_scale=True,
-                                                        scale_unable=True,unity_setting=create_obj_dic[("Con","C","UnitySetting")])
-    create_obj_dic |= autorig_utility.create_controller("Root3",root_obj,pos_CLR="C",con_shape="scuare",con_color=[0.2,0.2,0.8],con_size=(32,32,32),uniform_scale=True,
-                                                        scale_unable=True,unity_setting=create_obj_dic[("Con","C","UnitySetting")])
+    create_obj_dic |= autorig_utility.create_controller("Root1",root_obj,pos_CLR="C",con_shape="scuare",con_color=[0.8,0.2,0.2],con_scl=(40,40,40),uniform_scale=True,
+                                                        con_advance_scl=(True,True,True),setting=create_obj_dic[("Con","C","Setting")])
+    create_obj_dic |= autorig_utility.create_controller("Root2",root_obj,pos_CLR="C",con_shape="scuare",con_color=[0.2,0.8,0.2],con_scl=(36,36,36),uniform_scale=True,
+                                                        con_advance_scl=(True,True,True),setting=create_obj_dic[("Con","C","Setting")])
+    create_obj_dic |= autorig_utility.create_controller("Root3",root_obj,pos_CLR="C",con_shape="scuare",con_color=[0.2,0.2,0.8],con_scl=(32,32,32),uniform_scale=True,
+                                                        con_advance_scl=(True,True,True),setting=create_obj_dic[("Con","C","Setting")])
+    
     #接続
     cmds.connectAttr(f"{create_obj_dic[('Drv','C','Root1')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Root2')]}.offsetParentMatrix")
     cmds.connectAttr(f"{create_obj_dic[('Drv','C','Root2')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Root3')]}.offsetParentMatrix")
-    cmds.connectAttr(f"{create_obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','UnitySetting')]}.offsetParentMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Setting')]}.offsetParentMatrix")
 
     return create_obj_dic
 
@@ -129,7 +103,7 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         作成したオブジェ入った辞書
     """
     create_obj_dic={}
-    unity_setting = obj_dic[('Con','C','UnitySetting')]
+    setting = obj_dic[('Con','C','Setting')]
 
     #親作成
     root_obj = cmds.group(em=True,n=f"Grp_C_Body",p=parent)
@@ -139,243 +113,188 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     hips_matrix = cmds.xform(orientation_dic["c_hips"],m=True,ws=True,q=True)
     spine_matrix = cmds.xform(orientation_dic["c_spine"],m=True,ws=True,q=True)
     chest_matrix = cmds.xform(orientation_dic["c_chest"],m=True,ws=True,q=True)
-    if("c_upperChest" in orientation_dic):
-        upperChest_matrix = cmds.xform(orientation_dic["c_upperChest"],m=True,ws=True,q=True)
 
     #腰親作成
-    create_obj_dic |= autorig_utility.create_controller("Waist",root_obj,pos_CLR="C",con_color=(0.8,0.8,0.2),con_shape="arrorFour",con_size=(10,10,10),con_rotate=(0,0,90),
-                                                        uniform_scale=True,unity_setting=unity_setting,scale_unable=True)
+    create_obj_dic |= autorig_utility.create_controller("Waist",root_obj,pos_CLR="C",con_color=(0.8,0.8,0.2),con_shape="arrorFour",con_scl=(10,10,10),con_rot=(0,0,90),
+                                                        uniform_scale=True,setting=setting,con_advance_scl=(True,True,True))
     cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Waist')]}.offsetParentMatrix")
     cmds.xform(create_obj_dic[('Grp','C','Waist')],m=spine_matrix,ws=True)
 
     #尻コントローラー
-    create_obj_dic |= autorig_utility.create_controller("Hips",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.2),con_shape="cube",con_size=(7,13,13),con_position=(-4,0,0),
-                                                        unity_setting=unity_setting,scale_unable=True,pos_unable=True)
+    create_obj_dic |= autorig_utility.create_controller("Hips",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.2),con_shape="cube",con_scl=(7,13,13),con_pos=(-4,0,0),
+                                                        setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
     cmds.connectAttr(f"{create_obj_dic[('Drv','C','Waist')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Hips')]}.offsetParentMatrix")
 
     #胴体FK
     #Spine
-    create_obj_dic |= autorig_utility.create_controller("SpineFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(9,9,9),con_rotate=(0,0,90),
-                                                        unity_setting=unity_setting,scale_unable=True,pos_unable=True)
+    create_obj_dic |= autorig_utility.create_controller("SpineFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
+                                                        setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
     cmds.connectAttr(f"{create_obj_dic[('Drv','C','Waist')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','SpineFK')]}.offsetParentMatrix")
     cmds.xform(create_obj_dic[('Grp','C','SpineFK')],m=spine_matrix,ws=True)
     #ChestFK
-    create_obj_dic |= autorig_utility.create_controller("ChestFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(9,9,9),con_rotate=(0,0,90),
-                                                        unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','ChestFK')]}.offsetParentMatrix")
+    create_obj_dic |= autorig_utility.create_controller("ChestFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
+                                                        setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
     cmds.xform(create_obj_dic[('Grp','C','ChestFK')],m=chest_matrix,ws=True)
-    autorig_utility.layerd_scale_rotate(create_obj_dic[('Grp','C','SpineFK')],create_obj_dic[('Drv','C','SpineFK')],
-                                create_obj_dic[('Grp','C','ChestFK')],create_obj_dic[('Con','C','ChestFK')])
-    #UpperChestFK
-    if("c_upperChestFK" in orientation_dic):
-        create_obj_dic |= autorig_utility.create_controller("UpperChestFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(9,9,9),con_rotate=(0,0,90),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestFK')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','UpperChestFK')]}.offsetParentMatrix")
-        cmds.xform(create_obj_dic[('Grp','C','UpperChestFK')],m=upperChest_matrix,ws=True)
-        autorig_utility.layerd_scale_rotate(create_obj_dic[('Grp','C','SpineFK')],create_obj_dic[('Drv','C','ChestFK')],
-                                    create_obj_dic[('Grp','C','UpperChestFK')],create_obj_dic[('Con','C','UpperChestFK')])
-
+    autorig_utility.switch_parent(posA=create_obj_dic[('Drv','C','SpineFK')],
+                                  rotB=create_obj_dic[('Drv','C','SpineFK')],rotA=create_obj_dic[('Drv','C','Waist')],
+                                  sclB=create_obj_dic[('Drv','C','SpineFK')],sclA=create_obj_dic[('Drv','C','Waist')],
+                                  dvn_con=create_obj_dic[('Con','C','ChestFK')],dvn_grp=create_obj_dic[('Grp','C','ChestFK')],postScl=True)
+    
     #IK
-    if("c_upperChest" not in orientation_dic):
-        create_obj_dic |= autorig_utility.create_controller("ChestIK",root_obj,pos_CLR="C",con_shape="cube",con_color=(0.2,0.8,0.2),con_size=(13,13,13),con_position=(8,0,0),
-                                                            unity_setting=unity_setting,scale_unable=True)
-        decomposeMatrix = cmds.createNode("decomposeMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-        multMatrix = cmds.createNode("multMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestFK')]}.worldMatrix[0]",f"{decomposeMatrix}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{decomposeMatrix}.outputShear",f"{composeMatrix1}.inputShear")
-        cmds.connectAttr(f"{decomposeMatrix}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{decomposeMatrix}.outputScale",f"{composeMatrix2}.inputScale")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{create_obj_dic[('Grp','C','ChestIK')]}.offsetParentMatrix",f=True)
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.inverseMatrix",f"{multMatrix}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.matrix",f"{multMatrix}.matrixIn[2]")
-        cmds.connectAttr(f"{multMatrix}.matrixSum",f"{create_obj_dic[('Con','C','ChestIK')]}.offsetParentMatrix",f=True)
-        cmds.xform(create_obj_dic[('Grp','C','ChestIK')],m=chest_matrix,ws=True)
+    create_obj_dic |= autorig_utility.create_controller("ChestIK",root_obj,pos_CLR="C",con_shape="cube",con_color=(0.2,0.8,0.2),con_scl=(13,13,13),con_pos=(8,0,0),
+                                                            setting=setting,con_advance_scl=(True,True,True))
+    autorig_utility.postScale_parent(dvn_con=create_obj_dic[('Con','C','ChestIK')],dvn_grp=create_obj_dic[('Grp','C','ChestIK')]
+                                     ,drv_drv=create_obj_dic[('Drv','C','ChestFK')])
+    cmds.xform(create_obj_dic[('Grp','C','ChestIK')],m=chest_matrix,ws=True)
 
-        create_obj_dic |= autorig_utility.create_controller("SpineIK",root_obj,pos_CLR="C",con_shape="fatCross",con_color=(0.2,0.8,0.2),con_size=(4,4,4),con_rotate=(0,0,90),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True,rot_unable=(False,True,True))
-        #ノード作成
-        decomposeMatrix=cmds.createNode("decomposeMatrix")
-        composeMatrix1=cmds.createNode("composeMatrix")
-        composeMatrix2=cmds.createNode("composeMatrix")
-        composeMatrix3=cmds.createNode("composeMatrix")
-        composeMatrix4=cmds.createNode("composeMatrix")
-        multMatrix1=cmds.createNode("multMatrix")
-        multMatrix2=cmds.createNode("multMatrix")
-        aimMatrix=cmds.createNode("aimMatrix")
-        eulerToQuat1=cmds.createNode("eulerToQuat")
-        eulerToQuat2=cmds.createNode("eulerToQuat")
-        dotProduct1=cmds.createNode("dotProduct")
-        dotProduct2=cmds.createNode("dotProduct")
-        quatSlerp=cmds.createNode("quatSlerp")
-        quatProd1=cmds.createNode("quatProd")
-        quatProd2=cmds.createNode("quatProd")
-        quatInvert=cmds.createNode("quatInvert")
-        #アトリビュート作成
-        cmds.addAttr(f"{create_obj_dic[('Con','C','SpineIK')]}",ln="FollowTwist",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.FollowTwist",0.4,k=True)
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.FollowTwist",f"{quatSlerp}.inputT",f=True)
-        cmds.addAttr(f"{create_obj_dic[('Con','C','SpineIK')]}",ln="FollowStretch",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.FollowStretch",0.3,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con','C','ChestIK')]}",ln="StretchIK",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.StretchIK",1,k=True)
-        #計算
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix3}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix4}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.inputTranslateY",1)
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{decomposeMatrix}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{decomposeMatrix}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{aimMatrix}.inputMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.worldMatrix[0]",f"{aimMatrix}.primaryTargetMatrix")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix}.secondaryTargetMatrix")
-        cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{create_obj_dic[('Grp','C','SpineIK')]}.offsetParentMatrix")
-        cmds.setAttr(f"{aimMatrix}.secondaryMode",1)
-        cmds.setAttr(f"{composeMatrix2}.inputTranslateY",1)
-        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix4}.outputMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{multMatrix1}.matrixIn[2]")
-        cmds.connectAttr(f"{decomposeMatrix}.outputScale",f"{composeMatrix3}.inputScale")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix3}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.matrix",f"{multMatrix2}.matrixIn[2]")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{create_obj_dic[('Con','C','SpineIK')]}.offsetParentMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.rotate",f"{eulerToQuat1}.inputRotate")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.rotateOrder",f"{eulerToQuat1}.inputRotateOrder")
-        cmds.connectAttr(f"{eulerToQuat1}.outputQuatX",f"{dotProduct1}.input1X")
-        cmds.connectAttr(f"{eulerToQuat1}.outputQuatY",f"{dotProduct1}.input1Y")
-        cmds.connectAttr(f"{eulerToQuat1}.outputQuatZ",f"{dotProduct1}.input1Z")
-        cmds.setAttr(f"{dotProduct1}.input2X",1)
-        cmds.connectAttr(f"{quatProd2}.outputQuat",f"{composeMatrix4}.inputQuat")
+    create_obj_dic |= autorig_utility.create_controller("SpineIK",root_obj,pos_CLR="C",con_shape="fatCross",con_color=(0.2,0.8,0.2),con_scl=(4,4,4),con_rot=(0,0,90),
+                                                            setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True),con_advance_rot=(False,True,True))
+    aimMatrix = cmds.createNode("aimMatrix")
+    multMatrix1 = cmds.createNode("multMatrix")
+    multMatrix2 = cmds.createNode("multMatrix")
+    multMatrix3 = cmds.createNode("multMatrix")
+    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
+    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+    dotProduct1 = cmds.createNode("dotProduct")
+    dotProduct2 = cmds.createNode("dotProduct")
+    composeMatrix1 = cmds.createNode("composeMatrix")
+    composeMatrix2 = cmds.createNode("composeMatrix")
+    quatToEuler1 = cmds.createNode("quatToEuler")
+    quatToEuler2 = cmds.createNode("quatToEuler")
+    floatMath1 = cmds.createNode("floatMath")
+    floatMath2 = cmds.createNode("floatMath")
+    floatMath3 = cmds.createNode("floatMath")
+    
+    cmds.setAttr(F"{aimMatrix}.secondaryInputAxisZ",1)
+    cmds.setAttr(F"{aimMatrix}.secondaryInputAxisY",0)
+    cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix2}.matrixIn[0]")
+    cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
+    cmds.setAttr(f"{aimMatrix}.secondaryMode",1)
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{aimMatrix}.inputMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.worldMatrix[0]",f"{aimMatrix}.primaryTargetMatrix")
+    cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix}.secondaryTargetMatrix")
+    cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
+    cmds.setAttr(f"{composeMatrix1}.inputTranslateZ",1)
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.matrix",f"{multMatrix3}.matrixIn[0]")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestFK')]}.matrix",f"{multMatrix3}.matrixIn[1]")
+    cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','Hips')]}.matrix",f"{decomposeMatrix2}.inputMatrix")
+    cmds.setAttr(f"{dotProduct1}.input2X",1)
+    cmds.setAttr(f"{dotProduct2}.input2X",1)
+    cmds.connectAttr(f"{decomposeMatrix1}.outputQuatX",f"{dotProduct1}.input1X")
+    cmds.connectAttr(f"{decomposeMatrix1}.outputQuatY",f"{dotProduct1}.input1Y")
+    cmds.connectAttr(f"{decomposeMatrix1}.outputQuatZ",f"{dotProduct1}.input1Z")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputQuatX",f"{dotProduct2}.input1X")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputQuatY",f"{dotProduct2}.input1Y")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputQuatZ",f"{dotProduct2}.input1Z")
+    cmds.connectAttr(f"{dotProduct1}.output",f"{quatToEuler1}.inputQuatX")
+    cmds.connectAttr(f"{dotProduct2}.output",f"{quatToEuler2}.inputQuatX")
+    cmds.connectAttr(f"{decomposeMatrix1}.outputQuatW",f"{quatToEuler1}.inputQuatW")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputQuatW",f"{quatToEuler2}.inputQuatW")
+    cmds.connectAttr(F"{quatToEuler1}.outputRotateX",f"{floatMath1}.floatA")
+    cmds.connectAttr(F"{quatToEuler2}.outputRotateX",f"{floatMath2}.floatA")
+    cmds.setAttr(F"{floatMath1}.operation",2)
+    cmds.setAttr(F"{floatMath2}.operation",2)
+    cmds.setAttr(F"{floatMath3}.operation",0)
+    cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath3}.floatA")
+    cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath3}.floatB")
+    cmds.connectAttr(f"{floatMath3}.outFloat",f"{composeMatrix2}.inputRotateX")
+    cmds.addAttr(create_obj_dic[('Con','C','SpineIK')],ln="followChest",at="float",max=1,min=0,k=True)
+    cmds.addAttr(create_obj_dic[('Con','C','SpineIK')],ln="followHips",at="float",max=1,min=0,k=True)
+    cmds.connectAttr(F"{create_obj_dic[('Con','C','SpineIK')]}.followChest",f"{floatMath1}.floatB")
+    cmds.connectAttr(F"{create_obj_dic[('Con','C','SpineIK')]}.followHips",f"{floatMath2}.floatB")
 
-        cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatSlerp}.input2Quat")
+    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
+    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+    composeMatrix1 = cmds.createNode("composeMatrix")
+    composeMatrix2 = cmds.createNode("composeMatrix")
+    multMatrix1 = cmds.createNode("multMatrix")
+    distanceBetween1 = cmds.createNode("distanceBetween")
+    distanceBetween2 = cmds.createNode("distanceBetween")
+    floatComposite = cmds.createNode("floatComposite")
+    floatMath1 = cmds.createNode("floatMath")
+    floatMath2 = cmds.createNode("floatMath")
+    floatMath3 = cmds.createNode("floatMath")
+    cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
+    cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
+    cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
+    cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
+    cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{create_obj_dic[('Grp','C','SpineIK')]}.offsetParentMatrix")
+    cmds.connectAttr(F"{create_obj_dic[('Con','C','SpineIK')]}.inverseMatrix",f"{multMatrix1}.matrixIn[0]")
+    cmds.connectAttr(F"{composeMatrix2}.outputMatrix",f"{multMatrix1}.matrixIn[1]")
+    cmds.connectAttr(F"{create_obj_dic[('Con','C','SpineIK')]}.matrix",f"{multMatrix1}.matrixIn[2]")
+    cmds.connectAttr(F"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[3]")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{decomposeMatrix2}.inputMatrix")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputScaleY",f"{composeMatrix2}.inputScaleY")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputScaleZ",f"{composeMatrix2}.inputScaleZ")
+    cmds.setAttr(F"{floatMath1}.operation",2)
+    cmds.connectAttr(f"{floatMath1}.outFloat",f"{composeMatrix2}.inputScaleX")
+    cmds.connectAttr(F"{decomposeMatrix2}.outputScaleX",f"{floatMath1}.floatA")
+    cmds.connectAttr(F"{floatComposite}.outFloat",f"{floatMath1}.floatB")
+    cmds.setAttr(f"{floatComposite}.operation",2)
+    cmds.setAttr(f"{floatComposite}.floatA",1)
+    cmds.setAttr(F"{floatMath2}.operation",3)
+    cmds.connectAttr(f"{floatMath2}.outFloat",f"{floatComposite}.floatB")
+    cmds.connectAttr(F"{distanceBetween2}.distance",f"{floatMath2}.floatA")
+    cmds.connectAttr(F"{distanceBetween1}.distance",f"{floatMath2}.floatB")
+    cmds.connectAttr(F"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix1")
+    cmds.connectAttr(F"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{distanceBetween2}.inMatrix1")
+    cmds.connectAttr(F"{create_obj_dic[('Drv','C','ChestFK')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix2")
+    cmds.connectAttr(F"{create_obj_dic[('Drv','C','ChestIK')]}.worldMatrix[0]",f"{distanceBetween2}.inMatrix2")
+    cmds.setAttr(F"{floatMath3}.operation",2)
+    cmds.connectAttr(f"{floatMath3}.outFloat",f"{floatComposite}.factor")
+    cmds.connectAttr(f"{obj_dic[('Con','C','Setting')]}.advance",f"{floatMath3}.floatA")
+    cmds.addAttr(create_obj_dic[('Con','C','SpineIK')],ln="stretch",at="float",max=1,min=0,k=True)
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.stretch",f"{floatMath3}.floatB")
 
-        cmds.connectAttr(f"{dotProduct1}.output",f"{quatProd1}.input1QuatX")
-        cmds.connectAttr(f"{eulerToQuat1}.outputQuatW",f"{quatProd1}.input1QuatW")
-        cmds.connectAttr(f"{quatInvert}.outputQuat",f"{quatProd1}.input2Quat")
+    min = cmds.createNode("min")
+    colorComposite1 = cmds.createNode("colorComposite")
+    colorMath1 = cmds.createNode("colorMath")
+    distanceBetween1 = cmds.createNode("distanceBetween")
+    distanceBetween2 = cmds.createNode("distanceBetween")
+    multMatrix1 = cmds.createNode("multMatrix")
+    multMatrix2 = cmds.createNode("multMatrix")
+    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
+    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+    composeMatrix1 = cmds.createNode("composeMatrix")
+    floatMath1 = cmds.createNode("floatMath")
+    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.tx",f"{create_obj_dic[('Drv','C','ChestIK')]}.tx")
+    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.ty",f"{create_obj_dic[('Drv','C','ChestIK')]}.ty")
+    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.tz",f"{create_obj_dic[('Drv','C','ChestIK')]}.tz")
+    cmds.addAttr(create_obj_dic[('Con','C','ChestIK')],ln="stretch",at="float",max=1,min=0,k=True)
+    cmds.setAttr(f"{floatMath1}.operation",3)
+    cmds.setAttr(f"{colorMath1}.operation",3)
+    cmds.setAttr(f"{colorComposite1}.operation",2)
+    cmds.connectAttr(F"{colorComposite1}.outColor",f"{create_obj_dic[('Drv','C','ChestIK')]}.t")
+    cmds.connectAttr(f"{min}.output",F"{colorComposite1}.factor")
+    cmds.connectAttr(f"{obj_dic[('Con','C','Setting')]}.advance",f"{min}.input[0]")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.stretch",f"{min}.input[1]")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.t",F"{colorComposite1}.colorB")
+    cmds.connectAttr(f"{decomposeMatrix2}.outputTranslate",F"{colorComposite1}.colorA")
+    cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix2}.inputMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix1")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{distanceBetween2}.inMatrix1")
+    cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[0]")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldMatrix[0]",f"{multMatrix2}.matrixIn[1]")
+    cmds.connectAttr(f"{create_obj_dic[('Grp','C','ChestIK')]}.worldInverseMatrix[0]",f"{multMatrix2}.matrixIn[2]")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.worldMatrix[0]",f"{multMatrix1}.matrixIn[0]")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineFK')]}.worldInverseMatrix[0]",f"{multMatrix1}.matrixIn[1]")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix2")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestFK')]}.worldMatrix[0]",f"{distanceBetween2}.inMatrix2")
+    cmds.connectAttr(F"{distanceBetween1}.distance",f"{floatMath1}.floatA")
+    cmds.connectAttr(F"{distanceBetween2}.distance",f"{floatMath1}.floatB")
+    cmds.connectAttr(F"{floatMath1}.outFloat",f"{colorMath1}.colorBR")
+    cmds.connectAttr(F"{floatMath1}.outFloat",f"{colorMath1}.colorBG")
+    cmds.connectAttr(F"{floatMath1}.outFloat",f"{colorMath1}.colorBB")
+    cmds.connectAttr(F"{multMatrix1}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
+    cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",F"{colorMath1}.colorA")
+    cmds.connectAttr(f"{colorMath1}.outColor",f"{composeMatrix1}.inputTranslate")
 
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','Hips')]}.rotate",f"{eulerToQuat2}.inputRotate")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','Hips')]}.rotateOrder",f"{eulerToQuat2}.inputRotateOrder")
-        cmds.connectAttr(f"{eulerToQuat2}.outputQuatX",f"{dotProduct2}.input1X")
-        cmds.connectAttr(f"{eulerToQuat2}.outputQuatY",f"{dotProduct2}.input1Y")
-        cmds.connectAttr(f"{eulerToQuat2}.outputQuatZ",f"{dotProduct2}.input1Z")
-        cmds.setAttr(f"{dotProduct2}.input2X",1)
-        cmds.connectAttr(f"{dotProduct2}.output",f"{quatInvert}.inputQuatX")
-        cmds.connectAttr(f"{eulerToQuat2}.outputQuatW",f"{quatInvert}.inputQuatW")
-        cmds.connectAttr(f"{dotProduct2}.output",f"{quatProd2}.input2QuatX")
-        cmds.connectAttr(f"{eulerToQuat2}.outputQuatW",f"{quatProd2}.input2QuatW")
-        cmds.connectAttr(f"{quatSlerp}.outputQuat",f"{quatProd2}.input1Quat")
-
-        #接続
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Hips')]}",joint_dic["c_hips"])
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','ChestIK')]}",joint_dic["c_chest"])
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','SpineIK')]}",joint_dic["c_spine"])
-
-        #後半
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-        colorMath1 = cmds.createNode("colorMath")
-        cmds.setAttr(f"{colorMath1}.operation",1)
-        colorMath2 = cmds.createNode("colorMath")
-        cmds.setAttr(f"{colorMath2}.operation",2)
-        colorMath3 = cmds.createNode("colorMath")
-        length1 = cmds.createNode("length")
-        floatMath1 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath1}.operation",3)
-        floatMath2 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath2}.operation",2)
-        floatMath3 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath3}.floatB",-1)
-        cmds.setAttr(f"{floatMath3}.operation",2)
-        floatMath4 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath4}.floatB",1)
-        floatMath5 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath5}.operation",3)
-        floatMath6 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath6}.floatB",-1)
-        floatMath7 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath7}.operation",2)
-        floatMath8 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath8}.operation",2)
-        floatMath9 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath9}.operation",2)
-        floatMath10 = cmds.createNode("floatMath")
-        cmds.setAttr(f"{floatMath10}.floatB",1)
-        blendColors1 = cmds.createNode("blendColors")
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        multMatrix3 = cmds.createNode("multMatrix")
-        inverseMatrix1 = cmds.createNode("inverseMatrix")
-        distanceBetween1 = cmds.createNode("distanceBetween")
-        distanceBetween2 = cmds.createNode("distanceBetween")
-        #接続
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.worldMatrix[0]",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineIK')]}.worldMatrix[0]",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{colorMath1}.colorA")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputTranslate",f"{colorMath1}.colorB")
-        cmds.connectAttr(f"{colorMath1}.outColor",f"{length1}.input")
-        cmds.connectAttr(f"{length1}.output",f"{floatMath1}.floatB")
-        cmds.connectAttr(f"{distanceBetween2}.distance",f"{floatMath1}.floatA")
-        cmds.connectAttr(f"{floatMath1}.outFloat",f"{colorMath2}.colorBR")
-        cmds.connectAttr(f"{floatMath1}.outFloat",f"{colorMath2}.colorBG")
-        cmds.connectAttr(f"{floatMath1}.outFloat",f"{colorMath2}.colorBB")
-        cmds.connectAttr(f"{colorMath1}.outColor",f"{colorMath2}.colorA")
-        cmds.connectAttr(f"{colorMath2}.outColor",f"{colorMath3}.colorA")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputTranslate",f"{colorMath3}.colorB")
-        cmds.connectAttr(f"{colorMath3}.outColor",f"{blendColors1}.color1")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{blendColors1}.color2")
-        cmds.connectAttr(f"{floatMath4}.outFloat",f"{blendColors1}.blender")
-        cmds.connectAttr(f"{blendColors1}.output",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputShear",f"{composeMatrix1}.inputShear")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{composeMatrix1}.inputScale")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{joint_dic['c_chest']}.parentInverseMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{joint_dic['c_chest']}.WorldBindMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.WorldBindMatrix",f"{inverseMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{inverseMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{multMatrix2}.matrixIn[2]")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix3}.inputMatrix")
-        cmds.connectAttr(f"{joint_dic['c_chest']}.rotateOrder",f"{decomposeMatrix3}.inputRotateOrder")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputTranslate",f"{joint_dic['c_chest']}.t",f=True)
-        cmds.connectAttr(f"{decomposeMatrix3}.outputRotate",f"{joint_dic['c_chest']}.r",f=True)
-        cmds.connectAttr(f"{decomposeMatrix3}.outputScale",f"{joint_dic['c_chest']}.s",f=True)
-        cmds.connectAttr(f"{decomposeMatrix3}.outputShear",f"{joint_dic['c_chest']}.shear",f=True)
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.StretchIK",f"{floatMath2}.floatB")
-        cmds.connectAttr(f"{obj_dic[('Con','C','UnitySetting')]}.Scalable",f"{floatMath2}.floatA")
-        cmds.connectAttr(f"{floatMath2}.outFloat",f"{floatMath3}.floatA")
-        cmds.connectAttr(f"{floatMath3}.outFloat",f"{floatMath4}.floatA")
-        cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{distanceBetween1}.inMatrix1")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix2")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','SpineIK')]}.WorldBindMatrix",f"{distanceBetween2}.inMatrix1")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','ChestIK')]}.WorldBindMatrix",f"{distanceBetween2}.inMatrix2")
-        cmds.connectAttr(f"{distanceBetween1}.distance",f"{floatMath5}.floatA")
-        cmds.connectAttr(f"{distanceBetween2}.distance",f"{floatMath5}.floatB")
-        cmds.connectAttr(f"{floatMath5}.outFloat",f"{floatMath6}.floatA")
-        cmds.connectAttr(f"{floatMath6}.outFloat",f"{floatMath7}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.StretchIK",f"{floatMath7}.floatB")
-        cmds.connectAttr(f"{floatMath7}.outFloat",f"{floatMath8}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','SpineIK')]}.FollowStretch",f"{floatMath8}.floatB")
-        cmds.connectAttr(f"{floatMath8}.outFloat",f"{floatMath9}.floatA")
-        cmds.connectAttr(f"{obj_dic[('Con','C','UnitySetting')]}.Scalable",f"{floatMath9}.floatB")
-        cmds.connectAttr(f"{floatMath9}.outFloat",f"{floatMath10}.floatA")
-        cmds.connectAttr(f"{floatMath10}.outFloat",f"{composeMatrix2}.inputScaleX")
-        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
-        cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-        cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{create_obj_dic[('Grp','C','SpineIK')]}.offsetParentMatrix",f=True)
-
+    #接続
+    autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Hips')]}",joint_dic["c_hips"])
+    autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','ChestIK')]}",joint_dic["c_chest"])
+    autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','SpineIK')]}",joint_dic["c_spine"])
 
     return create_obj_dic
 
@@ -396,7 +315,7 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         作成したオブジェ入った辞書
     """
     create_obj_dic={}
-    unity_setting = obj_dic[('Con','C','UnitySetting')]
+    setting = obj_dic[('Con','C','Setting')]
 
     #親作成
     root_obj = cmds.group(em=True,n=f"Grp_C_Heads",p=parent)
@@ -405,210 +324,157 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     #matrix取得
     neck_matrix = cmds.xform(orientation_dic["c_neck"],m=True,ws=True,q=True)
     head_matrix = cmds.xform(orientation_dic["c_head"],m=True,ws=True,q=True)
-    if("l_eye" in orientation_dic):
-        eye_l_matrix = cmds.xform(orientation_dic["l_eye"],m=True,ws=True,q=True)
-    if("r_eye" in orientation_dic):
-        eye_r_matrix = cmds.xform(orientation_dic["r_eye"],m=True,ws=True,q=True)
+    chest_matrix = cmds.xform(orientation_dic["c_chest"],m=True,ws=True,q=True)
+    eye_l_matrix = cmds.xform(orientation_dic["l_eye"],m=True,ws=True,q=True)
+    eye_r_matrix = cmds.xform(orientation_dic["r_eye"],m=True,ws=True,q=True)
 
     #Neck
-    create_obj_dic |= autorig_utility.create_controller("Neck",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(3,3,3),con_rotate=(0,0,90),
-                                                        unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-    cmds.setAttr(f"{create_obj_dic[('Grp','C','Neck')]}.offsetParentMatrix",*cmds.xform(joint_dic["c_chest"],q=True,ws=True,m=True),typ="matrix")
+    create_obj_dic |= autorig_utility.create_controller("Neck",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(0,0,90),
+                                                        setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
     cmds.xform(create_obj_dic[('Grp','C','Neck')],m=neck_matrix,ws=True)
-    autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Neck')]}",joint_dic["c_neck"])
-    #アトリビュート作成
-    cmds.addAttr(create_obj_dic[('Con','C','Neck')],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-    cmds.setAttr(f"{create_obj_dic[('Con','C','Neck')]}.LayeredRotate",0,k=True)
-    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix5 = cmds.createNode("decomposeMatrix")
-    composeMatrix1 = cmds.createNode("composeMatrix")
-    cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-    multMatrix1 = cmds.createNode("multMatrix")
-    multMatrix2 = cmds.createNode("multMatrix")
-    quatProd1 = cmds.createNode("quatProd")
-    quatProd2 = cmds.createNode("quatProd")
-    quatSlerp = cmds.createNode("quatSlerp")
-    cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input1Quat")
-    cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatProd1}.input2Quat")
-    cmds.connectAttr(f"{create_obj_dic[('Grp','C','Neck')]}.matrix",f"{decomposeMatrix1}.inputMatrix")
-    cmds.connectAttr(f"{joint_dic['c_chest']}.worldMatrix[0]",f"{decomposeMatrix2}.inputMatrix")
-    cmds.connectAttr(f"{create_obj_dic[('Grp','C','Neck')]}.matrix",f"{multMatrix1}.matrixIn[0]")
-    cmds.connectAttr(f"{joint_dic['c_chest']}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
-    cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix3}.inputMatrix")
-    cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{decomposeMatrix4}.inputMatrix")
-    cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatSlerp}.input2Quat")
-    cmds.connectAttr(f"{create_obj_dic[('Con','C','Neck')]}.LayeredRotate",f"{quatSlerp}.inputT")
-    cmds.connectAttr(f"{quatSlerp}.outputQuat",f"{composeMatrix1}.inputQuat")
-    cmds.connectAttr(f"{create_obj_dic[('Grp','C','Neck')]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-    cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-    cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{create_obj_dic[('Grp','C','Neck')]}.offsetParentMatrix")
-    cmds.connectAttr(f"{decomposeMatrix3}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-    cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{composeMatrix1}.inputScale")
-    cmds.connectAttr(f"{decomposeMatrix4}.outputShear",f"{composeMatrix1}.inputShear")
-    cmds.connectAttr(f"{create_obj_dic[('Drv','C','Neck')]}.WorldBindMatrix",f"{decomposeMatrix5}.inputMatrix")
-    cmds.connectAttr(f"{decomposeMatrix5}.outputQuat",f"{quatProd2}.input1Quat")
-    cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd2}.input2Quat")
-    cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp}.input1Quat")
+    autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','ChestIK')],
+                                  rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
+                                  dvn_con=create_obj_dic[('Con','C','Neck')],dvn_grp=create_obj_dic[('Grp','C','Neck')])
+    cmds.setAttr(f"{create_obj_dic[('Con','C','Neck')]}.rotParent",1)
+
 
     #Head
-    create_obj_dic |= autorig_utility.create_controller("Head",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(8,8,8),con_position=(15,0,0),con_rotate=(0,0,90),
-                                                        unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-    cmds.setAttr(f"{create_obj_dic[('Grp','C','Head')]}.offsetParentMatrix",*cmds.xform(joint_dic["c_neck"],q=True,ws=True,m=True),typ="matrix")
-    cmds.xform(create_obj_dic[('Grp','C','Head')],m=head_matrix,ws=True)
+    create_obj_dic |= autorig_utility.create_controller("Head",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(8,8,8),con_pos=(15,0,0),con_rot=(0,0,90),
+                                                        setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),uniform_scale=True)
+    
+    outputComposeMatrix = cmds.createNode("composeMatrix")
+    cmds.setAttr(f"{outputComposeMatrix}.useEulerRotation",0)
+    cmds.connectAttr(f"{outputComposeMatrix}.outputMatrix",f"{create_obj_dic[('Grp','C','Head')]}.offsetParentMatrix",f=True)
+
+    cmds.addAttr(create_obj_dic[('Con','C','Head')],ln="neckMatrix",at="matrix")
+    matrix = OpenMaya.MMatrix(head_matrix)*OpenMaya.MMatrix(neck_matrix).inverse()
+    matrix = list(matrix)
+    cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.neckMatrix",matrix,typ="matrix",l=True)
+    multMatrix = cmds.createNode("multMatrix")
+    neckDecomposeMatrix = cmds.createNode("decomposeMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.neckMatrix",f"{multMatrix}.matrixIn[0]")
+    cmds.connectAttr(f"{create_obj_dic[('Drv','C','Neck')]}.worldMatrix[0]",f"{multMatrix}.matrixIn[1]")
+    cmds.connectAttr(f"{multMatrix}.matrixSum",f"{neckDecomposeMatrix}.inputMatrix")
+    cmds.connectAttr(f"{neckDecomposeMatrix}.outputTranslate",f"{outputComposeMatrix}.inputTranslate")
+
+    cmds.addAttr(create_obj_dic[('Con','C','Head')],ln="chestMatrix",at="matrix")
+    matrix = OpenMaya.MMatrix(head_matrix)*OpenMaya.MMatrix(chest_matrix).inverse()
+    matrix = list(matrix)
+    cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.chestMatrix",matrix,typ="matrix",l=True)
+    multMatrix = cmds.createNode("multMatrix")
+    chestDecomposeMatrix = cmds.createNode("decomposeMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.chestMatrix",f"{multMatrix}.matrixIn[0]")
+    cmds.connectAttr(f"{obj_dic[('Drv','C','ChestIK')]}.worldMatrix[0]",f"{multMatrix}.matrixIn[1]")
+    cmds.connectAttr(f"{multMatrix}.matrixSum",f"{chestDecomposeMatrix}.inputMatrix")
+
+    cmds.addAttr(create_obj_dic[('Con','C','Head')],ln="rootMatrix",at="matrix")
+    matrix = head_matrix
+    cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.rootMatrix",matrix,typ="matrix",l=True)
+    multMatrix = cmds.createNode("multMatrix")
+    rootDecomposeMatrix = cmds.createNode("decomposeMatrix")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.rootMatrix",f"{multMatrix}.matrixIn[0]")
+    cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{multMatrix}.matrixIn[1]")
+    cmds.connectAttr(f"{multMatrix}.matrixSum",f"{rootDecomposeMatrix}.inputMatrix")
+    cmds.connectAttr(f"{rootDecomposeMatrix}.outputScale",f"{outputComposeMatrix}.inputScale")
+
+    cmds.addAttr(F"{create_obj_dic[('Con','C','Head')]}",ln="rotParent",at="enum",en="root:chest:neck:",k=True)
+    cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",1)
+
+    rootCondition = cmds.createNode("condition")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",f"{rootCondition}.firstTerm")
+    cmds.setAttr(f"{rootCondition}.secondTerm",0)
+    cmds.setAttr(f"{rootCondition}.colorIfTrueR",1)
+    cmds.setAttr(f"{rootCondition}.colorIfFalseR",0)
+
+    chestCondition = cmds.createNode("condition")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",f"{chestCondition}.firstTerm")
+    cmds.setAttr(f"{chestCondition}.secondTerm",1)
+    cmds.setAttr(f"{chestCondition}.colorIfTrueR",1)
+    cmds.setAttr(f"{chestCondition}.colorIfFalseR",0)
+
+    neckCondition = cmds.createNode("condition")
+    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",f"{neckCondition}.firstTerm")
+    cmds.setAttr(f"{neckCondition}.secondTerm",2)
+    cmds.setAttr(f"{neckCondition}.colorIfTrueR",1)
+    cmds.setAttr(f"{neckCondition}.colorIfFalseR",0)
+
+    for i in {"X","Y","Z","W"}:
+        rootFloatMath = cmds.createNode("floatMath")
+        chestFloatMath = cmds.createNode("floatMath")
+        neckFloatMath = cmds.createNode("floatMath")
+        cmds.setAttr(F"{rootFloatMath}.operation",2)
+        cmds.setAttr(F"{chestFloatMath}.operation",2)
+        cmds.setAttr(F"{neckFloatMath}.operation",2)
+        cmds.connectAttr(f"{rootDecomposeMatrix}.outputQuat{i}",f"{rootFloatMath}.floatA")
+        cmds.connectAttr(f"{chestDecomposeMatrix}.outputQuat{i}",f"{chestFloatMath}.floatA")
+        cmds.connectAttr(f"{neckDecomposeMatrix}.outputQuat{i}",f"{neckFloatMath}.floatA")
+        cmds.connectAttr(f"{rootCondition}.outColorR",f"{rootFloatMath}.floatB")
+        cmds.connectAttr(f"{chestCondition}.outColorR",f"{chestFloatMath}.floatB")
+        cmds.connectAttr(f"{neckCondition}.outColorR",f"{neckFloatMath}.floatB")
+        addFloatMath1 = cmds.createNode("floatMath")
+        addFloatMath2 = cmds.createNode("floatMath")
+        cmds.setAttr(F"{addFloatMath1}.operation",0)
+        cmds.setAttr(F"{addFloatMath2}.operation",0)
+        cmds.connectAttr(f"{rootFloatMath}.outFloat",f"{addFloatMath1}.floatA")
+        cmds.connectAttr(f"{chestFloatMath}.outFloat",f"{addFloatMath1}.floatB")
+        cmds.connectAttr(f"{neckFloatMath}.outFloat",f"{addFloatMath2}.floatA")
+        cmds.connectAttr(f"{addFloatMath1}.outFloat",f"{addFloatMath2}.floatB")
+        cmds.connectAttr(f"{addFloatMath2}.outFloat",f"{outputComposeMatrix}.inputQuat{i}")
+
+    #接続
+    autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Neck')]}",joint_dic["c_neck"])
     autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Head')]}",joint_dic["c_head"])
-    #アトリビュート作成
-    cmds.addAttr(create_obj_dic[('Con','C','Head')],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-    cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.LayeredRotate",0,k=True)
-    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix5 = cmds.createNode("decomposeMatrix")
+
+    #目
+    eye_c_pos = [(v*0.5) + (cmds.xform(orientation_dic["r_eye"],t=True,ws=True,q=True)[n] * 0.5) for n,v in enumerate(cmds.xform(orientation_dic["l_eye"],t=True,ws=True,q=True))]
+    eye_c_pos[2]+=eye_c_pos[1]/2
+    create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR="C",con_color=(0.6,0.6,0),con_shape="scuare",con_scl=(3,3,6),con_pos=(0,0,0),con_rot=(90,0,90),
+                                                        setting=setting,uniform_scale=True)
+    cmds.xform(create_obj_dic[('Grp','C','EyeAim')],t=eye_c_pos,ws=True)
+    autorig_utility.switch_parent(dvn_grp=create_obj_dic[('Grp','C','EyeAim')],dvn_con=create_obj_dic[('Con','C','EyeAim')],
+                                  posA=obj_dic[('Drv','C','Root3')],posB=create_obj_dic[('Drv','C','Head')],
+                                  rotA=obj_dic[('Drv','C','Root3')],rotB=create_obj_dic[('Drv','C','Head')],
+                                  sclA=obj_dic[('Drv','C','Root3')],sclB=create_obj_dic[('Drv','C','Head')])
+    
+    lr = {}
+    lr["L"] = eye_l_matrix
+    lr["R"] = eye_r_matrix
+    move_matrix = [1,0,0,0,0,1,0,0,0,0,1,0,eye_c_pos[1]/2,0,0,1]
     composeMatrix1 = cmds.createNode("composeMatrix")
-    cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-    multMatrix1 = cmds.createNode("multMatrix")
-    multMatrix2 = cmds.createNode("multMatrix")
-    quatProd1 = cmds.createNode("quatProd")
-    quatProd2 = cmds.createNode("quatProd")
-    quatSlerp = cmds.createNode("quatSlerp")
-    cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input1Quat")
-    cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatProd1}.input2Quat")
-    cmds.connectAttr(f"{create_obj_dic[('Grp','C','Head')]}.matrix",f"{decomposeMatrix1}.inputMatrix")
-    cmds.connectAttr(f"{joint_dic['c_neck']}.worldMatrix[0]",f"{decomposeMatrix2}.inputMatrix")
-    cmds.connectAttr(f"{create_obj_dic[('Grp','C','Head')]}.matrix",f"{multMatrix1}.matrixIn[0]")
-    cmds.connectAttr(f"{joint_dic['c_neck']}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
-    cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix3}.inputMatrix")
-    cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{decomposeMatrix4}.inputMatrix")
-    cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatSlerp}.input2Quat")
-    cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.LayeredRotate",f"{quatSlerp}.inputT")
-    cmds.connectAttr(f"{quatSlerp}.outputQuat",f"{composeMatrix1}.inputQuat")
-    cmds.connectAttr(f"{create_obj_dic[('Grp','C','Head')]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-    cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-    cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{create_obj_dic[('Grp','C','Head')]}.offsetParentMatrix")
-    cmds.connectAttr(f"{decomposeMatrix3}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-    cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{composeMatrix1}.inputScale")
-    cmds.connectAttr(f"{decomposeMatrix4}.outputShear",f"{composeMatrix1}.inputShear")
-    cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.WorldBindMatrix",f"{decomposeMatrix5}.inputMatrix")
-    cmds.connectAttr(f"{decomposeMatrix5}.outputQuat",f"{quatProd2}.input1Quat")
-    cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd2}.input2Quat")
-    cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp}.input1Quat")
+    cmds.setAttr(F"{composeMatrix1}.inputTranslateY",1)
+    for i in lr:
+        if(i == "L"):
+            scl = 1
+        else:
+            scl = -1
+        create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR=i,con_color=(0.6,0.6,0),con_shape="circle",con_scl=(2,2,2),con_rot=(90,0,90),
+                                                            setting=setting,con_scl_lock=(True,True,True),con_rot_lock=(True,True,True),drv_scale_offset=(1,-1,1))
+        cmds.connectAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.worldMatrix",f"{create_obj_dic[('Grp',i,'EyeAim')]}.offsetParentMatrix")
+        matrix = OpenMaya.MMatrix(move_matrix)*OpenMaya.MMatrix(lr[i])
+        cmds.xform(create_obj_dic[('Grp',i,'EyeAim')],m=list(matrix),ws=True)
+        cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.r",*(0,0,0),typ="double3")
+        cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.s",*(scl,1,1),typ="double3")
 
-    if("l_eye" in orientation_dic and "r_eye" in orientation_dic):
-        eye_c_pos = [(v*0.5) + (cmds.xform(orientation_dic["r_eye"],t=True,ws=True,q=True)[n] * 0.5) for n,v in enumerate(cmds.xform(orientation_dic["l_eye"],t=True,ws=True,q=True))]
-        eye_c_pos[2]+=eye_c_pos[1]/2
-        create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR="C",con_color=(0.6,0.6,0),con_shape="scuare",con_size=(3,3,6),con_position=(0,0,0),con_rotate=(90,0,90),
-                                                            unity_setting=unity_setting,uniform_scale=True)
+        aim_target = cmds.group(em=True, name=f"Grp_{i}_EyeAimTarget", parent=root_obj)
+        cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.worldMatrix",f"{aim_target}.offsetParentMatrix")
+        cmds.xform(aim_target,m=lr[i],ws=True)
 
-        translate_vector = OpenMaya.MVector(eye_c_pos[0],eye_c_pos[1],eye_c_pos[2])
-        cmds.addAttr(create_obj_dic[('Drv','C','EyeAim')],ln="WorldBindMatrix",at="matrix")
-        cmds.setAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.WorldBindMatrix",*[1,0,0,0,0,1,0,0,0,0,1,0,translate_vector[0],translate_vector[1],translate_vector[2],1],typ="matrix")
-        cmds.setAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.WorldBindMatrix",lock=True, keyable=False)
-        cmds.addAttr(create_obj_dic[('Con','C','EyeAim')],ln="LayeredTranslate",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredTranslate",1,k=True)
-        cmds.addAttr(create_obj_dic[('Con','C','EyeAim')],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredRotate",1,k=True)
-        cmds.addAttr(create_obj_dic[('Con','C','EyeAim')],ln="LayeredScale",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredScale",1,k=True)
-
+        create_obj_dic |= autorig_utility.create_controller("Eye",root_obj,pos_CLR=i,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(2,2,2),con_rot=(90,90,0),
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,-1,1),uniform_scale=True)
+        
+        aimMatrix = cmds.createNode("aimMatrix")
         multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        multMatrix3 = cmds.createNode("multMatrix")
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        pairBlend1 = cmds.createNode("pairBlend")
-        pairBlend2 = cmds.createNode("pairBlend")
-        quatSlerp1 = cmds.createNode("quatSlerp")
-        quatSlerp2 = cmds.createNode("quatSlerp")
-        inverseMatrix1 = cmds.createNode("inverseMatrix")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
+        cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{aimMatrix}.inputMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Drv',i,'EyeAim')]}.worldMatrix[0]",f"{aimMatrix}.primaryTargetMatrix")
+        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
+        cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
+        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix}.secondaryTargetMatrix")
+        cmds.setAttr(f"{aimMatrix}.secondaryMode",1)
+        cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{create_obj_dic[('Grp',i,'Eye')]}.offsetParentMatrix")
 
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.WorldBindMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.worldMatrix",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.WorldBindMatrix",f"{inverseMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{decomposeMatrix4}.inputMatrix")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.WorldBindMatrix",f"{multMatrix3}.matrixIn[0]")
-        cmds.connectAttr(f"{inverseMatrix1}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatSlerp1}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{pairBlend1}.inRotate1")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{pairBlend1}.inTranslate1")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatSlerp1}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputScale",f"{pairBlend1}.inRotate2")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputShear",f"{composeMatrix1}.inputShear")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputTranslate",f"{pairBlend1}.inTranslate2")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredTranslate",f"{quatSlerp1}.inputT")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredTranslate",f"{pairBlend1}.weight")
-        cmds.connectAttr(f"{quatSlerp1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{pairBlend1}.outRotate",f"{composeMatrix1}.inputScale")
-        cmds.connectAttr(f"{pairBlend1}.outTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix3}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatSlerp2}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{pairBlend2}.inRotate1")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputShear",f"{pairBlend2}.inTranslate1")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatSlerp2}.input2Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredRotate",f"{quatSlerp2}.inputT")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputScale",f"{pairBlend2}.inRotate2")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputShear",f"{pairBlend2}.inTranslate2")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputTranslate",f"{composeMatrix2}.inputTranslate")
-        cmds.connectAttr(f"{pairBlend2}.outRotate",f"{composeMatrix2}.inputScale")
-        cmds.connectAttr(f"{pairBlend2}.outTranslate",f"{composeMatrix2}.inputShear")
-        cmds.connectAttr(f"{quatSlerp2}.outputQuat",f"{composeMatrix2}.inputQuat")
-        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{create_obj_dic[('Grp','C','EyeAim')]}.offsetParentMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Con','C','EyeAim')]}.LayeredScale",f"{pairBlend2}.weight")
-
-        lr = {}
-        lr["L"] = eye_l_matrix
-        lr["R"] = eye_r_matrix
-        move_matrix = [1,0,0,0,0,1,0,0,0,0,1,0,eye_c_pos[1]/2,0,0,1]
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        cmds.setAttr(F"{composeMatrix1}.inputTranslateY",1)
-        for i in lr:
-            if(i == "L"):
-                scl = 1
-            else:
-                scl = -1
-            create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR=i,con_color=(0.6,0.6,0),con_shape="circle",con_size=(2,2,2),con_rotate=(90,0,90),
-                                                                unity_setting=unity_setting,con_scl_lock=(False,False,False))
-            cmds.connectAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.worldMatrix",f"{create_obj_dic[('Grp',i,'EyeAim')]}.offsetParentMatrix")
-            matrix = OpenMaya.MMatrix(move_matrix)*OpenMaya.MMatrix(lr[i])
-            cmds.xform(create_obj_dic[('Grp',i,'EyeAim')],m=list(matrix),ws=True)
-            cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.r",*(0,0,0),typ="double3")
-            cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.s",*(scl,1,1),typ="double3")
-
-            aim_target = cmds.group(em=True, name=f"Grp_{i}_EyeAimTarget", parent=root_obj)
-            cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.worldMatrix",f"{aim_target}.offsetParentMatrix")
-            cmds.xform(aim_target,m=lr[i],ws=True)
-
-            create_obj_dic |= autorig_utility.create_controller("Eye",root_obj,pos_CLR=i,con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(2,2,2),con_rotate=(90,90,0),
-                                                                unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-            
-            aimMatrix = cmds.createNode("aimMatrix")
-            multMatrix1 = cmds.createNode("multMatrix")
-            cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{aimMatrix}.inputMatrix")
-            cmds.connectAttr(f"{create_obj_dic[('Drv',i,'EyeAim')]}.worldMatrix[0]",f"{aimMatrix}.primaryTargetMatrix")
-            cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-            cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
-            cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix}.secondaryTargetMatrix")
-            cmds.setAttr(f"{aimMatrix}.secondaryMode",1)
-            cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{create_obj_dic[('Grp',i,'Eye')]}.offsetParentMatrix")
-            cmds.setAttr(f"{create_obj_dic[('Grp',i,'Eye')]}.sy",scl)
-
-            cmds.setAttr(f"{create_obj_dic[('Drv',i,'Eye')]}.sz",scl)
-            
-            autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',i,'Eye')]}",joint_dic[f"{i.lower()}_eye"])
-
-            
+        cmds.setAttr(f"{create_obj_dic[('Grp',i,'Eye')]}.sy",scl)
+        
+        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',i,'Eye')]}",joint_dic[f"{i.lower()}_eye"])
 
     return create_obj_dic
 
@@ -630,7 +496,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         作成したオブジェ入った辞書
     """
     create_obj_dic={}
-    unity_setting = obj_dic[('Con','C','UnitySetting')]
+    setting = obj_dic[('Con','C','Setting')]
 
     #親作成
     root_center_obj = cmds.group(em=True,n=f"Grp_C_Leg",p=parent)
@@ -640,6 +506,10 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
     #左右繰り返し
     for clr in ("L","R"):
+        if(clr == "L"):
+            scl = 1
+        else:
+            scl = -1
         clr_lower = clr.lower()
         root_obj = cmds.group(em=True,n=f"Grp_{clr}_Leg",p=root_center_obj)
         create_obj_dic[('Grp',clr,'Leg')]=root_obj
@@ -651,31 +521,13 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         toes_matrix = cmds.xform(orientation_dic[f"{clr_lower}_toes"],m=True,ws=True,q=True)
 
         #LegRoot
-        create_obj_dic |= autorig_utility.create_controller("LegRoot",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="fatCross",con_size=(0.8,0.8,0.8),con_rotate=(90,0,0),con_position=(0,-4,0),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True,uniform_scale=True)
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{create_obj_dic[('Grp',clr,'LegRoot')]}.offsetParentMatrix")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.connectAttr(F"{obj_dic[('Drv','C','Hips')]}.worldMatrix",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(F"{decomposeMatrix2}.outputScale",f"{composeMatrix1}.inputScale")
-        cmds.connectAttr(F"{decomposeMatrix2}.outputShear",f"{composeMatrix1}.inputShear")
+        create_obj_dic |= autorig_utility.create_controller("LegRoot",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="fatCross",con_scl=(0.8,0.8,0.8),con_rot=(90,0,0),con_pos=(0,-4,0),
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),uniform_scale=True,drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'LegRoot')],m=upperLeg_matrix,ws=True)
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{create_obj_dic[('Grp',clr,'LegRoot')]}.offsetParentMatrix",f=True)
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'LegRoot')]}.inverseMatrix",F"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",F"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'LegRoot')]}.matrix",F"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Hips')]}.worldMatrix",F"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(F"{multMatrix1}.matrixSum",f"{decomposeMatrix1}.inputMatrix",f=True)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegRoot')]}.offsetParentMatrix",*(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1),typ="matrix")
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegRoot')]}.sy",-1)
+        autorig_utility.switch_parent(posA=obj_dic[('Drv','C','Hips')],sclA=obj_dic[('Drv','C','Root3')],
+                                      rotB=obj_dic[('Drv','C','Hips')],rotA=obj_dic[('Drv','C','Root3')],
+                                      dvn_con=create_obj_dic[('Con',clr,'LegRoot')],dvn_grp=create_obj_dic[('Grp',clr,'LegRoot')])
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LegRoot')]}.sy",scl)
 
         cmds.addAttr(create_obj_dic[('Drv',clr,'LegRoot')],ln="WorldBindMatrix",at="matrix")
         matrix = cmds.xform(create_obj_dic[('Drv',clr,'LegRoot')],q=True,ws=True,m=True)
@@ -718,7 +570,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
         #IKFK選択
         cmds.addAttr(create_obj_dic[('Con',clr,'LegRoot')],ln="IKFK",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",1,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",0,k=True)
         for i in [(upperLeg_fk,upperLeg_ik,joint_dic[f"{clr_lower}_upperLeg"]),(lowerLeg_fk,lowerLeg_ik,joint_dic[f"{clr_lower}_lowerLeg"]),
                 (foot_fk,foot_ik,joint_dic[f"{clr_lower}_foot"]),(toes_fk,toes_ik,joint_dic[f"{clr_lower}_toes"])]:
             decomposeMatrix1 = cmds.createNode("decomposeMatrix")
@@ -748,85 +600,53 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
             cmds.connectAttr(f"{pairBlend}.outRotate",f"{i[2]}.scale")
             cmds.connectAttr(f"{blendColors}.output",f"{i[2]}.shear")
 
-        #FK制作
-        decomposeMatrix_legRoot = cmds.createNode("decomposeMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix",f"{decomposeMatrix_legRoot}.inputMatrix")
-        fk_list = ([upperLeg_matrix,"LegRoot"],[upperLeg_matrix,"UpperLegFK",upperLeg_fk],[lowerLeg_matrix,"LowerLegFK",lowerLeg_fk],[foot_matrix,"FootFK",foot_fk],[toes_matrix,"ToesFK",toes_fk])
-        for i in range(4):
-            create_obj_dic |= autorig_utility.create_controller(fk_list[i+1][1],root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(3,3,3),con_rotate=(90,90,0),con_position=(9,0,0),
-                                                                unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-            cmds.connectAttr(F"{create_obj_dic[('Drv',clr,fk_list[i][1])]}.worldMatrix[0]",F"{create_obj_dic[('Grp',clr,fk_list[i+1][1])]}.offsetParentMatrix")
-            cmds.xform(create_obj_dic[('Grp',clr,fk_list[i+1][1])],m=fk_list[i+1][0],ws=True)
-            autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,fk_list[i+1][1])]}",fk_list[i+1][2])
+        #FK作成
+        #UpperLeg
+        create_obj_dic |= autorig_utility.create_controller("UpperLegFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+                                                                setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
+        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix[0]",f"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.offsetParentMatrix")
+        cmds.xform(create_obj_dic[('Grp',clr,'UpperLegFK')],m=upperLeg_matrix,ws=True)
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.sy",scl)
+        #lowerleg
+        create_obj_dic |= autorig_utility.create_controller("LowerLegFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+                                                                setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
+        cmds.xform(create_obj_dic[('Grp',clr,'LowerLegFK')],m=lowerLeg_matrix,ws=True)
+        autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'UpperLegFK')],
+                                      sclA=create_obj_dic[('Drv',clr,'LegRoot')],sclB=create_obj_dic[('Drv',clr,'UpperLegFK')],
+                                      rotA=create_obj_dic[('Drv',clr,'LegRoot')],rotB=create_obj_dic[('Drv',clr,'UpperLegFK')],
+                                      dvn_con=create_obj_dic[('Con',clr,'LowerLegFK')],dvn_grp=create_obj_dic[('Grp',clr,'LowerLegFK')],postScl=True)
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LowerLegFK')]}.sy",scl)
+        #foot
+        create_obj_dic |= autorig_utility.create_controller("FootFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+                                                                setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
+        cmds.xform(create_obj_dic[('Grp',clr,'FootFK')],m=foot_matrix,ws=True)
+        autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'LowerLegFK')],
+                                      sclA=create_obj_dic[('Drv',clr,'LegRoot')],sclB=create_obj_dic[('Drv',clr,'LowerLegFK')],
+                                      rotA=create_obj_dic[('Drv',clr,'LegRoot')],rotB=create_obj_dic[('Drv',clr,'LowerLegFK')],
+                                      dvn_con=create_obj_dic[('Con',clr,'FootFK')],dvn_grp=create_obj_dic[('Grp',clr,'FootFK')],postScl=True)
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'FootFK')]}.sy",scl)
+        #toes
+        create_obj_dic |= autorig_utility.create_controller("ToesFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+                                                                setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
+        cmds.xform(create_obj_dic[('Grp',clr,'ToesFK')],m=toes_matrix,ws=True)
+        autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'FootFK')],
+                                      sclA=create_obj_dic[('Drv',clr,'LegRoot')],sclB=create_obj_dic[('Drv',clr,'FootFK')],
+                                      rotA=create_obj_dic[('Drv',clr,'LegRoot')],rotB=create_obj_dic[('Drv',clr,'FootFK')],
+                                      dvn_con=create_obj_dic[('Con',clr,'ToesFK')],dvn_grp=create_obj_dic[('Grp',clr,'ToesFK')],postScl=True)
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'ToesFK')]}.sy",scl)
 
-            cmds.addAttr(create_obj_dic[('Con',clr,fk_list[i+1][1])],ln="LayeredScale",at="double",min=0,max=1,dv=0)
-            cmds.setAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.LayeredScale",0,k=True)
-            cmds.addAttr(create_obj_dic[('Con',clr,fk_list[i+1][1])],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-            cmds.setAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.LayeredRotate",1,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LowerLegFK')]}.rotParent",1)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FootFK')]}.rotParent",1)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'ToesFK')]}.rotParent",1)
+        autorig_utility.matrix_constraint(create_obj_dic[('Drv',clr,"UpperLegFK")],upperLeg_fk)
+        autorig_utility.matrix_constraint(create_obj_dic[('Drv',clr,"LowerLegFK")],lowerLeg_fk)
+        autorig_utility.matrix_constraint(create_obj_dic[('Drv',clr,"FootFK")],foot_fk)
+        autorig_utility.matrix_constraint(create_obj_dic[('Drv',clr,"ToesFK")],toes_fk)
 
-            decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-            decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-            decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-            decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-            decomposeMatrix5 = cmds.createNode("decomposeMatrix")
-            multMatrix1 = cmds.createNode("multMatrix")
-            multMatrix2 = cmds.createNode("multMatrix")
-            multMatrix3 = cmds.createNode("multMatrix")
-            composeMatrix1 = cmds.createNode("composeMatrix")
-            composeMatrix2 = cmds.createNode("composeMatrix")
-            blendColor1 = cmds.createNode("blendColors")
-            quatSlerp1 = cmds.createNode("quatSlerp")
-            quatProd1 = cmds.createNode("quatProd")
-            quatProd2 = cmds.createNode("quatProd")
-            quatProd3 = cmds.createNode("quatProd")
-            quatInvert1 = cmds.createNode("quatInvert")
-            cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-            cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-
-            if(clr=="R"):
-                cmds.setAttr(F"{create_obj_dic[('Drv',clr,fk_list[i+1][1])]}.sy",-1)
-                composeMatrix3 = cmds.createNode("composeMatrix")
-                cmds.setAttr(F"{composeMatrix3}.inputScaleY",-1)
-                cmds.connectAttr(f"{composeMatrix3}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
-                cmds.connectAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.inverseMatrix",f"{multMatrix3}.matrixIn[1]")
-                cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[2]")
-                cmds.connectAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.matrix",f"{multMatrix3}.matrixIn[3]")
-            else:
-                cmds.connectAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.inverseMatrix",f"{multMatrix3}.matrixIn[0]")
-                cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-                cmds.connectAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.matrix",f"{multMatrix3}.matrixIn[2]")
-            cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.offsetParentMatrix")
-
-            cmds.connectAttr(F"{multMatrix2}.matrixSum",F"{create_obj_dic[('Grp',clr,fk_list[i+1][1])]}.offsetParentMatrix",f=True)
-            cmds.connectAttr(F"{create_obj_dic[('Drv',clr,fk_list[i][1])]}.worldMatrix",f"{decomposeMatrix1}.inputMatrix")
-            cmds.connectAttr(F"{create_obj_dic[('Grp',clr,fk_list[i+1][1])]}.matrix",f"{multMatrix1}.matrixIn[0]")
-            cmds.connectAttr(F"{create_obj_dic[('Drv',clr,fk_list[i][1])]}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-            cmds.connectAttr(F"{create_obj_dic[('Drv',clr,fk_list[i][1])]}.WorldBindMatrix",f"{decomposeMatrix2}.inputMatrix")
-            cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatInvert1}.inputQuat")
-            cmds.connectAttr(f"{quatInvert1}.outputQuat",f"{quatProd1}.input1Quat")
-            cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input2Quat")
-            cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{blendColor1}.color1")
-            cmds.connectAttr(f"{decomposeMatrix_legRoot}.outputScale",f"{blendColor1}.color2")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.LayeredScale",f"{blendColor1}.blender")
-            cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatProd2}.input2Quat")
-            cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd2}.input1Quat")
-            cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd3}.input1Quat")
-            cmds.connectAttr(f"{create_obj_dic[('Drv',clr,fk_list[i+1][1])]}.WorldBindMatrix",f"{decomposeMatrix3}.inputMatrix")
-            cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{decomposeMatrix4}.inputMatrix")
-            cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd3}.input2Quat")
-            cmds.connectAttr(f"{quatProd3}.outputQuat",f"{quatSlerp1}.input1Quat")
-            cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp1}.input2Quat")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,fk_list[i+1][1])]}.LayeredRotate",f"{quatSlerp1}.inputT")
-            cmds.connectAttr(f"{blendColor1}.output",f"{composeMatrix2}.inputScale")
-            cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix5}.inputMatrix")
-            cmds.connectAttr(f"{decomposeMatrix5}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-            cmds.connectAttr(f"{quatSlerp1}.outputQuat",f"{composeMatrix1}.inputQuat")
-            cmds.connectAttr(f"{create_obj_dic[('Grp',clr,fk_list[i+1][1])]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-            cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-
-        #IK用ダミー
+        #IK作成
+        #IKdummy
         matrix = cmds.xform(upperLeg_fk,q=True,ws=True,m=True)
-        ik_parent = cmds.group(em=True,n=f"Grp_{clr}_LegIk",p=root_obj)
+        ik_parent = cmds.group(em=True,n=f"Grp_{clr}_LegIKJoint",p=root_obj)
         cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix",f"{ik_parent}.offsetParentMatrix")
         cmds.xform(ik_parent,m=matrix,ws=True)
 
@@ -843,61 +663,16 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         autorig_utility.matrix_constraint(lowerLeg_ik_dummy,lowerLeg_ik)
         autorig_utility.matrix_constraint(foot_ik_dummy,foot_ik)
 
-        #IKコントローラー
-        create_obj_dic |= autorig_utility.create_controller("LegIK",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="cube",con_size=(5,5,5),con_rotate=(90,90,0),
-                                                            unity_setting=unity_setting,uniform_scale=True,scale_unable=True)
-        hips_joint_matrix = cmds.xform(joint_dic[f"c_hips"],m=True,ws=True,q=True)
-
-        legIK_matrix=[1,0,0,0,0,1,0,0,0,0,1,0]
-        legIK_matrix.extend(list(OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(foot_matrix)).translation(OpenMaya.MSpace.kWorld)))
-        legIK_matrix.append(1)
-
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.offsetParentMatrix",*(-1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1),typ="matrix")
-            #cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.sx",-1)
-
-        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="parent",at="enum",en="Root:LegRoot",k=True)
-        blendMatrix = cmds.createNode("blendMatrix")
-        cmds.connectAttr(f"{blendMatrix}.outputMatrix",f"{create_obj_dic[('Grp',clr,'LegIK')]}.offsetParentMatrix")
-        #Root
-        cmds.addAttr(create_obj_dic[('Grp',clr,'LegIK')],ln="Root3Matrix",at="matrix")
-        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LegIK')]}.Root3Matrix",*legIK_matrix,typ="matrix")
-        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LegIK')]}.Root3Matrix",lock=True, keyable=False)
-        root_decomposeMatrix = cmds.createNode("decomposeMatrix")
-        root_multmatrix=cmds.createNode("multMatrix")
-        root_condition=cmds.createNode("condition")
-        cmds.setAttr(f"{root_condition}.colorIfFalseR",0)
-        cmds.setAttr(f"{root_condition}.colorIfTrueR",1)
-        cmds.setAttr(f"{root_condition}.secondTerm",0)
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'LegIK')]}.Root3Matrix",f"{root_multmatrix}.matrixIn[0]")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{root_multmatrix}.matrixIn[1]")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{root_decomposeMatrix}.inputMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.parent",f"{root_condition}.firstTerm")
-        cmds.connectAttr(f"{root_multmatrix}.matrixSum",f"{blendMatrix}.target[0].targetMatrix")
-        cmds.connectAttr(f"{root_condition}.outColorR",f"{blendMatrix}.target[0].weight")
-        #LegRoot
-        cmds.addAttr(create_obj_dic[('Grp',clr,'LegIK')],ln="LegRootMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(legIK_matrix)*OpenMaya.MMatrix(upperLeg_matrix).inverse()
-        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LegIK')]}.LegRootMatrix",list(matrix),typ="matrix")
-        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LegIK')]}.LegRootMatrix",lock=True, keyable=False)
-        hips_decomposeMatrix = cmds.createNode("decomposeMatrix")
-        hips_composeMatrix = cmds.createNode("composeMatrix")
-        cmds.setAttr(f"{hips_composeMatrix}.useEulerRotation",0)
-        hips_multmatrix=cmds.createNode("multMatrix")
-        hips_condition=cmds.createNode("condition")
-        cmds.setAttr(f"{hips_condition}.colorIfFalseR",0)
-        cmds.setAttr(f"{hips_condition}.colorIfTrueR",1)
-        cmds.setAttr(f"{hips_condition}.secondTerm",1)
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'LegIK')]}.LegRootMatrix",f"{hips_multmatrix}.matrixIn[0]")
-        cmds.connectAttr(f"{hips_composeMatrix}.outputMatrix",f"{hips_multmatrix}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix",f"{hips_decomposeMatrix}.inputMatrix")
-        cmds.connectAttr(f"{hips_decomposeMatrix}.outputQuat",f"{hips_composeMatrix}.inputQuat")
-        cmds.connectAttr(f"{hips_decomposeMatrix}.outputTranslate",f"{hips_composeMatrix}.inputTranslate")
-        cmds.connectAttr(f"{root_decomposeMatrix}.outputScale",f"{hips_composeMatrix}.inputScale")
-        cmds.connectAttr(f"{root_decomposeMatrix}.outputShear",f"{hips_composeMatrix}.inputShear")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.parent",f"{hips_condition}.firstTerm")
-        cmds.connectAttr(f"{hips_multmatrix}.matrixSum",f"{blendMatrix}.target[1].targetMatrix")
-        cmds.connectAttr(f"{hips_condition}.outColorR",f"{blendMatrix}.target[1].weight")
+        #メインコントローラー
+        create_obj_dic |= autorig_utility.create_controller("LegIK",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="cube",con_scl=(5,5,5),con_rot=(90,90,0),
+                                                            setting=setting,uniform_scale=True,connect_drv=False,con_advance_scl=(True,True,True))
+        cmds.xform(create_obj_dic[('Grp',clr,'LegIK')],ws=True,t=[foot_matrix[12],foot_matrix[13],foot_matrix[14]])
+        autorig_utility.switch_parent(posA=obj_dic[('Drv','C','Root3')],posB=create_obj_dic[('Drv',clr,'LegRoot')],
+                                      rotA=obj_dic[('Drv','C','Root3')],rotB=create_obj_dic[('Drv',clr,'LegRoot')],
+                                      sclA=create_obj_dic[('Drv',clr,'LegRoot')],
+                                      dvn_con=create_obj_dic[('Con',clr,'LegIK')],dvn_grp=create_obj_dic[('Grp',clr,'LegIK')])
+        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LegIK')]}.sx",scl)
+        legIK_matrix=cmds.xform(create_obj_dic[('Grp',clr,'LegIK')],q=True,ws=True,m=True)
 
         #先端回転
         toestip_matrix = cmds.xform(pos_dic[f"{clr_lower}_toestip"],m=True,ws=True,q=True)
@@ -906,26 +681,26 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         footoutside_matrix = cmds.xform(pos_dic[f"{clr_lower}_footoutside"],m=True,ws=True,q=True)
         sole_matrix = cmds.xform(pos_dic[f"{clr_lower}_sole"],m=True,ws=True,q=True)
         #matrix
-        cmds.addAttr(create_obj_dic[('Drv',clr,'LegIK')],ln="ToesTipMatrix",at="matrix")
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="ToesMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(toestip_matrix)*OpenMaya.MMatrix(legIK_matrix).inverse()
-        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.ToesTipMatrix",*matrix,typ="matrix",k=False,l=True)
-        cmds.addAttr(create_obj_dic[('Drv',clr,'LegIK')],ln="HeelMatrix",at="matrix")
+        cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.ToesMatrix",*matrix,typ="matrix",k=False,l=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="HeelMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(heel_matrix)*OpenMaya.MMatrix(legIK_matrix).inverse()
-        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.HeelMatrix",*matrix,typ="matrix",k=False,l=True)
-        cmds.addAttr(create_obj_dic[('Drv',clr,'LegIK')],ln="FootInsideMatrix",at="matrix")
+        cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.HeelMatrix",*matrix,typ="matrix",k=False,l=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="FootInsideMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(footinside_matrix)*OpenMaya.MMatrix(legIK_matrix).inverse()
-        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.FootInsideMatrix",*matrix,typ="matrix",k=False,l=True)
-        cmds.addAttr(create_obj_dic[('Drv',clr,'LegIK')],ln="FootOutsideMatrix",at="matrix")
+        cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.FootInsideMatrix",*matrix,typ="matrix",k=False,l=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="FootOutsideMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(footoutside_matrix)*OpenMaya.MMatrix(legIK_matrix).inverse()
-        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.FootOutsideMatrix",*matrix,typ="matrix",k=False,l=True)
-        cmds.addAttr(create_obj_dic[('Drv',clr,'LegIK')],ln="SoleMatrix",at="matrix")
+        cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.FootOutsideMatrix",*matrix,typ="matrix",k=False,l=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="SoleMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(sole_matrix)*OpenMaya.MMatrix(legIK_matrix).inverse()
-        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.SoleMatrix",*matrix,typ="matrix",k=False,l=True)
+        cmds.setAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.SoleMatrix",*matrix,typ="matrix",k=False,l=True)
         #アトリビュート作成
-        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="ToeRoll",at="double",dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToeRoll",0,k=True)
-        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="ToeRotate",at="double",dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToeRotate",0,k=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="ToesRoll",at="double",dv=0)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToesRoll",0,k=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="ToesRotate",at="double",dv=0)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToesRotate",0,k=True)
         cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="HeelRoll",at="double",dv=0)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.HeelRoll",0,k=True)
         cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="HeelRotate",at="double",dv=0)
@@ -935,457 +710,374 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.addAttr(create_obj_dic[('Con',clr,'LegIK')],ln="Tilt",at="double",dv=0)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",0,k=True)
         #計算
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        composeMatrix3 = cmds.createNode("composeMatrix")
-        composeMatrix4 = cmds.createNode("composeMatrix")
-        composeMatrix5 = cmds.createNode("composeMatrix")
+        toesComposeMatrix = cmds.createNode("composeMatrix")
+        heelComposeMatrix = cmds.createNode("composeMatrix")
+        soleComposeMatrix = cmds.createNode("composeMatrix")
+        insideComposeMatrix = cmds.createNode("composeMatrix")
+        outsideComposeMatrix = cmds.createNode("composeMatrix")
+        toesInverseMatrix = cmds.createNode("inverseMatrix")
+        heelInverseMatrix = cmds.createNode("inverseMatrix")
+        soleInverseMatrix = cmds.createNode("inverseMatrix")
+        insideInverseMatrix = cmds.createNode("inverseMatrix")
+        outsideInverseMatrix = cmds.createNode("inverseMatrix")
+        outMultMatrix = cmds.createNode("multMatrix")
+        cmds.connectAttr(f"{outMultMatrix}.matrixSum",f"{create_obj_dic[('Drv',clr,'LegIK')]}.offsetParentMatrix")
+        #con
         decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        condition1 = cmds.createNode("condition")
-        condition2 = cmds.createNode("condition")
-        multMatrix1 = cmds.createNode("multMatrix")
-        inverseMatrix1 = cmds.createNode("inverseMatrix")
-        inverseMatrix2 = cmds.createNode("inverseMatrix")
-        inverseMatrix3 = cmds.createNode("inverseMatrix")
-        inverseMatrix4 = cmds.createNode("inverseMatrix")
-        inverseMatrix5 = cmds.createNode("inverseMatrix")
-        floatMath1 = cmds.createNode("floatMath")
-        cmds.setAttr(F"{floatMath1}.operation",2)
-        cmds.setAttr(F"{floatMath1}.floatB",-1)
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToeRoll",f"{composeMatrix2}.inputRotateX")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToeRotate",f"{composeMatrix2}.inputRotateY")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.SoleRotate",f"{composeMatrix5}.inputRotateY")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.HeelRoll",f"{floatMath1}.floatA")
-        cmds.connectAttr(f"{floatMath1}.outFloat",f"{composeMatrix1}.inputRotateX")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.HeelRotate",f"{composeMatrix1}.inputRotateY")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{condition1}.firstTerm")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{condition2}.firstTerm")
-        cmds.setAttr(F"{condition1}.secondTerm",0)
-        cmds.setAttr(F"{condition2}.secondTerm",0)
-        cmds.setAttr(F"{condition1}.operation",4)
-        cmds.setAttr(F"{condition2}.operation",2)
-        cmds.setAttr(F"{condition1}.colorIfFalseR",0)
-        cmds.setAttr(F"{condition2}.colorIfFalseR",0)
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{condition1}.colorIfTrueR")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{condition2}.colorIfTrueR")
-        cmds.connectAttr(f"{condition1}.outColorR",f"{composeMatrix3}.inputRotateZ")
-        cmds.connectAttr(f"{condition2}.outColorR",f"{composeMatrix4}.inputRotateZ")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputRotate",f"{create_obj_dic[('Drv',clr,'LegIK')]}.r")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{create_obj_dic[('Drv',clr,'LegIK')]}.t")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegIK')]}.rotateOrder",f"{decomposeMatrix1}.inputRotateOrder")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.FootInsideMatrix",f"{inverseMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.FootOutsideMatrix",f"{inverseMatrix2}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.HeelMatrix",f"{inverseMatrix3}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.ToesTipMatrix",f"{inverseMatrix4}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.SoleMatrix",f"{inverseMatrix5}.inputMatrix")
-        #multMatrix
+        composeMatrix1 = cmds.createNode("composeMatrix")
+        floatComposite1 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite1}.operation",2)
+        cmds.setAttr(f"{floatComposite1}.floatA",1)
+        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.matrix",f"{decomposeMatrix1}.inputMatrix")
+        cmds.connectAttr(F"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
+        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
+        cmds.connectAttr(F"{composeMatrix1}.outputMatrix",f"{outMultMatrix}.matrixIn[0]")
+        cmds.connectAttr(f"{decomposeMatrix1}.outputScaleX",f"{floatComposite1}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite1}.factor")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{composeMatrix1}.inputScaleX")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{composeMatrix1}.inputScaleY")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{composeMatrix1}.inputScaleZ")
+
         #inside
-        cmds.connectAttr(F"{inverseMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(F"{composeMatrix4}.outputMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.FootInsideMatrix",f"{multMatrix1}.matrixIn[2]")
+        insideCondition = cmds.createNode("condition")
+        cmds.setAttr(f"{insideCondition}.secondTerm",0)
+        cmds.setAttr(f"{insideCondition}.operation",2)
+        cmds.setAttr(f"{insideCondition}.colorIfFalseR",0)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{insideCondition}.colorIfTrueR")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{insideCondition}.firstTerm")
+        cmds.connectAttr(f"{insideCondition}.outColorR",f"{insideComposeMatrix}.inputRotateZ")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.FootInsideMatrix",f"{insideInverseMatrix}.inputMatrix")
+        cmds.connectAttr(f"{insideInverseMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[1]")
+        cmds.connectAttr(f"{insideComposeMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[2]")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.FootInsideMatrix",f"{outMultMatrix}.matrixIn[3]")
         #outside
-        cmds.connectAttr(F"{inverseMatrix2}.outputMatrix",f"{multMatrix1}.matrixIn[3]")
-        cmds.connectAttr(F"{composeMatrix3}.outputMatrix",f"{multMatrix1}.matrixIn[4]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.FootOutsideMatrix",f"{multMatrix1}.matrixIn[5]")
+        outsideCondition = cmds.createNode("condition")
+        cmds.setAttr(f"{outsideCondition}.secondTerm",0)
+        cmds.setAttr(f"{outsideCondition}.operation",4)
+        cmds.setAttr(f"{outsideCondition}.colorIfFalseR",0)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{outsideCondition}.colorIfTrueR")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.Tilt",f"{outsideCondition}.firstTerm")
+        cmds.connectAttr(f"{outsideCondition}.outColorR",f"{outsideComposeMatrix}.inputRotateZ")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.FootOutsideMatrix",f"{outsideInverseMatrix}.inputMatrix")
+        cmds.connectAttr(f"{outsideInverseMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[4]")
+        cmds.connectAttr(f"{outsideComposeMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[5]")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.FootOutsideMatrix",f"{outMultMatrix}.matrixIn[6]")
         #heel
-        cmds.connectAttr(F"{inverseMatrix3}.outputMatrix",f"{multMatrix1}.matrixIn[6]")
-        cmds.connectAttr(F"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[7]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.HeelMatrix",f"{multMatrix1}.matrixIn[8]")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.HeelRoll",f"{heelComposeMatrix}.inputRotateX")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.HeelRotate",f"{heelComposeMatrix}.inputRotateY")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.HeelMatrix",f"{heelInverseMatrix}.inputMatrix")
+        cmds.connectAttr(F"{heelInverseMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[7]")
+        cmds.connectAttr(F"{heelComposeMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[8]")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.HeelMatrix",f"{outMultMatrix}.matrixIn[9]")
         #toe
-        cmds.connectAttr(F"{inverseMatrix4}.outputMatrix",f"{multMatrix1}.matrixIn[9]")
-        cmds.connectAttr(F"{composeMatrix2}.outputMatrix",f"{multMatrix1}.matrixIn[10]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.ToesTipMatrix",f"{multMatrix1}.matrixIn[11]")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToesRoll",f"{toesComposeMatrix}.inputRotateX")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToesRotate",f"{toesComposeMatrix}.inputRotateY")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.ToesMatrix",f"{toesInverseMatrix}.inputMatrix")
+        cmds.connectAttr(F"{toesInverseMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[10]")
+        cmds.connectAttr(F"{toesComposeMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[11]")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.ToesMatrix",f"{outMultMatrix}.matrixIn[12]")
         #sole
-        cmds.connectAttr(F"{inverseMatrix5}.outputMatrix",f"{multMatrix1}.matrixIn[12]")
-        cmds.connectAttr(F"{composeMatrix5}.outputMatrix",f"{multMatrix1}.matrixIn[13]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.SoleMatrix",f"{multMatrix1}.matrixIn[14]")
-        if(clr=="R"):
-            composeMatrix5 = cmds.createNode(f"composeMatrix")
-            multMatrix2 = cmds.createNode("multMatrix")
-            cmds.setAttr(F"{composeMatrix5}.inputScaleX",-1)
-            cmds.connectAttr(F"{multMatrix1}.matrixSum",f"{multMatrix2}.matrixIn[0]")
-            cmds.connectAttr(F"{composeMatrix5}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-            cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix1}.inputMatrix",f=True)
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.sx",-1)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.SoleRotate",f"{soleComposeMatrix}.inputRotateY")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.SoleMatrix",f"{soleInverseMatrix}.inputMatrix")
+        cmds.connectAttr(F"{soleInverseMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[13]")
+        cmds.connectAttr(F"{soleComposeMatrix}.outputMatrix",f"{outMultMatrix}.matrixIn[14]")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.SoleMatrix",f"{outMultMatrix}.matrixIn[15]")
+
+        cmds.xform(create_obj_dic[('Drv',clr,'LegIK')],ws=True,m=toes_matrix)
 
         #Foot
-        create_obj_dic |= autorig_utility.create_controller("FootIK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.2),con_shape="scuare",con_size=(3,3,3),con_rotate=(0,0,90),
-                                                        unity_setting=unity_setting,scale_unable=True,pos_unable=True)
+        create_obj_dic |= autorig_utility.create_controller("FootIK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.2),con_shape="scuare",con_scl=(3,3,3),con_rot=(0,0,90),con_pos=(-5,0,0),
+                                                        setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,'FootIK')]}.offsetParentMatrix")
-        cmds.xform(create_obj_dic[('Grp',clr,'FootIK')],m=toes_matrix,ws=True)
-        rot = cmds.xform(orientation_dic[f"{clr_lower}_foot"],ro=True,q=True,ws=True)
-        pos = cmds.xform(orientation_dic[f"{clr_lower}_foot"],t=True,q=True,ws=True)
-        cmds.xform(create_obj_dic[('Grp',clr,'FootIK')],ro=rot,ws=True)
-        cmds.xform(create_obj_dic[('Drv',clr,'FootIK')],t=pos,ws=True)
-        if(clr=="R"):
-            cmds.setAttr(f"{create_obj_dic[('Grp',clr,'FootIK')]}.sy",-1)
-            cmds.setAttr(f"{create_obj_dic[('Drv',clr,'FootIK')]}.sy",-1)
+        cmds.xform(create_obj_dic[('Drv',clr,'FootIK')],ws=True,m=foot_matrix)
+        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FootIK')]}.t",0,0,0)
+        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FootIK')]}.s",1,scl,1)
+        #matrix
+        cmds.addAttr(create_obj_dic[('Drv',clr,'FootIK')],ln="FootMatrix",at="matrix")
+        matrix = OpenMaya.MMatrix(foot_matrix)*OpenMaya.MMatrix(toes_matrix).inverse()
+        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'FootIK')]}.FootMatrix",*matrix,typ="matrix",k=False,l=True)
+        
+        #legLength
+        cmds.addAttr(ik_parent,ln="LegLength",at="float")
+        upperLeg_pos = [upperLeg_matrix[12],upperLeg_matrix[13],upperLeg_matrix[14]]
+        lowerLeg_pos = [lowerLeg_matrix[12],lowerLeg_matrix[13],lowerLeg_matrix[14]]
+        foot_pos = [foot_matrix[12],foot_matrix[13],foot_matrix[14]]
+        cmds.setAttr(F"{ik_parent}.LegLength",math.dist(upperLeg_pos,lowerLeg_pos)+math.dist(lowerLeg_pos,foot_pos),k=False,l=True)
 
         #IKHandle作成
-        ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_LegIkHandle",p=create_obj_dic[('Drv',clr,'FootIK')])
+        ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_LegIkHandle",p=root_obj)
         ikHandle = cmds.ikHandle(sj=upperLeg_ik_dummy,ee=foot_ik_dummy)[0]
         ikHandle = cmds.parent(ikHandle,ikHandle_parent)[0]
-        cmds.setAttr(f"{ikHandle}.v",0,l=True)
-        cmds.setAttr(f"{ikHandle}.t",*(0,0,0),typ="double3",l=True)
-        cmds.setAttr(f"{ikHandle}.r",*(0,0,0),typ="double3",l=True)
-        cmds.setAttr(f"{ikHandle}.s",*(1,1,1),typ="double3",l=True)
+        cmds.setAttr(f"{ikHandle}.t",0,0,0)
+        cmds.setAttr(f"{ikHandle_parent}.v",0,l=True)
 
-        #poleVector作成
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        blendColors1 = cmds.createNode("blendColors")
-        foot_decomposeMatrix = cmds.createNode("decomposeMatrix")
-        legRoot_decomposeMatrix = cmds.createNode("decomposeMatrix")
-
-        inverseMatrix1 = cmds.createNode("inverseMatrix")
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        multMatrix1 = cmds.createNode("multMatrix")
-        quatSlerp = cmds.createNode("quatSlerp")
-
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.connectAttr(f"{root_decomposeMatrix}.outputScale",f"{composeMatrix1}.inputScale")
-        cmds.connectAttr(f"{root_decomposeMatrix}.outputShear",f"{composeMatrix1}.inputShear")
-        cmds.connectAttr(f"{root_decomposeMatrix}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{legRoot_decomposeMatrix}.outputTranslate",f"{blendColors1}.color1")
-        cmds.connectAttr(f"{foot_decomposeMatrix }.outputTranslate",f"{blendColors1}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'FootIK')]}.worldMatrix",f"{foot_decomposeMatrix}.inputMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix",f"{legRoot_decomposeMatrix}.inputMatrix")
-        cmds.setAttr(f"{blendColors1}.blender",0.5)
-        cmds.connectAttr(f"{blendColors1}.output",f"{composeMatrix1}.inputTranslate")
-        lowerLeg_pos = cmds.xform(orientation_dic[f"{clr_lower}_lowerLeg"],ws=True,t=True,q=True)
-        foot_pos = cmds.xform(orientation_dic[f"{clr_lower}_foot"],ws=True,t=True,q=True)
-        upperLeg_pos = cmds.xform(orientation_dic[f"{clr_lower}_upperLeg"],ws=True,t=True,q=True)
-        upperLeg_length = math.sqrt((upperLeg_pos[0]-lowerLeg_pos[0])**2+(upperLeg_pos[1]-lowerLeg_pos[1])**2+(upperLeg_pos[2]-lowerLeg_pos[2])**2)
-        lowerLeg_length = math.sqrt((foot_pos[0]-lowerLeg_pos[0])**2+(foot_pos[1]-lowerLeg_pos[1])**2+(foot_pos[2]-lowerLeg_pos[2])**2)
-
-        cmds.addAttr(create_obj_dic[('Drv',clr,'FootIK')],ln="WorldBindMatrix",at="matrix")
-        matrix = cmds.xform(create_obj_dic[('Grp',clr,'FootIK')],m=True,ws=True,q=True)
-        cmds.setAttr(f"{create_obj_dic[('Drv',clr,'FootIK')]}.WorldBindMatrix",*matrix,typ="matrix")
-
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'FootIK')]}.WorldBindMatrix",f"{inverseMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{inverseMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'FootIK')]}.parentMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{root_decomposeMatrix}.outputQuat",F"{quatSlerp}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",F"{quatSlerp}.input2Quat")
-        cmds.connectAttr(F"{quatSlerp}.outputQuat",f"{composeMatrix1}.inputQuat",f=True)
-        
-        #lowerLegに一番近いfootとupperLeg結んだ直線状の点特定
-        hiritu = upperLeg_length/(upperLeg_length+lowerLeg_length)
-        pos = [(foot_pos[i]-upperLeg_pos[i])*hiritu for i in range(3)]
-        length = math.sqrt(((pos[0]+upperLeg_pos[0])-lowerLeg_pos[0])**2+((pos[1]+upperLeg_pos[1])-lowerLeg_pos[1])**2+((pos[2]+upperLeg_pos[2])-lowerLeg_pos[2])**2)
-        baitiru = ((upperLeg_length+lowerLeg_length)*0.6)/length
-
-        pv_pos = [((lowerLeg_pos[i]-upperLeg_pos[i])-pos[i])*baitiru+(pos[i]+upperLeg_pos[i]) for i in range(3) ]
-
-
-        create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_size=(2,2,2),con_position=[pv_pos[i]-(pos[i]+upperLeg_pos[i]) for i in range(3)],
-                                                            unity_setting=unity_setting,con_scl_lock=(False,False,False))
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}",ln="LayeredRotate",at="float",max=1,min=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.LayeredRotate",1,k=True)
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.LayeredRotate",F"{quatSlerp}.inputT")
-        
-        cmds.connectAttr(F"{composeMatrix1}.outputMatrix",f"{create_obj_dic[('Grp',clr,'LegPV')]}.offsetParentMatrix")
-        cmds.xform(f"{create_obj_dic[('Grp',clr,'LegPV')]}",t=[pos[i]+upperLeg_pos[i] for i in range(3) ],ws=True)
-        cmds.xform(f"{create_obj_dic[('Drv',clr,'LegPV')]}",t=pv_pos,ws=True)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LegPV')]}.sx",-1)
-        cmds.poleVectorConstraint(create_obj_dic[('Drv',clr,'LegPV')],ikHandle)
-
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="twist",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",0,k=True)
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",f"{ikHandle}.twist")
-
-        #IKスケーリング
-        cmds.addAttr(ik_parent,ln="FootMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(foot_matrix)*OpenMaya.MMatrix(cmds.xform(ik_parent,q=True,ws=True,m=True)).inverse()
-        cmds.setAttr(F"{ik_parent}.FootMatrix",*list(matrix),typ="matrix",lock=True, keyable=False)
-
-        cmds.addAttr(ik_parent,ln="LowerLegMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(lowerLeg_matrix)*OpenMaya.MMatrix(cmds.xform(ik_parent,q=True,ws=True,m=True)).inverse()
-        cmds.setAttr(F"{ik_parent}.LowerLegMatrix",*list(matrix),typ="matrix",lock=True, keyable=False)
-        
         #アトリビュート作成
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="stretch",at="float",max=1,min=0)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.stretch",1,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="addUpperLegStretch",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addUpperLegStretch",0,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="addLowerLegStretch",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addLowerLegStretch",0,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="addLegStretch",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addLegStretch",0,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="multUpperLegStretch",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.multUpperLegStretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="multLowerLegStretch",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.multLowerLegStretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="multLegStretch",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.multLegStretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="legThickness",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legThickness",1,k=True)
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="legUniformScale",at="float")
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",1,k=True)
-
-        #計算
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        distanceBetween1 = cmds.createNode("distanceBetween")
-        distanceBetween2 = cmds.createNode("distanceBetween")
-        distanceBetween3 = cmds.createNode("distanceBetween")
-        blendColors1 = cmds.createNode("blendColors")
-        blendColors2 = cmds.createNode("blendColors")
-        condition1 = cmds.createNode("condition")
-        condition2 = cmds.createNode("condition")
-        condition3 = cmds.createNode("condition")
-        floatMath1 = cmds.createNode("floatMath")
-        floatMath2 = cmds.createNode("floatMath")
-        floatMath3 = cmds.createNode("floatMath")
-        floatMath4 = cmds.createNode("floatMath")
-        floatMath5 = cmds.createNode("floatMath")
-        floatMath6 = cmds.createNode("floatMath")
-        floatMath7 = cmds.createNode("floatMath")
-        floatMath8 = cmds.createNode("floatMath")
-
-        cmds.setAttr(f"{floatMath2}.operation",2)
-        cmds.setAttr(f"{floatMath3}.operation",3)
-        cmds.setAttr(f"{floatMath4}.operation",2)
-        cmds.setAttr(f"{condition1}.operation",2)
-        cmds.setAttr(f"{condition2}.operation",0)
-        cmds.setAttr(f"{condition3}.operation",0)
-        cmds.setAttr(f"{condition2}.secondTerm",1)
-        cmds.setAttr(f"{condition3}.secondTerm",1)
-        cmds.setAttr(f"{condition2}.colorIfFalseR",1)
-        cmds.setAttr(f"{condition2}.colorIfFalseG",1)
-        cmds.setAttr(f"{condition2}.colorIfFalseB",1)
-        cmds.setAttr(f"{condition3}.colorIfFalseR",1)
-        cmds.setAttr(f"{condition3}.colorIfFalseG",1)
-        cmds.setAttr(f"{condition3}.colorIfFalseB",1)
-
-        cmds.connectAttr(f"{ik_parent}.FootMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{ik_parent}.LowerLegMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{distanceBetween2}.inMatrix1")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{distanceBetween2}.inMatrix2")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{distanceBetween1}.inMatrix2")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{distanceBetween1}.inMatrix1")
-        cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{distanceBetween3}.inMatrix2")
-        cmds.connectAttr(f"{ikHandle_parent}.worldMatrix",f"{distanceBetween3}.inMatrix1")
-        cmds.connectAttr(f"{distanceBetween1}.distance",f"{floatMath1}.floatA")
-        cmds.connectAttr(f"{distanceBetween2}.distance",f"{floatMath1}.floatB")
-        cmds.connectAttr(f"{floatMath1}.outFloat",f"{floatMath2}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{floatMath2}.floatB")
-        cmds.connectAttr(f"{distanceBetween3}.distance",f"{floatMath3}.floatA")
-        cmds.connectAttr(f"{floatMath2}.outFloat",f"{floatMath3}.floatB")
-        cmds.connectAttr(f"{floatMath3}.outFloat",f"{floatMath4}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{floatMath4}.floatB")
-        cmds.connectAttr(f"{distanceBetween3}.distance",f"{condition1}.firstTerm")
-        cmds.connectAttr(f"{floatMath2}.outFloat",f"{condition1}.secondTerm")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{condition1}.colorIfFalseR")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{condition1}.colorIfFalseG")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{condition1}.colorIfFalseB")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{condition1}.colorIfTrueR")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{condition1}.colorIfTrueB")
-        cmds.connectAttr(f"{floatMath4}.outFloat",f"{condition1}.colorIfTrueG")
-        cmds.connectAttr(f"{condition1}.outColor",f"{blendColors1}.color1")
-        cmds.connectAttr(f"{condition1}.colorIfFalse",f"{blendColors1}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.stretch",f"{blendColors1}.blender")
-        cmds.connectAttr(f"{condition1}.outColor",f"{blendColors2}.color1")
-        cmds.connectAttr(f"{condition1}.colorIfFalse",f"{blendColors2}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.stretch",f"{blendColors2}.blender")
-        cmds.connectAttr(F"{blendColors1}.outputR",f"{condition2}.colorIfTrueR")
-        cmds.connectAttr(F"{blendColors1}.outputB",f"{condition2}.colorIfTrueB")
-        cmds.connectAttr(F"{blendColors2}.outputR",f"{condition3}.colorIfTrueR")
-        cmds.connectAttr(F"{blendColors2}.outputB",f"{condition3}.colorIfTrueB")
-
-        cmds.connectAttr(f"{blendColors1}.outputG",f"{floatMath5}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addUpperLegStretch",f"{floatMath5}.floatB")
-        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addLegStretch",f"{floatMath6}.floatB")
-        cmds.connectAttr(f"{floatMath6}.outFloat",f"{condition2}.colorIfTrueG")
-        cmds.connectAttr(f"{obj_dic[('Con','C','UnitySetting')]}.Scalable",f"{condition2}.firstTerm")
-
-        cmds.connectAttr(f"{blendColors2}.outputG",f"{floatMath7}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addLowerLegStretch",f"{floatMath7}.floatB")
-        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.addLegStretch",f"{floatMath8}.floatB")
-        cmds.connectAttr(f"{floatMath8}.outFloat",f"{condition3}.colorIfTrueG")
-        cmds.connectAttr(f"{obj_dic[('Con','C','UnitySetting')]}.Scalable",f"{condition3}.firstTerm")
-
-        #方向特定
-        x=[1,0,0,0,0,1,0,0,0,0,1,0,1,0,0,1]
-        y=[1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,1]
-        z=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,1]
-        lowerLeg_joint_matrix = cmds.xform(lowerLeg_fk,q=True,ws=True,m=True)
-        upperLeg_joint_matrix = cmds.xform(upperLeg_fk,q=True,ws=True,m=True)
-        hand_pos = cmds.xform(foot_fk,q=True,ws=True,t=True)
-        #Lower
-        lower_x_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(x)*OpenMaya.MMatrix(lowerLeg_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        lower_y_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(y)*OpenMaya.MMatrix(lowerLeg_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        lower_z_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(z)*OpenMaya.MMatrix(lowerLeg_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        lower_x_distance = [(lower_x_pos[i]-hand_pos[i])**2 for i in range(3)]
-        lower_y_distance = [(lower_y_pos[i]-hand_pos[i])**2 for i in range(3)]
-        lower_z_distance = [(lower_z_pos[i]-hand_pos[i])**2 for i in range(3)]
-        if(lower_x_distance<lower_y_distance and lower_x_distance<lower_z_distance):
-            cmds.connectAttr(f"{condition3}.outColorG",f"{lowerLeg_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerLeg_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerLeg_ik_dummy}.sz")
-        if(lower_y_distance<lower_x_distance and lower_y_distance<lower_z_distance):
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerLeg_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition3}.outColorG",f"{lowerLeg_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerLeg_ik_dummy}.sz")
-        if(lower_z_distance<lower_x_distance and lower_z_distance<lower_y_distance):
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerLeg_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerLeg_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition3}.outColorG",f"{lowerLeg_ik_dummy}.sz")
-        #Upper
-        upper_x_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(x)*OpenMaya.MMatrix(upperLeg_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        upper_y_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(y)*OpenMaya.MMatrix(upperLeg_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        upper_z_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(z)*OpenMaya.MMatrix(upperLeg_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        upper_x_distance = [(upper_x_pos[i]-hand_pos[i])**2 for i in range(3)]
-        upper_y_distance = [(upper_y_pos[i]-hand_pos[i])**2 for i in range(3)]
-        upper_z_distance = [(upper_z_pos[i]-hand_pos[i])**2 for i in range(3)]
-        if(upper_x_distance<upper_y_distance and upper_x_distance<upper_z_distance):
-            cmds.connectAttr(f"{condition2}.outColorG",f"{upperLeg_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperLeg_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperLeg_ik_dummy}.sz")
-        if(upper_y_distance<upper_x_distance and upper_y_distance<upper_z_distance):
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperLeg_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition2}.outColorG",f"{upperLeg_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperLeg_ik_dummy}.sz")
-        if(upper_z_distance<upper_x_distance and upper_z_distance<upper_y_distance):
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperLeg_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperLeg_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition2}.outColorG",f"{upperLeg_ik_dummy}.sz")
-
-        cmds.setAttr(F"{ik_parent}.v",0,k=False,l=True)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LowerLegFK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FootFK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'ToesFK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LegPV')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LegIK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FootIK')]}.v",l=False)
-
-        floatMath1 = cmds.createNode("floatMath")
-        floatMath2 = cmds.createNode("floatMath")
-        cmds.setAttr(F"{floatMath1}.operation",2)
-        cmds.setAttr(F"{floatMath1}.floatB",-1)
-        cmds.setAttr(F"{floatMath2}.floatB",1)
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",F"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.v")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",F"{create_obj_dic[('Grp',clr,'LowerLegFK')]}.v")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",F"{create_obj_dic[('Grp',clr,'FootFK')]}.v")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",F"{create_obj_dic[('Grp',clr,'ToesFK')]}.v")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",F"{floatMath1}.floatA")
-        cmds.connectAttr(F"{floatMath1}.outFloat",F"{floatMath2}.floatA")
-        cmds.connectAttr(f"{floatMath2}.outFloat",F"{create_obj_dic[('Grp',clr,'LegPV')]}.v")
-        cmds.connectAttr(f"{floatMath2}.outFloat",F"{create_obj_dic[('Grp',clr,'LegIK')]}.v")
-        cmds.connectAttr(f"{floatMath2}.outFloat",F"{create_obj_dic[('Grp',clr,'FootIK')]}.v")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",0)
-
-        vis_floatMath = floatMath2
-
-        #SmoothIK
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="smoothIK",at="float",max=1,min=0)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.smoothIK",0,k=True)
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="smoothRange",at="float",min=0)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.smoothRange",5,k=True)
-        floatMath1 = cmds.createNode("floatMath")
-        floatMath2 = cmds.createNode("floatMath")
-        floatMath3 = cmds.createNode("floatMath")
-        floatMath4 = cmds.createNode("floatMath")
-        floatMath5 = cmds.createNode("floatMath")
-        floatMath6 = cmds.createNode("floatMath")
-        floatMath7 = cmds.createNode("floatMath")
-        floatMath8 = cmds.createNode("floatMath")
-        floatMath9 = cmds.createNode("floatMath")
-        floatMath10 = cmds.createNode("floatMath")
-        floatMath11 = cmds.createNode("floatMath")
-        distanceBetween1 = cmds.createNode("distanceBetween")
-        distanceBetween2 = cmds.createNode("distanceBetween")
-        distanceBetween3 = cmds.createNode("distanceBetween")
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        aimMatrix1 = cmds.createNode("aimMatrix")
+
+        #計算
         multMatrix1 = cmds.createNode("multMatrix")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'FootIK')]}.FootMatrix",f"{multMatrix1}.matrixIn[0]")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'FootIK')]}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
+        distanceBetween1 = cmds.createNode("distanceBetween")
+        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{distanceBetween1}.inMatrix1")
+        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix2")
+        aimMatrix1 = cmds.createNode("aimMatrix")
+        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix1}.primaryTargetMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix[0]",f"{aimMatrix1}.inputMatrix")
+        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{aimMatrix1}.outputMatrix",f"{decomposeMatrix1}.inputMatrix")
+        composeMatrix1 = cmds.createNode("composeMatrix")
+        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
+        cmds.connectAttr(F"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
+        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
+        multMatrix2 = cmds.createNode("multMatrix")
+        composeMatrix2 = cmds.createNode("composeMatrix")
+        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix2}.matrixIn[0]")
+        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
+        floatMath1 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath1}.operation",2)
+        cmds.connectAttr(F"{decomposeMatrix1}.outputScaleX",f"{floatMath1}.floatA")
+        floatComposite1 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite1}.operation",2)
+        cmds.setAttr(f"{floatComposite1}.floatA",1)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{floatComposite1}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite1}.factor")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatMath1}.floatB")
+        floatMath2 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath2}.operation",3)
+        cmds.connectAttr(F"{distanceBetween1}.distance",f"{floatMath2}.floatA")
+        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath2}.floatB")
+        floatMath3 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath3}.operation",1)
+        cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath3}.floatA")
+        cmds.connectAttr(F"{ik_parent}.LegLength",f"{floatMath3}.floatB")
+        floatMath4 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath4}.operation",3)
+        cmds.connectAttr(F"{floatMath3}.outFloat",f"{floatMath4}.floatA")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.smoothRange",f"{floatMath4}.floatB")
+        floatMath5 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath5}.operation",0)
+        cmds.setAttr(f"{floatMath5}.floatB",1)
+        cmds.connectAttr(F"{floatMath4}.outFloat",f"{floatMath5}.floatA")
+        floatMath6 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath6}.operation",2)
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatA")
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatB")
+        floatMath7 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath7}.operation",2)
+        cmds.setAttr(f"{floatMath7}.floatB",-0.25)
+        cmds.connectAttr(F"{floatMath6}.outFloat",f"{floatMath7}.floatA")
+        floatMath8 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath8}.operation",0)
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath8}.floatA")
+        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatB")
+        floatMath9 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath9}.operation",2)
+        cmds.connectAttr(F"{floatMath8}.outFloat",f"{floatMath9}.floatA")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.smoothRange",f"{floatMath9}.floatB")
+        floatMath10 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath10}.operation",0)
+        cmds.connectAttr(F"{floatMath9}.outFloat",f"{floatMath10}.floatB")
+        floatMath11 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath11}.operation",1)
+        cmds.connectAttr(F"{floatMath11}.outFloat",f"{floatMath10}.floatA")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.smoothRange",f"{floatMath11}.floatB")
+        cmds.connectAttr(F"{ik_parent}.LegLength",f"{floatMath11}.floatA")
         condition1 = cmds.createNode("condition")
         condition2 = cmds.createNode("condition")
-        absolute = cmds.createNode("absolute")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-        cmds.setAttr(f"{floatMath1}.operation",2)
-        cmds.setAttr(f"{floatMath2}.operation",2)
-        cmds.setAttr(f"{floatMath3}.operation",2)
-        cmds.setAttr(f"{floatMath4}.operation",1)
-        cmds.setAttr(f"{floatMath5}.operation",3)
-        cmds.setAttr(f"{floatMath6}.operation",2)
-        cmds.setAttr(f"{floatMath7}.operation",0)
-        cmds.setAttr(f"{floatMath8}.operation",2)
-        cmds.setAttr(f"{floatMath9}.operation",2)
-        cmds.setAttr(f"{floatMath10}.operation",2)
-        cmds.setAttr(f"{condition1}.operation",2)
-        cmds.setAttr(f"{condition2}.operation",2)
-        cmds.setAttr(f"{condition1}.colorIfFalseR",0)
-        cmds.setAttr(f"{floatMath6}.floatB",0.5)
-        cmds.setAttr(f"{floatMath7}.floatB",0.5)
-        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.legUniformScale",f"{floatMath1}.floatA")
-        cmds.connectAttr(F"{ik_parent}.sx",f"{floatMath1}.floatB")
-        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath2}.floatA")
-        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath3}.floatA")
-        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.smoothRange",f"{floatMath2}.floatB")
-        cmds.connectAttr(F"{distanceBetween1}.distance",f"{floatMath11}.floatA")
-        cmds.connectAttr(F"{distanceBetween3}.distance",f"{floatMath11}.floatB")
-        cmds.connectAttr(F"{floatMath11}.outFloat",f"{floatMath3}.floatB")
-        cmds.connectAttr(f"{foot_ik_dummy}.WorldBindMatrix",f"{distanceBetween1}.inMatrix1")
-        cmds.connectAttr(f"{lowerLeg_ik_dummy}.WorldBindMatrix",f"{distanceBetween1}.inMatrix2")
-        cmds.connectAttr(f"{upperLeg_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix1")
-        cmds.connectAttr(f"{lowerLeg_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix2")
-        cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{distanceBetween2}.inMatrix1")
-        cmds.connectAttr(f"{ikHandle_parent}.parentMatrix",f"{distanceBetween2}.inMatrix2")
-        cmds.connectAttr(f"{ik_parent}.worldMatrix",f"{aimMatrix1}.primaryTargetMatrix")
-        cmds.connectAttr(f"{ikHandle_parent}.parentMatrix",f"{aimMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{aimMatrix1}.outputMatrix",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{ikHandle_parent}.parentInverseMatrix",f"{multMatrix1}.matrixIn[2]")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputShear",f"{composeMatrix1}.inputShear")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(F"{multMatrix1}.matrixSum",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputTranslate",f"{ikHandle_parent}.t")
-        cmds.connectAttr(F"{floatMath3}.outFloat",f"{floatMath4}.floatB")
-        cmds.connectAttr(F"{distanceBetween2}.distance",f"{floatMath4}.floatA")
-        cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath5}.floatB")
-        cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath9}.floatB")
-        cmds.connectAttr(F"{floatMath2}.outFloat",F"{condition2}.secondTerm")
-        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'LegIK')]}.smoothIK",f"{floatMath10}.floatB")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{floatMath5}.floatA")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{absolute}.input")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{condition1}.firstTerm")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{condition1}.colorIfTrueR")
-        cmds.connectAttr(f"{absolute}.output",f"{condition2}.firstTerm")
-        cmds.connectAttr(f"{condition1}.outColorR",f"{condition2}.colorIfTrueR")
-        cmds.connectAttr(F"{floatMath10}.outFloat",f"{composeMatrix2}.inputTranslateX")
-        cmds.connectAttr(F"{condition2}.outColorR",f"{floatMath10}.floatA")
-        cmds.connectAttr(f"{floatMath9}.outFloat",f"{condition2}.colorIfFalseR")
-        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatA")
-        cmds.connectAttr(F"{floatMath6}.outFloat",f"{floatMath7}.floatA")
-        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatA")
-        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatB")
-        cmds.connectAttr(F"{floatMath8}.outFloat",f"{floatMath9}.floatA")
+        cmds.setAttr(f"{condition1}.operation",3)
+        cmds.setAttr(f"{condition2}.operation",5)
+        cmds.setAttr(f"{condition1}.secondTerm",0)
+        cmds.setAttr(f"{condition2}.secondTerm",2)
+        cmds.connectAttr(F"{floatMath9}.outFloat",f"{condition1}.firstTerm")
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{condition2}.firstTerm")
+        cmds.connectAttr(F"{floatMath10}.outFloat",f"{condition1}.colorIfTrueR")
+        cmds.connectAttr(F"{floatMath2}.outFloat",f"{condition1}.colorIfFalseR")
+        cmds.connectAttr(F"{condition1}.outColorR",f"{condition2}.colorIfTrueR")
+        cmds.connectAttr(F"{ik_parent}.LegLength",f"{condition2}.colorIfFalseR")
+        floatMath12 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath12}.operation",2)
+        cmds.connectAttr(F"{condition2}.outColorR",f"{floatMath12}.floatA")
+        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath12}.floatB")
+        floatComposite2 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite2}.operation",2)
+        cmds.connectAttr(f"{distanceBetween1}.distance",f"{floatComposite2}.floatA")
+        cmds.connectAttr(f"{floatMath12}.outFloat",f"{floatComposite2}.floatB")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.smoothIK",f"{floatComposite2}.factor")
+        cmds.connectAttr(F"{floatComposite2}.outFloat",f"{composeMatrix2}.inputTranslateX")
+        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{ikHandle_parent}.offsetParentMatrix")
+        distanceBetween2 = cmds.createNode("distanceBetween")
+        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{distanceBetween2}.inMatrix1")
+        cmds.connectAttr(F"{ik_parent}.worldMatrix[0]",f"{distanceBetween2}.inMatrix2")
+        floatMath13 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath13}.operation",3)
+        cmds.connectAttr(F"{distanceBetween2}.distance",f"{floatMath13}.floatA")
+        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{ik_parent}.worldMatrix[0]",f"{decomposeMatrix2}.inputMatrix")
+        floatMath14 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath14}.operation",2)
+        cmds.connectAttr(F"{decomposeMatrix2}.outputScaleX",f"{floatMath14}.floatA")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatMath14}.floatB")
+        floatMath15 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath15}.operation",2)
+        cmds.connectAttr(F"{floatMath14}.outFloat",f"{floatMath15}.floatA")
+        cmds.connectAttr(F"{ik_parent}.LegLength",f"{floatMath15}.floatB")
+        cmds.connectAttr(F"{floatMath15}.outFloat",f"{floatMath13}.floatB")
+        floatMath16 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath16}.operation",2)
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatMath16}.floatB")
+        cmds.connectAttr(F"{floatMath13}.outFloat",f"{floatMath16}.floatA")
+        condition3 = cmds.createNode("condition")
+        cmds.setAttr(f"{condition3}.operation",2)
+        cmds.setAttr(f"{condition3}.secondTerm",1)
+        cmds.connectAttr(F"{floatMath16}.outFloat",f"{condition3}.colorIfTrueR")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{condition3}.colorIfFalseR")
+        cmds.connectAttr(F"{floatMath13}.outFloat",f"{condition3}.firstTerm")
+        floatComposite3 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite3}.operation",2)
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatComposite3}.floatA")
+        cmds.connectAttr(f"{condition3}.outColorR",f"{floatComposite3}.floatB")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.stretch",f"{floatComposite3}.factor")
+        floatComposite4 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite4}.operation",2)
+        cmds.setAttr(f"{floatComposite4}.floatA",1)
+        cmds.connectAttr(f"{floatComposite3}.outFloat",f"{floatComposite4}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite4}.factor")
+        floatMath17 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath17}.operation",2)
+        cmds.connectAttr(F"{floatComposite4}.outFloat",f"{floatMath17}.floatA")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.multLegStretch",f"{floatMath17}.floatB")
+        floatMath18 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath18}.operation",2)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.multLowerLegStretch",f"{floatMath18}.floatA")
+        cmds.connectAttr(f"{floatMath17}.outFloat",f"{floatMath18}.floatB")
+        floatMath19 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath19}.operation",2)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.multUpperLegStretch",f"{floatMath19}.floatA")
+        cmds.connectAttr(f"{floatMath17}.outFloat",f"{floatMath19}.floatB")
+        floatComposite5 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite5}.operation",2)
+        cmds.setAttr(f"{floatComposite5}.floatA",1)
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite5}.factor")
+        cmds.connectAttr(f"{floatMath18}.outFloat",f"{floatComposite5}.floatB")
+        floatComposite6 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite6}.operation",2)
+        cmds.setAttr(f"{floatComposite6}.floatA",1)
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite6}.factor")
+        cmds.connectAttr(f"{floatMath19}.outFloat",f"{floatComposite6}.floatB")
 
-        #アトリビュート作成
-        Drv_Obj=ikHandle
-        Dvn_Obj=foot_ik
+        floatComposite7 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite7}.operation",2)
+        cmds.setAttr(f"{floatComposite7}.floatA",1)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.legThickness",f"{floatComposite7}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite7}.factor")
+        floatMath20 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath20}.operation",2)
+        cmds.connectAttr(f"{floatComposite7}.outFloat",f"{floatMath20}.floatA")
+        cmds.connectAttr(f"{floatComposite1}.outFloat",f"{floatMath20}.floatB")
+
+        #UpperLeg
+        upperJoint_matrix = cmds.xform(upperLeg_ik_dummy,m=True,ws=True,q=True)
+        upper_vec = []
+        for i in [0,1,2]:
+            upper_vec.append(lowerLeg_pos[i]-upperLeg_pos[i])
+        magnitude = math.sqrt(sum(x**2 for x in upper_vec))
+        upper_vec = [x / magnitude for x in upper_vec]
+        x_vec = []
+        for i in [0,1,2]:
+            x_vec.append(upperJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in x_vec))
+        x_vec = [x / magnitude for x in x_vec]
+        y_vec = []
+        for i in [4,5,6]:
+            y_vec.append(upperJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in y_vec))
+        y_vec = [x / magnitude for x in y_vec]
+        z_vec = []
+        for i in [8,9,10]:
+            z_vec.append(upperJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in z_vec))
+        z_vec = [x / magnitude for x in z_vec]
+        dot=[]
+        for i in [x_vec,y_vec,z_vec]:
+            dot_product = abs(sum(x * y for x, y in zip(upper_vec, i)))
+            dot.append(dot_product)
+        if(dot[0]>dot[1] and dot[0]>dot[2]):
+            cmds.connectAttr(f"{floatComposite6}.outFloat",f"{upperLeg_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperLeg_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperLeg_ik_dummy}.sz")
+        elif(dot[1]>dot[0] and dot[1]>dot[2]):
+            cmds.connectAttr(f"{floatComposite6}.outFloat",f"{upperLeg_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperLeg_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperLeg_ik_dummy}.sz")
+        else:
+            cmds.connectAttr(f"{floatComposite6}.outFloat",f"{upperLeg_ik_dummy}.sz")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperLeg_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperLeg_ik_dummy}.sy")
+        #LowerLeg
+        lowerJoint_matrix = cmds.xform(lowerLeg_ik_dummy,m=True,ws=True,q=True)
+        lower_vec = []
+        for i in [0,1,2]:
+            lower_vec.append(foot_pos[i]-lowerLeg_pos[i])
+        magnitude = math.sqrt(sum(x**2 for x in lower_vec))
+        lower_vec = [x / magnitude for x in lower_vec]
+        x_vec = []
+        for i in [0,1,2]:
+            x_vec.append(lowerJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in x_vec))
+        x_vec = [x / magnitude for x in x_vec]
+        y_vec = []
+        for i in [4,5,6]:
+            y_vec.append(lowerJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in y_vec))
+        y_vec = [x / magnitude for x in y_vec]
+        z_vec = []
+        for i in [8,9,10]:
+            z_vec.append(lowerJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in z_vec))
+        z_vec = [x / magnitude for x in z_vec]
+        dot=[]
+        for i in [x_vec,y_vec,z_vec]:
+            dot_product = abs(sum(x * y for x, y in zip(lower_vec, i)))
+            dot.append(dot_product)
+        if(dot[0]>dot[1] and dot[0]>dot[2]):
+            cmds.connectAttr(f"{floatComposite5}.outFloat",f"{lowerLeg_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerLeg_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerLeg_ik_dummy}.sz")
+        elif(dot[1]>dot[0] and dot[1]>dot[2]):
+            cmds.connectAttr(f"{floatComposite5}.outFloat",f"{lowerLeg_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerLeg_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerLeg_ik_dummy}.sz")
+        else:
+            cmds.connectAttr(f"{floatComposite5}.outFloat",f"{lowerLeg_ik_dummy}.sz")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerLeg_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerLeg_ik_dummy}.sy")
+
+        #足首回転
+        Drv_Obj = create_obj_dic[('Drv',clr,'FootIK')]
+        Dvn_Obj = foot_ik
         drv_matrix = cmds.xform(Drv_Obj,q=True,ws=True,m=True)
         dvn_matrix = cmds.xform(Dvn_Obj,q=True,ws=True,m=True)
-        if(cmds.objExists(f"{Drv_Obj}.WorldBindMatrix") == True):
-            cmds.setAttr(f"{Drv_Obj}.WorldBindMatrix",lock=False)
-        else:
-            cmds.addAttr(Drv_Obj,ln="WorldBindMatrix",at="matrix")
-        if(cmds.objExists(f"{Dvn_Obj}.WorldBindMatrix") == True):
-            cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",lock=False)
-        else:
-            cmds.addAttr(Dvn_Obj,ln="WorldBindMatrix",at="matrix")
+        cmds.addAttr(Drv_Obj,ln="WorldBindMatrix",at="matrix")
         cmds.setAttr(f"{Drv_Obj}.WorldBindMatrix",*drv_matrix,typ="matrix")
         cmds.setAttr(f"{Drv_Obj}.WorldBindMatrix",lock=True, keyable=False)
-        cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",*dvn_matrix,typ="matrix")
-        cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",lock=True, keyable=False)
         cmds.setAttr(f"{Dvn_Obj}.jointOrient" ,*(0,0,0),typ="double3")
-        #計算
         multMatrix1 = cmds.createNode("multMatrix")
         multMatrix2 = cmds.createNode("multMatrix")
         decomposeMatrix1 = cmds.createNode("decomposeMatrix")
@@ -1398,55 +1090,133 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{multMatrix2}.matrixIn[2]")
         cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
         cmds.connectAttr(f"{Dvn_Obj}.rotateOrder",f"{decomposeMatrix1}.inputRotateOrder",f=True)
-        #cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{Dvn_Obj}.t",f=True)
         cmds.connectAttr(f"{decomposeMatrix1}.outputRotate",f"{Dvn_Obj}.r",f=True)
         cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{Dvn_Obj}.s",f=True)
         cmds.connectAttr(f"{decomposeMatrix1}.outputShear",f"{Dvn_Obj}.shear",f=True)
 
         #つま先
-        create_obj_dic |= autorig_utility.create_controller("ToesIK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.2),con_shape="scuare",con_size=(3,3,3),con_rotate=(0,0,90),
-                                                        unity_setting=unity_setting,scale_unable=True,con_pos_lock=(False,False,False))
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'ToesIK')]}.v",l=False)
-        cmds.connectAttr(f"{vis_floatMath}.outFloat",F"{create_obj_dic[('Grp',clr,'ToesIK')]}.v",f=True)
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,'ToesIK')]}.offsetParentMatrix")
-        cmds.xform(create_obj_dic[('Grp',clr,'ToesIK')],m=toes_matrix,ws=True)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'ToesIK')]}.sy",-1)
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'ToesIK')]}.sy",-1)
-        Drv_Obj=create_obj_dic[('Drv',clr,'ToesIK')]
-        Dvn_Obj=toes_ik
-        drv_matrix = cmds.xform(Drv_Obj,q=True,ws=True,m=True)
-        dvn_matrix = cmds.xform(Dvn_Obj,q=True,ws=True,m=True)
-        if(cmds.objExists(f"{Drv_Obj}.WorldBindMatrix") == True):
-            cmds.setAttr(f"{Drv_Obj}.WorldBindMatrix",lock=False)
-        else:
-            cmds.addAttr(Drv_Obj,ln="WorldBindMatrix",at="matrix")
-        if(cmds.objExists(f"{Dvn_Obj}.WorldBindMatrix") == True):
-            cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",lock=False)
-        else:
-            cmds.addAttr(Dvn_Obj,ln="WorldBindMatrix",at="matrix")
-        cmds.setAttr(f"{Drv_Obj}.WorldBindMatrix",*drv_matrix,typ="matrix")
-        cmds.setAttr(f"{Drv_Obj}.WorldBindMatrix",lock=True, keyable=False)
-        cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",*dvn_matrix,typ="matrix")
-        cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",lock=True, keyable=False)
-        cmds.setAttr(f"{Dvn_Obj}.jointOrient" ,*(0,0,0),typ="double3")
-        #計算
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
+        create_obj_dic |= autorig_utility.create_controller("ToesIK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.2),con_shape="scuare",con_scl=(3,3,3),con_rot=(0,0,90),con_pos=(5,0,0),
+                                                        setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
+        
+        matrix = OpenMaya.MMatrix(toes_matrix)*OpenMaya.MMatrix(cmds.xform(foot_ik,q=True,ws=True,m=True)).inverse()
+        cmds.addAttr(create_obj_dic[('Con',clr,'ToesIK')],ln="toesMatrix",at="matrix")
+        cmds.setAttr(F"{create_obj_dic[('Con',clr,'ToesIK')]}.toesMatrix",*matrix,typ="matrix",k=False,l=True)
+
         decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        inverseMatrix = cmds.createNode("inverseMatrix")
-        cmds.connectAttr(f"{Drv_Obj}.worldMatrix[0]",f"{multMatrix1}.matrixIn[0]",f=True)
-        cmds.connectAttr(f"{Dvn_Obj}.parentInverseMatrix",f"{multMatrix1}.matrixIn[1]",f=True)
-        cmds.connectAttr(f"{Drv_Obj}.WorldBindMatrix",f"{inverseMatrix}.inputMatrix",f=True)
-        cmds.connectAttr(f"{Dvn_Obj}.WorldBindMatrix",f"{multMatrix2}.matrixIn[0]",f=True)
-        cmds.connectAttr(f"{inverseMatrix}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{multMatrix2}.matrixIn[2]")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{Dvn_Obj}.rotateOrder",f"{decomposeMatrix1}.inputRotateOrder",f=True)
-        #cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{Dvn_Obj}.t",f=True)
-        cmds.connectAttr(f"{decomposeMatrix1}.outputRotate",f"{Dvn_Obj}.r",f=True)
-        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{Dvn_Obj}.s",f=True)
-        cmds.connectAttr(f"{decomposeMatrix1}.outputShear",f"{Dvn_Obj}.shear",f=True)
+        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+        composeMatrix1 = cmds.createNode("composeMatrix")
+        multMatrix1 = cmds.createNode("multMatrix")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'ToesIK')]}.toesMatrix",f"{multMatrix1}.matrixIn[0]")
+        cmds.connectAttr(F"{foot_ik}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
+        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
+        cmds.connectAttr(F"{multMatrix1}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'LegIK')]}.worldMatrix",f"{decomposeMatrix2}.inputMatrix")
+        cmds.connectAttr(F"{decomposeMatrix2}.outputQuat",f"{composeMatrix1}.inputQuat")
+        cmds.connectAttr(F"{decomposeMatrix2}.outputScale",f"{composeMatrix1}.inputScale")
+        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
+        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{create_obj_dic[('Grp',clr,'ToesIK')]}.offsetParentMatrix")
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'ToesIK')]}.sy",scl)
+        autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'ToesIK')],Dvn_Obj=toes_ik)
+
+        #PoleVector
+        #lowerLegに一番近いfootとupperLeg結んだ直線状の点特定
+        upperLeg_length = math.dist(upperLeg_pos,lowerLeg_pos)
+        lowerLeg_length = math.dist(lowerLeg_pos,foot_pos)
+        hiritu = upperLeg_length/(upperLeg_length+lowerLeg_length)
+        pos = [(foot_pos[i]-upperLeg_pos[i])*hiritu for i in range(3)]
+        length = math.sqrt(((pos[0]+upperLeg_pos[0])-lowerLeg_pos[0])**2+((pos[1]+upperLeg_pos[1])-lowerLeg_pos[1])**2+((pos[2]+upperLeg_pos[2])-lowerLeg_pos[2])**2)
+        baitiru = ((upperLeg_length+lowerLeg_length)*0.6)/length
+        pv_pos = [((lowerLeg_pos[i]-upperLeg_pos[i])-pos[i])*baitiru+(pos[i]+upperLeg_pos[i]) for i in range(3) ]
+
+        create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=[pv_pos[i]-(pos[i]+upperLeg_pos[i]) for i in range(3)],
+                                                            setting=setting,connect_drv=False,uniform_scale=True)
+        cmds.xform(f"{create_obj_dic[('Grp',clr,'LegPV')]}",t=[pos[i]+upperLeg_pos[i] for i in range(3) ],ws=True)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.matrix",f"{create_obj_dic[('Drv',clr,'LegPV')]}.offsetParentMatrix",)
+        cmds.xform(f"{create_obj_dic[('Drv',clr,'LegPV')]}",t=pv_pos,ws=True)
+        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LegPV')]}.sx",scl)
+        cmds.poleVectorConstraint(create_obj_dic[('Drv',clr,'LegPV')],ikHandle)
+
+        outputComposeMatrix = cmds.createNode("composeMatrix")
+        cmds.setAttr(f"{outputComposeMatrix}.useEulerRotation",0)
+        cmds.connectAttr(f"{outputComposeMatrix}.outputMatrix",f"{create_obj_dic[('Grp',clr,'LegPV')]}.offsetParentMatrix")
+        
+        rotA_matrix = cmds.xform(create_obj_dic[('Drv',clr,'LegRoot')],q=True,ws=True,m=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegPV')],ln="rotAMatrix",at="matrix")
+        matrix = OpenMaya.MMatrix(rotA_matrix).inverse()
+        matrix = list(matrix)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.rotAMatrix",matrix,typ="matrix",l=True)
+        multMatrixA = cmds.createNode("multMatrix")
+        decomposeMatrixA = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.rotAMatrix",f"{multMatrixA}.matrixIn[0]")
+        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix[0]",f"{multMatrixA}.matrixIn[1]")
+        cmds.connectAttr(f"{multMatrixA}.matrixSum",f"{decomposeMatrixA}.inputMatrix")
+        rotB_matrix = cmds.xform(create_obj_dic[('Drv',clr,'LegIK')],q=True,ws=True,m=True)
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegPV')],ln="rotBMatrix",at="matrix")
+        matrix = OpenMaya.MMatrix(rotB_matrix).inverse()
+        matrix = list(matrix)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.rotBMatrix",matrix,typ="matrix",l=True)
+        multMatrixB = cmds.createNode("multMatrix")
+        decomposeMatrixB = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.rotBMatrix",f"{multMatrixB}.matrixIn[0]")
+        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegIK')]}.worldMatrix[0]",f"{multMatrixB}.matrixIn[1]")
+        cmds.connectAttr(f"{multMatrixB}.matrixSum",f"{decomposeMatrixB}.inputMatrix")
+        quatSlerp=cmds.createNode("quatSlerp")
+        cmds.connectAttr(f"{decomposeMatrixA}.outputQuat",f"{quatSlerp}.input1Quat")
+        cmds.connectAttr(f"{decomposeMatrixB}.outputQuat",f"{quatSlerp}.input2Quat")
+        cmds.addAttr(create_obj_dic[('Con',clr,'LegPV')],ln="rotParent",at="float",max=1,min=0,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.rotParent",1)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.rotParent",f"{quatSlerp}.inputT")
+        cmds.connectAttr(f"{quatSlerp}.outputQuat",f"{outputComposeMatrix}.inputQuat")
+        
+        decomposeMatrixA = cmds.createNode("decomposeMatrix")
+        decomposeMatrixB = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix[0]",f"{decomposeMatrixA}.inputMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.worldMatrix[0]",f"{decomposeMatrixB}.inputMatrix")
+        blendColors = cmds.createNode("blendColors")
+        cmds.connectAttr(f"{decomposeMatrixA}.outputTranslate",f"{blendColors}.color1")
+        cmds.connectAttr(f"{decomposeMatrixB}.outputTranslate",f"{blendColors}.color2")
+        cmds.setAttr(f"{blendColors}.blender",lowerLeg_length/(upperLeg_length+lowerLeg_length))
+        cmds.connectAttr(f"{blendColors}.output",f"{outputComposeMatrix}.inputTranslate")
+        cmds.xform(f"{create_obj_dic[('Grp',clr,'LegPV')]}",t=[pos[i]+upperLeg_pos[i] for i in range(3) ],ws=True)
+
+        cmds.connectAttr(f"{decomposeMatrixA}.outputScale",f"{outputComposeMatrix}.inputScale")
+
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="twist",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",0,k=True)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",f"{ikHandle}.twist")
+
+        #IKFKSwitch
+        cmds.setAttr(f"{ik_parent}.v",0,l=True)
+
+        fkCondition = cmds.createNode("condition")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",f"{fkCondition}.firstTerm")
+        cmds.setAttr(f"{fkCondition}.secondTerm",0)
+        cmds.setAttr(f"{fkCondition}.operation",1)
+        cmds.setAttr(f"{fkCondition}.colorIfTrueR",1)
+        cmds.setAttr(f"{fkCondition}.colorIfFalseR",0)
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.v", lock=False)
+        cmds.connectAttr(f"{fkCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'LowerLegFK')]}.v", lock=False)
+        cmds.connectAttr(f"{fkCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'LowerLegFK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'FootFK')]}.v", lock=False)
+        cmds.connectAttr(f"{fkCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'FootFK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'ToesFK')]}.v", lock=False)
+        cmds.connectAttr(f"{fkCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'ToesFK')]}.v")
+
+        ikCondition = cmds.createNode("condition")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegRoot')]}.IKFK",f"{ikCondition}.firstTerm")
+        cmds.setAttr(f"{ikCondition}.secondTerm",1)
+        cmds.setAttr(f"{ikCondition}.operation",1)
+        cmds.setAttr(f"{ikCondition}.colorIfTrueR",1)
+        cmds.setAttr(f"{ikCondition}.colorIfFalseR",0)
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'LegIK')]}.v", lock=False)
+        cmds.connectAttr(f"{ikCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'LegIK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'FootIK')]}.v", lock=False)
+        cmds.connectAttr(f"{ikCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'FootIK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'ToesIK')]}.v", lock=False)
+        cmds.connectAttr(f"{ikCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'ToesIK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'LegPV')]}.v", lock=False)
+        cmds.connectAttr(f"{ikCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'LegPV')]}.v")
 
     return create_obj_dic
 
@@ -1467,7 +1237,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         作成したオブジェ入った辞書
     """
     create_obj_dic={}
-    unity_setting = obj_dic[('Con','C','UnitySetting')]
+    setting = obj_dic[('Con','C','Setting')]
 
     #親作成
     root_center_obj = cmds.group(em=True,n=f"Grp_C_Arm",p=parent)
@@ -1483,6 +1253,10 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         clr_lower = clr.lower()
         root_obj = cmds.group(em=True,n=f"Grp_{clr}_Arm",p=root_center_obj)
         create_obj_dic[('Grp',clr,'Arm')]=root_obj
+        if(clr == "L"):
+            scl = 1
+        else:
+            scl = -1
 
         #matrix取得
         upperArm_matrix = cmds.xform(orientation_dic[f"{clr_lower}_upperArm"],m=True,ws=True,q=True)
@@ -1491,14 +1265,14 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         hand_matrix = cmds.xform(orientation_dic[f"{clr_lower}_hand"],m=True,ws=True,q=True)
 
         #Shoulder
-        create_obj_dic |= autorig_utility.create_controller("Shoulder",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="cube",con_size=(3,3,3),con_rotate=(0,0,0),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-        cmds.connectAttr(f"{joint_dic['c_chest']}.worldMatrix[0]",f"{create_obj_dic[('Grp',clr,'Shoulder')]}.offsetParentMatrix")
+        create_obj_dic |= autorig_utility.create_controller("Shoulder",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="cube",con_scl=(3,3,3),con_rot=(0,0,0),
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
         cmds.xform(create_obj_dic[('Grp',clr,'Shoulder')],m=shoulder_matrix,ws=True)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'Shoulder')]}.sy",-1)
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'Shoulder')]}.sz",-1)
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,'Shoulder')]}",joint_dic[f"{clr_lower}_shoulder"])
+        autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','Root3')],
+                                  rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
+                                  dvn_con=create_obj_dic[('Con',clr,'Shoulder')],dvn_grp=create_obj_dic[('Grp',clr,'Shoulder')])
+        autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'Shoulder')], Dvn_Obj=joint_dic[f"{clr_lower}_shoulder"])
+        
 
         #ダミージョイント複製
         upperArm_fk = cmds.duplicate(joint_dic[f"{clr_lower}_upperArm"],f=True,po=True,n=cmds.ls(joint_dic[f"{clr_lower}_upperArm"],l=False)[0]+"_fk")[0]
@@ -1587,167 +1361,52 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.connectAttr(f"{pairBlend}.outRotate",f"{joint_dic[f'{clr_lower}_lowerArm']}.scale")
         cmds.connectAttr(f"{blendColors}.output",f"{joint_dic[f'{clr_lower}_lowerArm']}.shear")
 
-        #FKUpper
-        create_obj_dic |= autorig_utility.create_controller("UpperArmFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(3,3,3),con_rotate=(90,90,0),con_position=(9,0,0),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Shoulder')]}.worldMatrix[0]",F"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.offsetParentMatrix")
+        #FK作成
+        #UpperArm
+        create_obj_dic |= autorig_utility.create_controller("UpperArmFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'UpperArmFK')],m=upperArm_matrix,ws=True)
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,'UpperArmFK')]}",upperArm_fk)
-
-        cmds.addAttr(create_obj_dic[('Con',clr,'UpperArmFK')],ln="LayeredScale",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.LayeredScale",0,k=True)
-        cmds.addAttr(create_obj_dic[('Con',clr,'UpperArmFK')],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.LayeredRotate",1,k=True)
-
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix5 = cmds.createNode("decomposeMatrix")
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        multMatrix3 = cmds.createNode("multMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        blendColor1 = cmds.createNode("blendColors")
-        quatSlerp1 = cmds.createNode("quatSlerp")
-        quatProd1 = cmds.createNode("quatProd")
-        quatProd2 = cmds.createNode("quatProd")
-        quatProd3 = cmds.createNode("quatProd")
-        quatInvert1 = cmds.createNode("quatInvert")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'UpperArmFK')]}.sy",-1)
-            composeMatrix3 = cmds.createNode("composeMatrix")
-            cmds.setAttr(F"{composeMatrix3}.inputScaleY",-1)
-            cmds.connectAttr(f"{composeMatrix3}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.inverseMatrix",f"{multMatrix3}.matrixIn[1]")
-            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[2]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.matrix",f"{multMatrix3}.matrixIn[3]")
-        else:
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.inverseMatrix",f"{multMatrix3}.matrixIn[0]")
-            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.matrix",f"{multMatrix3}.matrixIn[2]")
-        cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.offsetParentMatrix")
-
-        cmds.connectAttr(F"{multMatrix2}.matrixSum",F"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.offsetParentMatrix",f=True)
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Shoulder')]}.worldMatrix",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.matrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Shoulder')]}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Shoulder')]}.WorldBindMatrix",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatInvert1}.inputQuat")
-        cmds.connectAttr(f"{quatInvert1}.outputQuat",f"{quatProd1}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{blendColor1}.color1")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{blendColor1}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.LayeredScale",f"{blendColor1}.blender")
-        cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatProd2}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd2}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd3}.input1Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'UpperArmFK')]}.WorldBindMatrix",f"{decomposeMatrix3}.inputMatrix")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{decomposeMatrix4}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd3}.input2Quat")
-        cmds.connectAttr(f"{quatProd3}.outputQuat",f"{quatSlerp1}.input1Quat")
-        cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp1}.input2Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'UpperArmFK')]}.LayeredRotate",f"{quatSlerp1}.inputT")
-        cmds.connectAttr(f"{blendColor1}.output",f"{composeMatrix2}.inputScale")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix5}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix5}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{quatSlerp1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-
-        #FKLower
-        create_obj_dic |= autorig_utility.create_controller("LowerArmFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_size=(3,3,3),con_rotate=(90,90,0),con_position=(9,0,0),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True)
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'UpperArmFK')]}.worldMatrix[0]",F"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.offsetParentMatrix")
+        autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'Shoulder')],sclA=obj_dic[('Drv','C','Root3')],
+                                    rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
+                                    dvn_con=create_obj_dic[('Con',clr,'UpperArmFK')],dvn_grp=create_obj_dic[('Grp',clr,'UpperArmFK')])
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.sy",scl)
+        #LowerArm
+        create_obj_dic |= autorig_utility.create_controller("LowerArmFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'LowerArmFK')],m=lowerArm_matrix,ws=True)
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,'LowerArmFK')]}",lowerArm_fk)
 
-        cmds.addAttr(create_obj_dic[('Con',clr,'LowerArmFK')],ln="LayeredScale",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.LayeredScale",0,k=True)
-        cmds.addAttr(create_obj_dic[('Con',clr,'LowerArmFK')],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.LayeredRotate",1,k=True)
+        upperArm_fk_dummy = cmds.group(em=True,n=f"Grp_{clr}_UpparArnDummy",p=root_obj)
+        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.worldMatrix[0]",f"{upperArm_fk_dummy}.offsetParentMatrix")
+        cmds.setAttr(f"{upperArm_fk_dummy}.sy",scl)
+        cmds.setAttr(f"{upperArm_fk_dummy}.t",l=True)
+        cmds.setAttr(f"{upperArm_fk_dummy}.r",l=True)
+        cmds.setAttr(f"{upperArm_fk_dummy}.s",l=True)
+        cmds.setAttr(f"{upperArm_fk_dummy}.v",0,l=True)
 
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix5 = cmds.createNode("decomposeMatrix")
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        multMatrix3 = cmds.createNode("multMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        blendColor1 = cmds.createNode("blendColors")
-        quatSlerp1 = cmds.createNode("quatSlerp")
-        quatProd1 = cmds.createNode("quatProd")
-        quatProd2 = cmds.createNode("quatProd")
-        quatProd3 = cmds.createNode("quatProd")
-        quatInvert1 = cmds.createNode("quatInvert")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
+        autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'UpperArmFK')],
+                                      sclA=upperArm_fk_dummy,sclB=create_obj_dic[('Drv',clr,'UpperArmFK')],
+                                    rotA=upperArm_fk_dummy,rotB=create_obj_dic[('Drv',clr,'UpperArmFK')],
+                                    dvn_con=create_obj_dic[('Con',clr,'LowerArmFK')],dvn_grp=create_obj_dic[('Grp',clr,'LowerArmFK')])
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.sy",scl)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.rotParent",1)
+        
+        #接続
+        autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'UpperArmFK')], Dvn_Obj=upperArm_fk)
+        autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'LowerArmFK')], Dvn_Obj=lowerArm_fk)
 
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'LowerArmFK')]}.sy",-1)
-            composeMatrix3 = cmds.createNode("composeMatrix")
-            cmds.setAttr(F"{composeMatrix3}.inputScaleY",-1)
-            cmds.connectAttr(f"{composeMatrix3}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.inverseMatrix",f"{multMatrix3}.matrixIn[1]")
-            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[2]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.matrix",f"{multMatrix3}.matrixIn[3]")
-        else:
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.inverseMatrix",f"{multMatrix3}.matrixIn[0]")
-            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.matrix",f"{multMatrix3}.matrixIn[2]")
-
-        cmds.connectAttr(F"{multMatrix2}.matrixSum",F"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.offsetParentMatrix",f=True)
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'UpperArmFK')]}.worldMatrix",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.matrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'UpperArmFK')]}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'UpperArmFK')]}.WorldBindMatrix",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatInvert1}.inputQuat")
-        cmds.connectAttr(f"{quatInvert1}.outputQuat",f"{quatProd1}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{blendColor1}.color1")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{blendColor1}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.LayeredScale",f"{blendColor1}.blender")
-        cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatProd2}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd2}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd3}.input1Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LowerArmFK')]}.WorldBindMatrix",f"{decomposeMatrix3}.inputMatrix")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{decomposeMatrix4}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd3}.input2Quat")
-        cmds.connectAttr(f"{quatProd3}.outputQuat",f"{quatSlerp1}.input1Quat")
-        cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp1}.input2Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.LayeredRotate",f"{quatSlerp1}.inputT")
-        cmds.connectAttr(f"{blendColor1}.output",f"{composeMatrix2}.inputScale")
-        cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{create_obj_dic[('Con',clr,'LowerArmFK')]}.offsetParentMatrix")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix5}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix5}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{quatSlerp1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-
-        #IK
-        create_obj_dic |= autorig_utility.create_controller("HandIK",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="hexagon1",con_size=(5,5,5),con_rotate=(90,90,0),
-                                                            unity_setting=unity_setting,con_rot_lock=(False,False,False),uniform_scale=True)
+        #IK作成
+        create_obj_dic |= autorig_utility.create_controller("HandIK",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="hexagon1",con_scl=(5,5,5),con_rot=(90,90,0),
+                                                            setting=setting,con_rot_lock=(True,True,True),con_scl_lock=(True,True,True),drv_scale_offset=(1,scl,1))
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.sy",scl)
         shoulder_joint_matrix = cmds.xform(joint_dic[f"{clr_lower}_shoulder"],m=True,ws=True,q=True)
         upperArm_joint_matrix = cmds.xform(joint_dic[f"{clr_lower}_upperArm"],m=True,ws=True,q=True)
         lowerArm_joint_matrix = cmds.xform(joint_dic[f"{clr_lower}_lowerArm"],m=True,ws=True,q=True)
-
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.offsetParentMatrix",*(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1),typ="matrix")
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'HandIK')]}.offsetParentMatrix",*(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1),typ="matrix")
 
         en="Root:Shoulder:Hips:Spine:Chest:Head:LeftUpperLeg:LeftLowerLeg:LeftFoot:RightUpperLeg:RightLowerLeg:RightFoot"
         if(clr=="R"):
             en+=":LeftHand"
         cmds.addAttr(create_obj_dic[('Con',clr,'HandIK')],ln="parent",at="enum",en=en,k=True)
         blendMatrix = cmds.createNode("blendMatrix")
-        cmds.connectAttr(f"{blendMatrix}.outputMatrix",f"{create_obj_dic[('Grp',clr,'HandIK')]}.offsetParentMatrix")
         #Root
         cmds.addAttr(create_obj_dic[('Grp',clr,'HandIK')],ln="Root3Matrix",at="matrix")
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.Root3Matrix",*hand_matrix,typ="matrix")
@@ -1764,6 +1423,24 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.parent",f"{root_condition}.firstTerm")
         cmds.connectAttr(f"{root_multmatrix}.matrixSum",f"{blendMatrix}.target[0].targetMatrix")
         cmds.connectAttr(f"{root_condition}.outColorR",f"{blendMatrix}.target[0].weight")
+        #回転
+        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
+        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+        composeMatrix = cmds.createNode("composeMatrix")
+        quatSlerp = cmds.createNode("quatSlerp")
+        cmds.setAttr(f"{composeMatrix}.useEulerRotation",0)
+        cmds.addAttr(create_obj_dic[('Con',clr,'HandIK')],ln="rotParent",at="double",min=0,max=1,dv=0)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.rotParent",1,k=True)
+        cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatSlerp}.input1Quat")
+        cmds.connectAttr(f"{blendMatrix}.outputMatrix",f"{decomposeMatrix1}.inputMatrix")
+        cmds.connectAttr(f"{root_multmatrix}.matrixSum",f"{decomposeMatrix2}.inputMatrix")
+        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatSlerp}.input2Quat")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.rotParent",f"{quatSlerp}.inputT")
+        cmds.connectAttr(f"{composeMatrix}.outputMatrix",f"{create_obj_dic[('Grp',clr,'HandIK')]}.offsetParentMatrix")
+        cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{composeMatrix}.inputTranslate")
+        cmds.connectAttr(f"{root_decomposeMatrix}.outputScale",f"{composeMatrix}.inputScale")
+        cmds.connectAttr(f"{quatSlerp}.outputQuat",f"{composeMatrix}.inputQuat")
+
         #Shoulder
         cmds.addAttr(create_obj_dic[('Grp',clr,'HandIK')],ln="ShoulderMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(shoulder_joint_matrix).inverse()
@@ -1787,7 +1464,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.parent",f"{shoulder_condition}.firstTerm")
         cmds.connectAttr(f"{shoulder_multmatrix}.matrixSum",f"{blendMatrix}.target[1].targetMatrix")
         cmds.connectAttr(f"{shoulder_condition}.outColorR",f"{blendMatrix}.target[1].weight")
-        #Hips
+#Hips
         cmds.addAttr(create_obj_dic[('Grp',clr,'HandIK')],ln="HipsMatrix",at="matrix")
         matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(hips_joint_matrix).inverse()
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.HipsMatrix",list(matrix),typ="matrix")
@@ -2024,7 +1701,6 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.parent",f"{head_condition}.firstTerm")
         cmds.connectAttr(f"{head_multmatrix}.matrixSum",f"{blendMatrix}.target[11].targetMatrix")
         cmds.connectAttr(f"{head_condition}.outColorR",f"{blendMatrix}.target[11].weight")
-
         if(clr=="R"):
             #LeftHand
             l_hand_joint_matrix = cmds.xform(joint_dic["l_hand"],q=True,ws=True,m=True)
@@ -2050,8 +1726,6 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
             cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.parent",f"{head_condition}.firstTerm")
             cmds.connectAttr(f"{head_multmatrix}.matrixSum",f"{blendMatrix}.target[12].targetMatrix")
             cmds.connectAttr(f"{head_condition}.outColorR",f"{blendMatrix}.target[12].weight")
-        
-
 
         matrix = cmds.xform(upperArm_fk,q=True,ws=False,m=True)
         ik_parent = cmds.group(em=True,n=f"Grp_{clr}_ArmIK",p=root_obj)
@@ -2090,14 +1764,289 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleY",orient[0][2])
 
         #IKHandle作成
+        ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_ArmIkHandle",p=root_obj)
         ikHandle = cmds.ikHandle(sj=upperArm_ik_dummy,ee=hand_ik_dummy,sol='ikRPsolver')[0]
-        ikHandle = cmds.parent(ikHandle,f"{create_obj_dic[('Drv',clr,'HandIK')]}")[0]
+        ikHandle = cmds.parent(ikHandle,ikHandle_parent)[0]
         cmds.setAttr(f"{ikHandle}.v",0,l=True)
         cmds.setAttr(f"{ikHandle}.t",*(0,0,0),typ="double3",l=True)
         cmds.setAttr(f"{ikHandle}.r",*(0,0,0),typ="double3",l=True)
         cmds.setAttr(f"{ikHandle}.s",*(1,1,1),typ="double3",l=True)
 
 
+
+
+
+
+        #armLength
+        cmds.addAttr(ik_parent,ln="ArmLength",at="float")
+        upperArm_pos = [upperArm_matrix[12],upperArm_matrix[13],upperArm_matrix[14]]
+        lowerArm_pos = [lowerArm_matrix[12],lowerArm_matrix[13],lowerArm_matrix[14]]
+        foot_pos = [hand_matrix[12],hand_matrix[13],hand_matrix[14]]
+        length = math.dist(upperArm_pos,lowerArm_pos)+math.dist(lowerArm_pos,foot_pos)
+        cmds.setAttr(F"{ik_parent}.ArmLength",length,k=False,l=True)
+
+
+        #アトリビュート作成
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="stretch",at="float",max=1,min=0)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.stretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="multUpperArmStretch",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.multUpperArmStretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="multLowerArmStretch",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.multLowerArmStretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="multArmStretch",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.multArmStretch",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="armThickness",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.armThickness",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="armUniformScale",at="float")
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.armUniformScale",1,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="smoothIK",at="float",max=1,min=0)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.smoothIK",0,k=True)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="smoothRange",at="float",min=0)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.smoothRange",5,k=True)
+
+        #matrix
+        cmds.addAttr(create_obj_dic[('Drv',clr,'HandIK')],ln="ArmMatrix",at="matrix")
+        matrix = OpenMaya.MMatrix(upperArm_matrix)*OpenMaya.MMatrix(shoulder_matrix).inverse()
+        cmds.setAttr(F"{create_obj_dic[('Drv',clr,'HandIK')]}.ArmMatrix",*matrix,typ="matrix",k=False,l=True)
+
+        #計算
+        multMatrix1 = cmds.createNode("multMatrix")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'HandIK')]}.ArmMatrix",f"{multMatrix1}.matrixIn[0]")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Shoulder')]}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
+        distanceBetween1 = cmds.createNode("distanceBetween")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'HandIK')]}.worldMatrix[0]",f"{distanceBetween1}.inMatrix1")
+        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{distanceBetween1}.inMatrix2")
+        aimMatrix1 = cmds.createNode("aimMatrix")
+        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'HandIK')]}.worldMatrix[0]",f"{aimMatrix1}.primaryTargetMatrix")
+        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix1}.inputMatrix")
+        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{aimMatrix1}.outputMatrix",f"{decomposeMatrix1}.inputMatrix")
+        composeMatrix1 = cmds.createNode("composeMatrix")
+        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
+        cmds.connectAttr(F"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
+        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
+        multMatrix2 = cmds.createNode("multMatrix")
+        composeMatrix2 = cmds.createNode("composeMatrix")
+        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix2}.matrixIn[0]")
+        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
+        floatMath1 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath1}.operation",2)
+        cmds.connectAttr(F"{decomposeMatrix1}.outputScaleX",f"{floatMath1}.floatA")
+        floatComposite1 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite1}.operation",2)
+        cmds.setAttr(f"{floatComposite1}.floatA",1)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.armUniformScale",f"{floatComposite1}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite1}.factor")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatMath1}.floatB")
+        floatMath2 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath2}.operation",3)
+        cmds.connectAttr(F"{distanceBetween1}.distance",f"{floatMath2}.floatA")
+        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath2}.floatB")
+        floatMath3 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath3}.operation",1)
+        cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath3}.floatA")
+        cmds.connectAttr(F"{ik_parent}.ArmLength",f"{floatMath3}.floatB")
+        floatMath4 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath4}.operation",3)
+        cmds.connectAttr(F"{floatMath3}.outFloat",f"{floatMath4}.floatA")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.smoothRange",f"{floatMath4}.floatB")
+        floatMath5 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath5}.operation",0)
+        cmds.setAttr(f"{floatMath5}.floatB",1)
+        cmds.connectAttr(F"{floatMath4}.outFloat",f"{floatMath5}.floatA")
+        floatMath6 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath6}.operation",2)
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatA")
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatB")
+        floatMath7 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath7}.operation",2)
+        cmds.setAttr(f"{floatMath7}.floatB",-0.25)
+        cmds.connectAttr(F"{floatMath6}.outFloat",f"{floatMath7}.floatA")
+        floatMath8 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath8}.operation",0)
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath8}.floatA")
+        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatB")
+        floatMath9 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath9}.operation",2)
+        cmds.connectAttr(F"{floatMath8}.outFloat",f"{floatMath9}.floatA")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.smoothRange",f"{floatMath9}.floatB")
+        floatMath10 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath10}.operation",0)
+        cmds.connectAttr(F"{floatMath9}.outFloat",f"{floatMath10}.floatB")
+        floatMath11 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath11}.operation",1)
+        cmds.connectAttr(F"{floatMath11}.outFloat",f"{floatMath10}.floatA")
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.smoothRange",f"{floatMath11}.floatB")
+        cmds.connectAttr(F"{ik_parent}.ArmLength",f"{floatMath11}.floatA")
+        condition1 = cmds.createNode("condition")
+        condition2 = cmds.createNode("condition")
+        cmds.setAttr(f"{condition1}.operation",3)
+        cmds.setAttr(f"{condition2}.operation",5)
+        cmds.setAttr(f"{condition1}.secondTerm",0)
+        cmds.setAttr(f"{condition2}.secondTerm",2)
+        cmds.connectAttr(F"{floatMath9}.outFloat",f"{condition1}.firstTerm")
+        cmds.connectAttr(F"{floatMath5}.outFloat",f"{condition2}.firstTerm")
+        cmds.connectAttr(F"{floatMath10}.outFloat",f"{condition1}.colorIfTrueR")
+        cmds.connectAttr(F"{floatMath2}.outFloat",f"{condition1}.colorIfFalseR")
+        cmds.connectAttr(F"{condition1}.outColorR",f"{condition2}.colorIfTrueR")
+        cmds.connectAttr(F"{ik_parent}.ArmLength",f"{condition2}.colorIfFalseR")
+        floatMath12 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath12}.operation",2)
+        cmds.connectAttr(F"{condition2}.outColorR",f"{floatMath12}.floatA")
+        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath12}.floatB")
+        floatComposite2 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite2}.operation",2)
+        cmds.connectAttr(f"{distanceBetween1}.distance",f"{floatComposite2}.floatA")
+        cmds.connectAttr(f"{floatMath12}.outFloat",f"{floatComposite2}.floatB")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.smoothIK",f"{floatComposite2}.factor")
+        cmds.connectAttr(F"{floatComposite2}.outFloat",f"{composeMatrix2}.inputTranslateX")
+        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{ikHandle_parent}.offsetParentMatrix")
+        distanceBetween2 = cmds.createNode("distanceBetween")
+        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{distanceBetween2}.inMatrix1")
+        cmds.connectAttr(F"{ik_parent}.worldMatrix[0]",f"{distanceBetween2}.inMatrix2")
+        floatMath13 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath13}.operation",3)
+        cmds.connectAttr(F"{distanceBetween2}.distance",f"{floatMath13}.floatA")
+        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{ik_parent}.worldMatrix[0]",f"{decomposeMatrix2}.inputMatrix")
+        floatMath14 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath14}.operation",2)
+        cmds.connectAttr(F"{decomposeMatrix2}.outputScaleX",f"{floatMath14}.floatA")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatMath14}.floatB")
+        floatMath15 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath15}.operation",2)
+        cmds.connectAttr(F"{floatMath14}.outFloat",f"{floatMath15}.floatA")
+        cmds.connectAttr(F"{ik_parent}.ArmLength",f"{floatMath15}.floatB")
+        cmds.connectAttr(F"{floatMath15}.outFloat",f"{floatMath13}.floatB")
+        floatMath16 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath16}.operation",2)
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatMath16}.floatB")
+        cmds.connectAttr(F"{floatMath13}.outFloat",f"{floatMath16}.floatA")
+        condition3 = cmds.createNode("condition")
+        cmds.setAttr(f"{condition3}.operation",2)
+        cmds.setAttr(f"{condition3}.secondTerm",1)
+        cmds.connectAttr(F"{floatMath16}.outFloat",f"{condition3}.colorIfTrueR")
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{condition3}.colorIfFalseR")
+        cmds.connectAttr(F"{floatMath13}.outFloat",f"{condition3}.firstTerm")
+        floatComposite3 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite3}.operation",2)
+        cmds.connectAttr(F"{floatComposite1}.outFloat",f"{floatComposite3}.floatA")
+        cmds.connectAttr(f"{condition3}.outColorR",f"{floatComposite3}.floatB")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.stretch",f"{floatComposite3}.factor")
+        floatComposite4 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite4}.operation",2)
+        cmds.setAttr(f"{floatComposite4}.floatA",1)
+        cmds.connectAttr(f"{floatComposite3}.outFloat",f"{floatComposite4}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite4}.factor")
+        floatMath17 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath17}.operation",2)
+        cmds.connectAttr(F"{floatComposite4}.outFloat",f"{floatMath17}.floatA")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.multArmStretch",f"{floatMath17}.floatB")
+        floatMath18 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath18}.operation",2)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.multLowerArmStretch",f"{floatMath18}.floatA")
+        cmds.connectAttr(f"{floatMath17}.outFloat",f"{floatMath18}.floatB")
+        floatMath19 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath19}.operation",2)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.multUpperArmStretch",f"{floatMath19}.floatA")
+        cmds.connectAttr(f"{floatMath17}.outFloat",f"{floatMath19}.floatB")
+        floatComposite5 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite5}.operation",2)
+        cmds.setAttr(f"{floatComposite5}.floatA",1)
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite5}.factor")
+        cmds.connectAttr(f"{floatMath18}.outFloat",f"{floatComposite5}.floatB")
+        floatComposite6 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite6}.operation",2)
+        cmds.setAttr(f"{floatComposite6}.floatA",1)
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite6}.factor")
+        cmds.connectAttr(f"{floatMath19}.outFloat",f"{floatComposite6}.floatB")
+
+        floatComposite7 = cmds.createNode("floatComposite")
+        cmds.setAttr(f"{floatComposite7}.operation",2)
+        cmds.setAttr(f"{floatComposite7}.floatA",1)
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.armThickness",f"{floatComposite7}.floatB")
+        cmds.connectAttr(f"{setting}.advance",f"{floatComposite7}.factor")
+        floatMath20 = cmds.createNode("floatMath")
+        cmds.setAttr(f"{floatMath20}.operation",2)
+        cmds.connectAttr(f"{floatComposite7}.outFloat",f"{floatMath20}.floatA")
+        cmds.connectAttr(f"{floatComposite1}.outFloat",f"{floatMath20}.floatB")
+
+        #UpperArm
+        upperJoint_matrix = cmds.xform(upperArm_ik_dummy,m=True,ws=True,q=True)
+        upper_vec = []
+        for i in [0,1,2]:
+            upper_vec.append(lowerArm_pos[i]-upperArm_pos[i])
+        magnitude = math.sqrt(sum(x**2 for x in upper_vec))
+        upper_vec = [x / magnitude for x in upper_vec]
+        x_vec = []
+        for i in [0,1,2]:
+            x_vec.append(upperJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in x_vec))
+        x_vec = [x / magnitude for x in x_vec]
+        y_vec = []
+        for i in [4,5,6]:
+            y_vec.append(upperJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in y_vec))
+        y_vec = [x / magnitude for x in y_vec]
+        z_vec = []
+        for i in [8,9,10]:
+            z_vec.append(upperJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in z_vec))
+        z_vec = [x / magnitude for x in z_vec]
+        dot=[]
+        for i in [x_vec,y_vec,z_vec]:
+            dot_product = abs(sum(x * y for x, y in zip(upper_vec, i)))
+            dot.append(dot_product)
+        if(dot[0]>dot[1] and dot[0]>dot[2]):
+            cmds.connectAttr(f"{floatComposite6}.outFloat",f"{upperArm_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperArm_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperArm_ik_dummy}.sz")
+        elif(dot[1]>dot[0] and dot[1]>dot[2]):
+            cmds.connectAttr(f"{floatComposite6}.outFloat",f"{upperArm_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperArm_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperArm_ik_dummy}.sz")
+        else:
+            cmds.connectAttr(f"{floatComposite6}.outFloat",f"{upperArm_ik_dummy}.sz")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperArm_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{upperArm_ik_dummy}.sy")
+        #LowerLeg
+        lowerJoint_matrix = cmds.xform(lowerArm_ik_dummy,m=True,ws=True,q=True)
+        lower_vec = []
+        for i in [0,1,2]:
+            lower_vec.append(foot_pos[i]-lowerArm_pos[i])
+        magnitude = math.sqrt(sum(x**2 for x in lower_vec))
+        lower_vec = [x / magnitude for x in lower_vec]
+        x_vec = []
+        for i in [0,1,2]:
+            x_vec.append(lowerJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in x_vec))
+        x_vec = [x / magnitude for x in x_vec]
+        y_vec = []
+        for i in [4,5,6]:
+            y_vec.append(lowerJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in y_vec))
+        y_vec = [x / magnitude for x in y_vec]
+        z_vec = []
+        for i in [8,9,10]:
+            z_vec.append(lowerJoint_matrix[i])
+        magnitude = math.sqrt(sum(x**2 for x in z_vec))
+        z_vec = [x / magnitude for x in z_vec]
+        dot=[]
+        for i in [x_vec,y_vec,z_vec]:
+            dot_product = abs(sum(x * y for x, y in zip(lower_vec, i)))
+            dot.append(dot_product)
+        if(dot[0]>dot[1] and dot[0]>dot[2]):
+            cmds.connectAttr(f"{floatComposite5}.outFloat",f"{lowerArm_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerArm_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerArm_ik_dummy}.sz")
+        elif(dot[1]>dot[0] and dot[1]>dot[2]):
+            cmds.connectAttr(f"{floatComposite5}.outFloat",f"{lowerArm_ik_dummy}.sy")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerArm_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerArm_ik_dummy}.sz")
+        else:
+            cmds.connectAttr(f"{floatComposite5}.outFloat",f"{lowerArm_ik_dummy}.sz")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerArm_ik_dummy}.sx")
+            cmds.connectAttr(f"{floatMath20}.outFloat",f"{lowerArm_ik_dummy}.sy")
 
 
         #poleVector作成
@@ -2128,281 +2077,49 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         pv_pos = [((lowerArm_pos[i]-upperArm_pos[i])-pos[i])*baitiru+(pos[i]+upperArm_pos[i]) for i in range(3) ]
 
 
-        create_obj_dic |= autorig_utility.create_controller("ArmPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_size=(2,2,2),con_position=[pv_pos[i]-(pos[i]+upperArm_pos[i]) for i in range(3)],
-                                                            unity_setting=unity_setting,con_scl_lock=(False,False,False))
+        create_obj_dic |= autorig_utility.create_controller("ArmPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=[pv_pos[i]-(pos[i]+upperArm_pos[i]) for i in range(3)],
+                                                            setting=setting,uniform_scale=True,connect_drv=False)
         
         cmds.connectAttr(F"{composeMatrix1}.outputMatrix",f"{create_obj_dic[('Grp',clr,'ArmPV')]}.offsetParentMatrix")
         cmds.xform(f"{create_obj_dic[('Grp',clr,'ArmPV')]}",t=[pos[i]+upperArm_pos[i] for i in range(3) ],ws=True)
+        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'ArmPV')]}.sx",scl)
+        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'ArmPV')]}.matrix",F"{create_obj_dic[('Drv',clr,'ArmPV')]}.offsetParentMatrix")
         cmds.xform(f"{create_obj_dic[('Drv',clr,'ArmPV')]}",t=pv_pos,ws=True)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'ArmPV')]}.sx",-1)
         cmds.poleVectorConstraint(create_obj_dic[('Drv',clr,'ArmPV')],ikHandle)
 
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="twist",at="float")
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",0,k=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",f"{ikHandle}.twist")
 
-        #IKスケーリング
-        cmds.addAttr(ik_parent,ln="HandMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(cmds.xform(ik_parent,q=True,ws=True,m=True)).inverse()
-        cmds.setAttr(F"{ik_parent}.HandMatrix",*list(matrix),typ="matrix",lock=True, keyable=False)
-
-        cmds.addAttr(ik_parent,ln="LowerArmMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(lowerArm_matrix)*OpenMaya.MMatrix(cmds.xform(ik_parent,q=True,ws=True,m=True)).inverse()
-        cmds.setAttr(F"{ik_parent}.LowerArmMatrix",*list(matrix),typ="matrix",lock=True, keyable=False)
-        
-        #アトリビュート作成
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="stretch",at="float",max=1,min=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.stretch",1,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="addUpperArmStretch",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addUpperArmStretch",0,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="addLowerArmStretch",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addLowerArmStretch",0,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="addArmStretch",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addArmStretch",0,k=True)
-
-        #計算
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        distanceBetween1 = cmds.createNode("distanceBetween")
-        distanceBetween2 = cmds.createNode("distanceBetween")
-        distanceBetween3 = cmds.createNode("distanceBetween")
-        blendColors1 = cmds.createNode("blendColors")
-        blendColors2 = cmds.createNode("blendColors")
-        condition1 = cmds.createNode("condition")
-        condition2 = cmds.createNode("condition")
-        condition3 = cmds.createNode("condition")
-        floatMath1 = cmds.createNode("floatMath")
-        floatMath2 = cmds.createNode("floatMath")
-        floatMath3 = cmds.createNode("floatMath")
-        floatMath4 = cmds.createNode("floatMath")
-        floatMath5 = cmds.createNode("floatMath")
-        floatMath6 = cmds.createNode("floatMath")
-        floatMath7 = cmds.createNode("floatMath")
-        floatMath8 = cmds.createNode("floatMath")
-
-        cmds.setAttr(f"{floatMath2}.operation",2)
-        cmds.setAttr(f"{floatMath3}.operation",3)
-        cmds.setAttr(f"{floatMath4}.operation",2)
-        cmds.setAttr(f"{condition1}.operation",2)
-        cmds.setAttr(f"{condition2}.operation",0)
-        cmds.setAttr(f"{condition3}.operation",0)
-        cmds.setAttr(f"{condition2}.secondTerm",1)
-        cmds.setAttr(f"{condition3}.secondTerm",1)
-        cmds.setAttr(f"{condition2}.colorIfFalseR",1)
-        cmds.setAttr(f"{condition2}.colorIfFalseG",1)
-        cmds.setAttr(f"{condition2}.colorIfFalseB",1)
-        cmds.setAttr(f"{condition3}.colorIfFalseR",1)
-        cmds.setAttr(f"{condition3}.colorIfFalseG",1)
-        cmds.setAttr(f"{condition3}.colorIfFalseB",1)
-
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.HandMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.LowerArmMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.worldMatrix",f"{multMatrix2}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.worldMatrix",f"{distanceBetween2}.inMatrix1")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{distanceBetween2}.inMatrix2")
-        cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{distanceBetween1}.inMatrix2")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{distanceBetween1}.inMatrix1")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.worldMatrix",f"{distanceBetween3}.inMatrix2")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'HandIK')]}.worldMatrix",f"{distanceBetween3}.inMatrix1")
-        cmds.connectAttr(f"{distanceBetween1}.distance",f"{floatMath1}.floatA")
-        cmds.connectAttr(f"{distanceBetween2}.distance",f"{floatMath1}.floatB")
-        cmds.connectAttr(f"{floatMath1}.outFloat",f"{floatMath2}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{floatMath2}.floatB")
-        cmds.connectAttr(f"{distanceBetween3}.distance",f"{floatMath3}.floatA")
-        cmds.connectAttr(f"{floatMath2}.outFloat",f"{floatMath3}.floatB")
-        cmds.connectAttr(f"{floatMath3}.outFloat",f"{floatMath4}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{floatMath4}.floatB")
-        cmds.connectAttr(f"{distanceBetween3}.distance",f"{condition1}.firstTerm")
-        cmds.connectAttr(f"{floatMath2}.outFloat",f"{condition1}.secondTerm")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{condition1}.colorIfFalseR")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{condition1}.colorIfFalseG")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{condition1}.colorIfFalseB")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{condition1}.colorIfTrueR")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{condition1}.colorIfTrueB")
-        cmds.connectAttr(f"{floatMath4}.outFloat",f"{condition1}.colorIfTrueG")
-        cmds.connectAttr(f"{condition1}.outColor",f"{blendColors1}.color1")
-        cmds.connectAttr(f"{condition1}.colorIfFalse",f"{blendColors1}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.stretch",f"{blendColors1}.blender")
-        cmds.connectAttr(f"{condition1}.outColor",f"{blendColors2}.color1")
-        cmds.connectAttr(f"{condition1}.colorIfFalse",f"{blendColors2}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.stretch",f"{blendColors2}.blender")
-        cmds.connectAttr(F"{blendColors1}.outputR",f"{condition2}.colorIfTrueR")
-        cmds.connectAttr(F"{blendColors1}.outputB",f"{condition2}.colorIfTrueB")
-        cmds.connectAttr(F"{blendColors2}.outputR",f"{condition3}.colorIfTrueR")
-        cmds.connectAttr(F"{blendColors2}.outputB",f"{condition3}.colorIfTrueB")
-
-        cmds.connectAttr(f"{blendColors1}.outputG",f"{floatMath5}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addUpperArmStretch",f"{floatMath5}.floatB")
-        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addArmStretch",f"{floatMath6}.floatB")
-        cmds.connectAttr(f"{floatMath6}.outFloat",f"{condition2}.colorIfTrueG")
-        cmds.connectAttr(f"{obj_dic[('Con','C','UnitySetting')]}.Scalable",f"{condition2}.firstTerm")
-
-        cmds.connectAttr(f"{blendColors2}.outputG",f"{floatMath7}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addLowerArmStretch",f"{floatMath7}.floatB")
-        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatA")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.addArmStretch",f"{floatMath8}.floatB")
-        cmds.connectAttr(f"{floatMath8}.outFloat",f"{condition3}.colorIfTrueG")
-        cmds.connectAttr(f"{obj_dic[('Con','C','UnitySetting')]}.Scalable",f"{condition3}.firstTerm")
-
-        #方向特定
-        x=[1,0,0,0,0,1,0,0,0,0,1,0,1,0,0,1]
-        y=[1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,1]
-        z=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,1]
-        #Lower
-        lower_x_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(x)*OpenMaya.MMatrix(lowerArm_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        lower_y_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(y)*OpenMaya.MMatrix(lowerArm_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        lower_z_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(z)*OpenMaya.MMatrix(lowerArm_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        lower_x_distance = [(lower_x_pos[i]-hand_pos[i])**2 for i in range(3)]
-        lower_y_distance = [(lower_y_pos[i]-hand_pos[i])**2 for i in range(3)]
-        lower_z_distance = [(lower_z_pos[i]-hand_pos[i])**2 for i in range(3)]
-        if(lower_x_distance<lower_y_distance and lower_x_distance<lower_z_distance):
-            cmds.connectAttr(f"{condition3}.outColorG",f"{lowerArm_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerArm_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerArm_ik_dummy}.sz")
-        if(lower_y_distance<lower_x_distance and lower_y_distance<lower_z_distance):
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerArm_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition3}.outColorG",f"{lowerArm_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerArm_ik_dummy}.sz")
-        if(lower_z_distance<lower_x_distance and lower_z_distance<lower_y_distance):
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerArm_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition3}.outColorR",f"{lowerArm_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition3}.outColorG",f"{lowerArm_ik_dummy}.sz")
-        #Upper
-        upper_x_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(x)*OpenMaya.MMatrix(upperArm_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        upper_y_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(y)*OpenMaya.MMatrix(upperArm_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        upper_z_pos = OpenMaya.MTransformationMatrix(OpenMaya.MMatrix(z)*OpenMaya.MMatrix(upperArm_joint_matrix)).translation(OpenMaya.MSpace.kWorld)
-        upper_x_distance = [(upper_x_pos[i]-hand_pos[i])**2 for i in range(3)]
-        upper_y_distance = [(upper_y_pos[i]-hand_pos[i])**2 for i in range(3)]
-        upper_z_distance = [(upper_z_pos[i]-hand_pos[i])**2 for i in range(3)]
-        if(upper_x_distance<upper_y_distance and upper_x_distance<upper_z_distance):
-            cmds.connectAttr(f"{condition2}.outColorG",f"{upperArm_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperArm_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperArm_ik_dummy}.sz")
-        if(upper_y_distance<upper_x_distance and upper_y_distance<upper_z_distance):
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperArm_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition2}.outColorG",f"{upperArm_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperArm_ik_dummy}.sz")
-        if(upper_z_distance<upper_x_distance and upper_z_distance<upper_y_distance):
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperArm_ik_dummy}.sx")
-            cmds.connectAttr(f"{condition2}.outColorR",f"{upperArm_ik_dummy}.sy")
-            cmds.connectAttr(f"{condition2}.outColorG",f"{upperArm_ik_dummy}.sz")
-
-        cmds.setAttr(F"{ik_parent}.v",0,k=False,l=True)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'ArmPV')]}.v",l=False)
-        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'HandIK')]}.v",l=False)
-
-        floatMath1 = cmds.createNode("floatMath")
-        floatMath2 = cmds.createNode("floatMath")
-        cmds.setAttr(F"{floatMath1}.operation",2)
-        cmds.setAttr(F"{floatMath1}.floatB",-1)
-        cmds.setAttr(F"{floatMath2}.floatB",1)
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Shoulder')]}.IKFK",F"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.v")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Shoulder')]}.IKFK",F"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.v")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Shoulder')]}.IKFK",F"{floatMath1}.floatA")
-        cmds.connectAttr(F"{floatMath1}.outFloat",F"{floatMath2}.floatA")
-        cmds.connectAttr(f"{floatMath2}.outFloat",F"{create_obj_dic[('Grp',clr,'ArmPV')]}.v")
-        cmds.connectAttr(f"{floatMath2}.outFloat",F"{create_obj_dic[('Grp',clr,'HandIK')]}.v")
-
-        #SmoothIK
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="smoothIK",at="float",max=1,min=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.smoothIK",0,k=True)
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="smoothRange",at="float",min=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.smoothRange",5,k=True)
-        floatMath1 = cmds.createNode("floatMath")
-        floatMath2 = cmds.createNode("floatMath")
-        floatMath3 = cmds.createNode("floatMath")
-        floatMath4 = cmds.createNode("floatMath")
-        floatMath5 = cmds.createNode("floatMath")
-        floatMath6 = cmds.createNode("floatMath")
-        floatMath7 = cmds.createNode("floatMath")
-        floatMath8 = cmds.createNode("floatMath")
-        floatMath9 = cmds.createNode("floatMath")
-        floatMath10 = cmds.createNode("floatMath")
-        floatMath11 = cmds.createNode("floatMath")
-        distanceBetween1 = cmds.createNode("distanceBetween")
-        distanceBetween2 = cmds.createNode("distanceBetween")
-        distanceBetween3 = cmds.createNode("distanceBetween")
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        aimMatrix1 = cmds.createNode("aimMatrix")
-        multMatrix1 = cmds.createNode("multMatrix")
-        condition1 = cmds.createNode("condition")
-        condition2 = cmds.createNode("condition")
-        absolute = cmds.createNode("absolute")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-        cmds.setAttr(f"{floatMath1}.operation",2)
-        cmds.setAttr(f"{floatMath2}.operation",2)
-        cmds.setAttr(f"{floatMath3}.operation",2)
-        cmds.setAttr(f"{floatMath4}.operation",1)
-        cmds.setAttr(f"{floatMath5}.operation",3)
-        cmds.setAttr(f"{floatMath6}.operation",2)
-        cmds.setAttr(f"{floatMath7}.operation",0)
-        cmds.setAttr(f"{floatMath8}.operation",2)
-        cmds.setAttr(f"{floatMath9}.operation",2)
-        cmds.setAttr(f"{floatMath10}.operation",2)
-        cmds.setAttr(f"{condition1}.operation",2)
-        cmds.setAttr(f"{condition2}.operation",2)
-        cmds.setAttr(f"{condition1}.colorIfFalseR",0)
-        cmds.setAttr(f"{floatMath6}.floatB",0.5)
-        cmds.setAttr(f"{floatMath7}.floatB",0.5)
-        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.sx",f"{floatMath1}.floatA")
-        cmds.connectAttr(F"{create_obj_dic[('Grp',clr,'ArmIK')]}.sx",f"{floatMath1}.floatB")
-        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath2}.floatA")
-        cmds.connectAttr(F"{floatMath1}.outFloat",f"{floatMath3}.floatA")
-        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.smoothRange",f"{floatMath2}.floatB")
-        cmds.connectAttr(F"{distanceBetween1}.distance",f"{floatMath11}.floatA")
-        cmds.connectAttr(F"{distanceBetween3}.distance",f"{floatMath11}.floatB")
-        cmds.connectAttr(F"{floatMath11}.outFloat",f"{floatMath3}.floatB")
-        cmds.connectAttr(f"{hand_ik_dummy}.WorldBindMatrix",f"{distanceBetween1}.inMatrix1")
-        cmds.connectAttr(f"{lowerArm_ik_dummy}.WorldBindMatrix",f"{distanceBetween1}.inMatrix2")
-        cmds.connectAttr(f"{upperArm_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix1")
-        cmds.connectAttr(f"{lowerArm_ik_dummy}.WorldBindMatrix",f"{distanceBetween3}.inMatrix2")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.worldMatrix",f"{distanceBetween2}.inMatrix1")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'HandIK')]}.parentMatrix",f"{distanceBetween2}.inMatrix2")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'ArmIK')]}.worldMatrix",f"{aimMatrix1}.primaryTargetMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'HandIK')]}.parentMatrix",f"{aimMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{aimMatrix1}.outputMatrix",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'HandIK')]}.parentInverseMatrix",f"{multMatrix1}.matrixIn[2]")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputShear",f"{composeMatrix1}.inputShear")
-        cmds.connectAttr(F"{decomposeMatrix1}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(F"{multMatrix1}.matrixSum",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputTranslate",f"{create_obj_dic[('Drv',clr,'HandIK')]}.t")
-        cmds.connectAttr(F"{floatMath3}.outFloat",f"{floatMath4}.floatB")
-        cmds.connectAttr(F"{distanceBetween2}.distance",f"{floatMath4}.floatA")
-        cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath5}.floatB")
-        cmds.connectAttr(F"{floatMath2}.outFloat",f"{floatMath9}.floatB")
-        cmds.connectAttr(F"{floatMath2}.outFloat",F"{condition2}.secondTerm")
-        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'HandIK')]}.smoothIK",f"{floatMath10}.floatB")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{floatMath5}.floatA")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{absolute}.input")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{condition1}.firstTerm")
-        cmds.connectAttr(F"{floatMath4}.outFloat",f"{condition1}.colorIfTrueR")
-        cmds.connectAttr(f"{absolute}.output",f"{condition2}.firstTerm")
-        cmds.connectAttr(f"{condition1}.outColorR",f"{condition2}.colorIfTrueR")
-        cmds.connectAttr(F"{floatMath10}.outFloat",f"{composeMatrix2}.inputTranslateX")
-        cmds.connectAttr(F"{condition2}.outColorR",f"{floatMath10}.floatA")
-        cmds.connectAttr(f"{floatMath9}.outFloat",f"{condition2}.colorIfFalseR")
-        cmds.connectAttr(F"{floatMath5}.outFloat",f"{floatMath6}.floatA")
-        cmds.connectAttr(F"{floatMath6}.outFloat",f"{floatMath7}.floatA")
-        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatA")
-        cmds.connectAttr(F"{floatMath7}.outFloat",f"{floatMath8}.floatB")
-        cmds.connectAttr(F"{floatMath8}.outFloat",f"{floatMath9}.floatA")
-
-
         cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleX",0)
         cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleY",0)
         cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleZ",0)
+
+        
+        #IKFKSwitch
+        cmds.setAttr(f"{ik_parent}.v",0,l=True)
+
+        fkCondition = cmds.createNode("condition")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Shoulder')]}.IKFK",f"{fkCondition}.firstTerm")
+        cmds.setAttr(f"{fkCondition}.secondTerm",0)
+        cmds.setAttr(f"{fkCondition}.operation",1)
+        cmds.setAttr(f"{fkCondition}.colorIfTrueR",1)
+        cmds.setAttr(f"{fkCondition}.colorIfFalseR",0)
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.v", lock=False)
+        cmds.connectAttr(f"{fkCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'LowerArmFK')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.v", lock=False)
+        cmds.connectAttr(f"{fkCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'UpperArmFK')]}.v")
+
+        ikCondition = cmds.createNode("condition")
+        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Shoulder')]}.IKFK",f"{ikCondition}.firstTerm")
+        cmds.setAttr(f"{ikCondition}.secondTerm",1)
+        cmds.setAttr(f"{ikCondition}.operation",1)
+        cmds.setAttr(f"{ikCondition}.colorIfTrueR",1)
+        cmds.setAttr(f"{ikCondition}.colorIfFalseR",0)
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'ArmPV')]}.v", lock=False)
+        cmds.connectAttr(f"{ikCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'ArmPV')]}.v")
+        cmds.setAttr( f"{create_obj_dic[('Grp',clr,'HandIK')]}.v", lock=False)
+        cmds.connectAttr(f"{ikCondition}.outColorR",f"{create_obj_dic[('Grp',clr,'HandIK')]}.v")
 
     return create_obj_dic
 
@@ -2424,7 +2141,7 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         作成したオブジェ入った辞書
     """
     create_obj_dic={}
-    unity_setting = obj_dic[('Con','C','UnitySetting')]
+    setting = obj_dic[('Con','C','Setting')]
 
     #親作成
     root_center_obj = cmds.group(em=True,n=f"Grp_C_Hand",p=parent)
@@ -2435,239 +2152,166 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         clr_lower = clr.lower()
         root_obj = cmds.group(em=True,n=f"Grp_{clr}_Hand",p=root_center_obj)
         create_obj_dic[('Grp',clr,'Hand')]=root_obj
+        if(clr == "L"):
+            scl = 1
+        else:
+            scl = -1
 
         hand_matrix = cmds.xform(orientation_dic[f'{clr_lower}_hand'],q=True,ws=True,m=True)
 
-        cmds.addAttr(joint_dic[f'{clr_lower}_lowerArm'],ln="WorldBindMatrix",at="matrix")
-        cmds.addAttr(joint_dic[f'{clr_lower}_upperArm'],ln="WorldBindMatrix",at="matrix")
-        lowerArm_matrix = cmds.xform(joint_dic[f'{clr_lower}_lowerArm'],ws=True,q=True,m=True)
-        upperArm_matrix = cmds.xform(joint_dic[f'{clr_lower}_upperArm'],ws=True,q=True,m=True)
-        cmds.setAttr(f"{joint_dic[f'{clr_lower}_lowerArm']}.WorldBindMatrix",*lowerArm_matrix,typ="matrix")
-        cmds.setAttr(f"{joint_dic[f'{clr_lower}_upperArm']}.WorldBindMatrix",*upperArm_matrix,typ="matrix")
-
         #手首 Hand
-        create_obj_dic |= autorig_utility.create_controller("Wrist",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="cube",con_size=(4,4,4),con_rotate=(90,90,0),con_position=(2,0,0),
-                                                            unity_setting=unity_setting,scale_unable=True,pos_unable=True,uniform_scale=True)
-        cmds.connectAttr(F"{joint_dic[f'{clr_lower}_lowerArm']}.worldMatrix[0]",F"{create_obj_dic[('Grp',clr,'Wrist')]}.offsetParentMatrix")
+        create_obj_dic |= autorig_utility.create_controller("Wrist",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="cube",con_scl=(4,4,4),con_rot=(90,90,0),con_pos=(2,0,0),
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),uniform_scale=True,drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'Wrist')],m=hand_matrix,ws=True)
+        autorig_utility.switch_parent(posA=joint_dic[f'{clr_lower}_lowerArm'],sclA=obj_dic[('Drv','C','Root3')],
+                                      rotA=obj_dic[('Drv','C','Root3')],rotB=joint_dic[f'{clr_lower}_lowerArm'],
+                                      dvn_grp=create_obj_dic[('Grp',clr,'Wrist')],dvn_con=create_obj_dic[('Con',clr,'Wrist')])
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'Wrist')]}.sy",scl)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.rotParent",1)
         autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,'Wrist')]}",joint_dic[f'{clr_lower}_hand'])
 
-        cmds.addAttr(create_obj_dic[('Con',clr,'Wrist')],ln="LayeredScale",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.LayeredScale",0,k=True)
-        cmds.addAttr(create_obj_dic[('Con',clr,'Wrist')],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.LayeredRotate",1,k=True)
-        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-        decomposeMatrix5 = cmds.createNode("decomposeMatrix")
-        multMatrix1 = cmds.createNode("multMatrix")
-        multMatrix2 = cmds.createNode("multMatrix")
-        multMatrix3 = cmds.createNode("multMatrix")
-        composeMatrix1 = cmds.createNode("composeMatrix")
-        composeMatrix2 = cmds.createNode("composeMatrix")
-        blendColor1 = cmds.createNode("blendColors")
-        quatSlerp1 = cmds.createNode("quatSlerp")
-        quatProd1 = cmds.createNode("quatProd")
-        quatProd2 = cmds.createNode("quatProd")
-        quatProd3 = cmds.createNode("quatProd")
-        quatInvert1 = cmds.createNode("quatInvert")
-        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.sy",-1)
-            composeMatrix3 = cmds.createNode("composeMatrix")
-            cmds.setAttr(F"{composeMatrix3}.inputScaleY",-1)
-            cmds.connectAttr(f"{composeMatrix3}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.inverseMatrix",f"{multMatrix3}.matrixIn[1]")
-            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[2]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.matrix",f"{multMatrix3}.matrixIn[3]")
-        else:
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.inverseMatrix",f"{multMatrix3}.matrixIn[0]")
-            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.matrix",f"{multMatrix3}.matrixIn[2]")
-        cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{create_obj_dic[('Con',clr,'Wrist')]}.offsetParentMatrix")
-
-        cmds.connectAttr(F"{multMatrix2}.matrixSum",F"{create_obj_dic[('Grp',clr,'Wrist')]}.offsetParentMatrix",f=True)
-        cmds.connectAttr(F"{joint_dic[f'{clr_lower}_lowerArm']}.worldMatrix",f"{decomposeMatrix1}.inputMatrix")
-        cmds.connectAttr(F"{create_obj_dic[('Grp',clr,'Wrist')]}.matrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(F"{joint_dic[f'{clr_lower}_lowerArm']}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(F"{joint_dic[f'{clr_lower}_lowerArm']}.WorldBindMatrix",f"{decomposeMatrix2}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatInvert1}.inputQuat")
-        cmds.connectAttr(f"{quatInvert1}.outputQuat",f"{quatProd1}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{blendColor1}.color1")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{blendColor1}.color2")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.LayeredScale",f"{blendColor1}.blender")
-        cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatProd2}.input2Quat")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd2}.input1Quat")
-        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd3}.input1Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'Wrist')]}.WorldBindMatrix",f"{decomposeMatrix3}.inputMatrix")
-        cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix",f"{decomposeMatrix4}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd3}.input2Quat")
-        cmds.connectAttr(f"{quatProd3}.outputQuat",f"{quatSlerp1}.input1Quat")
-        cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp1}.input2Quat")
-        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'Wrist')]}.LayeredRotate",f"{quatSlerp1}.inputT")
-        cmds.connectAttr(f"{blendColor1}.output",f"{composeMatrix2}.inputScale")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix5}.inputMatrix")
-        cmds.connectAttr(f"{decomposeMatrix5}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-        cmds.connectAttr(f"{quatSlerp1}.outputQuat",f"{composeMatrix1}.inputQuat")
-        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,'Wrist')]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-
         #指一括操作コントローラー
-        create_obj_dic |= autorig_utility.create_controller("FingerBundle",root_obj,pos_CLR=clr,con_color=(0.8,0.2,0.2),con_shape="triangular",con_size=(2,2,2),con_rotate=(-90,0,0),
-                                                            unity_setting=unity_setting)
+        create_obj_dic |= autorig_utility.create_controller("FingerBundle",root_obj,pos_CLR=clr,con_color=(0.8,0.2,0.2),con_shape="triangular",con_scl=(2,2,2),con_rot=(-90,0,0),
+                                                            setting=setting,drv_scale_offset=(1,scl,1),uniform_scale=True)
         cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,'FingerBundle')]}.offsetParentMatrix")
         cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FingerBundle')]}.tx",3)
-        if(clr=="R"):
-            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FingerBundle')]}.sy",-1)
-            cmds.setAttr(F"{create_obj_dic[('Drv',clr,'FingerBundle')]}.sy",-1)
+        cmds.setAttr(F"{create_obj_dic[('Grp',clr,'FingerBundle')]}.sy",scl)
 
         finger_name_list = ("Thumb","Index","Middle","Ring","Little")
         number_name_list=("Root","Proximal","Intermediate","Distal")
-        for name in finger_name_list:
-            if(f"{clr_lower}_{name.lower()}1" in orientation_dic and f"{clr_lower}_{name.lower()}2" in orientation_dic and f"{clr_lower}_{name.lower()}3" in orientation_dic):
-                for number in range(4):
-                    if(number == 0):
-                        create_obj_dic[('Drv',clr,f'{name}Root')]=cmds.group(em=True,n=f"Drv_{clr}_{name}Root",p=root_obj)
-                        matrix = cmds.xform(orientation_dic[f'{clr_lower}_{name.lower()}1'],ws=True,q=True,m=True)
-                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Drv',clr,f'{name}Root')]}.offsetParentMatrix")
-                        cmds.xform(create_obj_dic[('Drv',clr,f'{name}Root')],ws=True,m=matrix)
-                        cmds.addAttr(create_obj_dic[('Drv',clr,f'{name}Root')],ln="WorldBindMatrix",at="matrix")
-                        cmds.setAttr(f"{create_obj_dic[('Drv',clr,f'{name}Root')]}.WorldBindMatrix",*matrix,typ="matrix")
-                        cmds.setAttr(f"{create_obj_dic[('Drv',clr,f'{name}Root')]}.WorldBindMatrix",lock=True, keyable=False)
-                    elif(f'{clr_lower}_{name.lower()}{number}' in joint_dic):
-                        parent_obj_name=f"{name}{number_name_list[number-1]}"
-                        create_obj_name=f"{name}{number_name_list[number]}"
-                        joint=joint_dic[f'{clr_lower}_{name.lower()}{number}']
-                        matrix = cmds.xform(orientation_dic[f'{clr_lower}_{name.lower()}{number}'],ws=True,q=True,m=True)
-                        create_obj_dic |= autorig_utility.create_controller(f"{create_obj_name}",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="pentagon",con_size=(1,1,1),
-                                                                            con_rotate=(0,180,90),unity_setting=unity_setting,scale_unable=True,pos_unable=True)
 
-                        #FKLower
-                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,parent_obj_name)]}.worldMatrix[0]",F"{create_obj_dic[('Grp',clr,create_obj_name)]}.offsetParentMatrix")
-                        cmds.xform(create_obj_dic[('Grp',clr,create_obj_name)],m=matrix,ws=True)
-                        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,create_obj_name)]}",joint)
+        for finger in finger_name_list:
+            for number in range(4):
+                name = f"{finger}{number_name_list[number]}"
+                #根本
+                if(number==0):
+                    create_obj_dic[('Grp',clr,name)]=cmds.group(em=True,n=f"Grp_{clr}_{name}",p=root_obj)
+                    create_obj_dic[('Drv',clr,name)]=cmds.group(em=True,n=f"Drv_{clr}_{name}",p=create_obj_dic[('Grp',clr,name)])
 
-                        decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-                        decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-                        decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-                        decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-                        decomposeMatrix5 = cmds.createNode("decomposeMatrix")
-                        multMatrix1 = cmds.createNode("multMatrix")
-                        multMatrix2 = cmds.createNode("multMatrix")
-                        multMatrix3 = cmds.createNode("multMatrix")
-                        multMatrix4 = cmds.createNode("multMatrix")
-                        composeMatrix1 = cmds.createNode("composeMatrix")
-                        composeMatrix2 = cmds.createNode("composeMatrix")
-                        blendColor1 = cmds.createNode("blendColors")
-                        quatSlerp1 = cmds.createNode("quatSlerp")
-                        quatProd1 = cmds.createNode("quatProd")
-                        quatProd2 = cmds.createNode("quatProd")
-                        quatProd3 = cmds.createNode("quatProd")
-                        quatInvert1 = cmds.createNode("quatInvert")
-                        inverseMatrix1 = cmds.createNode("inverseMatrix")
-                        cmds.setAttr(f"{composeMatrix1}.useEulerRotation",0)
-                        cmds.setAttr(f"{composeMatrix2}.useEulerRotation",0)
+                    matrix = cmds.xform(orientation_dic[f'{clr_lower}_{finger.lower()}1'],ws=True,q=True,m=True)
+                    cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,name)]}.offsetParentMatrix")
+                    cmds.xform(create_obj_dic[('Grp',clr,name)],ws=True,m=matrix)
 
-                        if(number!=1):
-                            cmds.addAttr(create_obj_dic[('Con',clr,create_obj_name)],ln="LayeredScale",at="double",min=0,max=1,dv=0)
-                            cmds.setAttr(f"{create_obj_dic[('Con',clr,create_obj_name)]}.LayeredScale",0,k=True)
-                            cmds.addAttr(create_obj_dic[('Con',clr,create_obj_name)],ln="LayeredRotate",at="double",min=0,max=1,dv=0)
-                            cmds.setAttr(f"{create_obj_dic[('Con',clr,create_obj_name)]}.LayeredRotate",1,k=True)
-                            cmds.connectAttr(f"{create_obj_dic[('Con',clr,create_obj_name)]}.LayeredScale",f"{blendColor1}.blender")
-                            cmds.connectAttr(f"{create_obj_dic[('Con',clr,create_obj_name)]}.LayeredRotate",f"{quatSlerp1}.inputT")
+                    cmds.addAttr(create_obj_dic[('Drv',clr,name)],ln="WorldBindMatrix",at="matrix")
+                    cmds.setAttr(f"{create_obj_dic[('Drv',clr,name)]}.WorldBindMatrix",*matrix,typ="matrix")
+                    cmds.setAttr(f"{create_obj_dic[('Drv',clr,name)]}.WorldBindMatrix",lock=True, keyable=False)
+                else:
+                    parent_name = f"{finger}{number_name_list[number-1]}"
+                    root_name = f"{finger}{number_name_list[0]}"
+                    matrix = cmds.xform(orientation_dic[f'{clr_lower}_{finger.lower()}{number}'],ws=True,q=True,m=True)
 
-                        if(clr=="R"):
-                            cmds.setAttr(F"{create_obj_dic[('Drv',clr,create_obj_name)]}.sy",-1)
-                            composeMatrix3 = cmds.createNode("composeMatrix")
-                            cmds.setAttr(F"{composeMatrix3}.inputScaleY",-1)
-                            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
-                            cmds.connectAttr(f"{composeMatrix3}.outputMatrix",f"{multMatrix3}.matrixIn[1]")
-                        else:
-                            cmds.connectAttr(f"{composeMatrix2}.outputMatrix",f"{multMatrix3}.matrixIn[0]")
+                    create_obj_dic |= autorig_utility.create_controller(name,root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="pentagon",con_scl=(1,1,1),drv_scale_offset=(1,scl,1),
+                                                                            con_rot=(0,180,90),setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
+                    cmds.xform(create_obj_dic[('Grp',clr,name)],ws=True,m=matrix)
+                    autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,parent_name)],
+                                      sclA=create_obj_dic[('Drv',clr,'Wrist')],sclB=create_obj_dic[('Drv',clr,parent_name)],
+                                    rotA=create_obj_dic[('Drv',clr,'Wrist')],rotB=create_obj_dic[('Drv',clr,parent_name)],
+                                    dvn_con=create_obj_dic[('Con',clr,name)],dvn_grp=create_obj_dic[('Grp',clr,name)],postScl=True)
+                    cmds.setAttr(f"{create_obj_dic[('Con',clr,name)]}.rotParent",1)
+                    cmds.setAttr(f"{create_obj_dic[('Grp',clr,name)]}.sy",scl)
 
-                        cmds.connectAttr(F"{multMatrix2}.matrixSum",F"{create_obj_dic[('Grp',clr,create_obj_name)]}.offsetParentMatrix",f=True)
-                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,parent_obj_name)]}.worldMatrix",f"{decomposeMatrix1}.inputMatrix")
-                        cmds.connectAttr(F"{create_obj_dic[('Grp',clr,create_obj_name)]}.matrix",f"{multMatrix1}.matrixIn[0]")
-                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,parent_obj_name)]}.worldMatrix",f"{multMatrix1}.matrixIn[1]")
-                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,parent_obj_name)]}.WorldBindMatrix",f"{decomposeMatrix2}.inputMatrix")
-                        cmds.connectAttr(f"{decomposeMatrix2}.outputQuat",f"{quatInvert1}.inputQuat")
-                        cmds.connectAttr(f"{quatInvert1}.outputQuat",f"{quatProd1}.input1Quat")
-                        cmds.connectAttr(f"{decomposeMatrix1}.outputQuat",f"{quatProd1}.input2Quat")
-                        cmds.connectAttr(f"{decomposeMatrix1}.outputScale",f"{blendColor1}.color1")
-                        cmds.connectAttr(f"{decomposeMatrix4}.outputScale",f"{blendColor1}.color2")
-                        cmds.connectAttr(f"{quatProd1}.outputQuat",f"{quatProd2}.input2Quat")
-                        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd2}.input1Quat")
-                        cmds.connectAttr(f"{decomposeMatrix3}.outputQuat",f"{quatProd3}.input1Quat")
-                        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,create_obj_name)]}.WorldBindMatrix",f"{decomposeMatrix3}.inputMatrix")
-                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.WorldBindMatrix",f"{inverseMatrix1}.inputMatrix")
-                        cmds.connectAttr(f"{inverseMatrix1}.outputMatrix",f"{multMatrix4}.matrixIn[0]")
-                        cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{multMatrix4}.matrixIn[1]")
-                        cmds.connectAttr(f"{multMatrix4}.matrixSum",f"{decomposeMatrix4}.inputMatrix")
-                        cmds.connectAttr(f"{decomposeMatrix4}.outputQuat",f"{quatProd3}.input2Quat")
-                        cmds.connectAttr(f"{quatProd3}.outputQuat",f"{quatSlerp1}.input1Quat")
-                        cmds.connectAttr(f"{quatProd2}.outputQuat",f"{quatSlerp1}.input2Quat")
-                        cmds.connectAttr(f"{blendColor1}.output",f"{composeMatrix2}.inputScale")
-                        cmds.connectAttr(f"{multMatrix3}.matrixSum",f"{create_obj_dic[('Con',clr,create_obj_name)]}.offsetParentMatrix")
-                        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{decomposeMatrix5}.inputMatrix")
-                        cmds.connectAttr(f"{decomposeMatrix5}.outputTranslate",f"{composeMatrix1}.inputTranslate")
-                        cmds.connectAttr(f"{quatSlerp1}.outputQuat",f"{composeMatrix1}.inputQuat")
-                        cmds.connectAttr(f"{create_obj_dic[('Grp',clr,create_obj_name)]}.inverseMatrix",f"{multMatrix2}.matrixIn[0]")
-                        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
+                    create_obj_dic[('Dvn',clr,name)]=cmds.group(em=True,n=f"Dvn_{clr}_{name}",p=create_obj_dic[('Grp',clr,name)])
+                    create_obj_dic.update({('Con',clr,name):cmds.parent(create_obj_dic[('Con',clr,name)],create_obj_dic[('Dvn',clr,name)])[0]})
+                    create_obj_dic.update({('Drv',clr,name):cmds.parent(create_obj_dic[('Drv',clr,name)],create_obj_dic[('Dvn',clr,name)])[0]})
 
-                        #一括制御用
-                        eulerToQuatT = cmds.createNode("eulerToQuat")
-                        eulerToQuatR = cmds.createNode("eulerToQuat")
-                        eulerToQuatS = cmds.createNode("eulerToQuat")
-                        quatProd1 = cmds.createNode("quatProd")
-                        quatProd2 = cmds.createNode("quatProd")
+                    joint=joint_dic[f'{clr_lower}_{finger.lower()}{number}']
+                    autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,name)]}",joint)
 
-                        cmds.connectAttr(f"{eulerToQuatT}.outputQuat",F"{quatProd2}.input2Quat")
-                        cmds.connectAttr(f"{eulerToQuatR}.outputQuat",F"{quatProd1}.input2Quat")
-                        cmds.connectAttr(f"{eulerToQuatS}.outputQuat",F"{quatProd1}.input1Quat")
-                        cmds.connectAttr(F"{quatProd1}.outputQuat",f"{quatProd2}.input1Quat")
-                        cmds.connectAttr(F"{quatProd2}.outputQuat",f"{composeMatrix2}.inputQuat")
-                        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.rotateOrder",f"{eulerToQuatR}.inputRotateOrder")
-                        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.rotateOrder",f"{eulerToQuatT}.inputRotateOrder")
-                        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.rotateOrder",f"{eulerToQuatS}.inputRotateOrder")
 
-                        floatMathTX = cmds.createNode("floatMath")
-                        floatMathTY = cmds.createNode("floatMath")
-                        floatMathTZ = cmds.createNode("floatMath")
-                        floatMathRX = cmds.createNode("floatMath")
-                        floatMathRY = cmds.createNode("floatMath")
-                        floatMathRZ = cmds.createNode("floatMath")
-                        floatMathSX = cmds.createNode("floatMath")
-                        floatMathSY = cmds.createNode("floatMath")
-                        floatMathSZ = cmds.createNode("floatMath")
+                    #一括制御用
+                    eulerToQuatT = cmds.createNode("eulerToQuat")
+                    eulerToQuatR = cmds.createNode("eulerToQuat")
+                    quatSlerpT = cmds.createNode("quatSlerp")
+                    quatSlerpR = cmds.createNode("quatSlerp")
+                    cmds.connectAttr(f"{eulerToQuatT}.outputQuat",F"{quatSlerpT}.input2Quat")
+                    cmds.connectAttr(f"{eulerToQuatR}.outputQuat",F"{quatSlerpR}.input2Quat")
+                    cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.rotateOrder",f"{eulerToQuatT}.inputRotateOrder")
+                    cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.rotateOrder",f"{eulerToQuatR}.inputRotateOrder")
+                    cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.sx",F"{quatSlerpT}.inputT")
+                    cmds.connectAttr(F"{create_obj_dic[('Con',clr,'FingerBundle')]}.sx",F"{quatSlerpR}.inputT")
 
-                        cmds.connectAttr(f"{floatMathTX}.outFloat",f"{eulerToQuatT}.inputRotateX")
-                        cmds.connectAttr(f"{floatMathTY}.outFloat",f"{eulerToQuatT}.inputRotateY")
-                        cmds.connectAttr(f"{floatMathTZ}.outFloat",f"{eulerToQuatT}.inputRotateZ")
-                        cmds.connectAttr(f"{floatMathRX}.outFloat",f"{eulerToQuatR}.inputRotateX")
-                        cmds.connectAttr(f"{floatMathRY}.outFloat",f"{eulerToQuatR}.inputRotateY")
-                        cmds.connectAttr(f"{floatMathRZ}.outFloat",f"{eulerToQuatR}.inputRotateZ")
-                        cmds.connectAttr(f"{floatMathSX}.outFloat",f"{eulerToQuatS}.inputRotateX")
-                        cmds.connectAttr(f"{floatMathSY}.outFloat",f"{eulerToQuatS}.inputRotateY")
-                        cmds.connectAttr(f"{floatMathSZ}.outFloat",f"{eulerToQuatS}.inputRotateZ")
+                    quatProd1 = cmds.createNode("quatProd")
+                    quatToEuler1 = cmds.createNode("quatToEuler")
+                    cmds.connectAttr(f"{quatSlerpT}.outputQuat",F"{quatProd1}.input2Quat")
+                    cmds.connectAttr(f"{quatSlerpR}.outputQuat",F"{quatProd1}.input1Quat")
+                    cmds.connectAttr(F"{quatProd1}.outputQuat",f"{quatToEuler1}.inputQuat")
+                    cmds.connectAttr(f"{quatToEuler1}.outputRotate",f"{create_obj_dic[('Dvn',clr,name)]}.rotate")
+                    cmds.connectAttr(f"{create_obj_dic[('Dvn',clr,name)]}.rotateOrder",f"{quatToEuler1}.inputRotateOrder")
 
-                        math_list = [floatMathTX,floatMathTY,floatMathTZ,floatMathRX,floatMathRY,floatMathRZ,floatMathSX,floatMathSY,floatMathSZ]
+                    floatMathTX = cmds.createNode("floatMath")
+                    floatMathTY = cmds.createNode("floatMath")
+                    floatMathTZ = cmds.createNode("floatMath")
+                    floatMathRX = cmds.createNode("floatMath")
+                    floatMathRY = cmds.createNode("floatMath")
+                    floatMathRZ = cmds.createNode("floatMath")
+                    cmds.connectAttr(f"{floatMathTX}.outFloat",f"{eulerToQuatT}.inputRotateX")
+                    cmds.connectAttr(f"{floatMathTY}.outFloat",f"{eulerToQuatT}.inputRotateY")
+                    cmds.connectAttr(f"{floatMathTZ}.outFloat",f"{eulerToQuatT}.inputRotateZ")
+                    cmds.connectAttr(f"{floatMathRX}.outFloat",f"{eulerToQuatR}.inputRotateX")
+                    cmds.connectAttr(f"{floatMathRY}.outFloat",f"{eulerToQuatR}.inputRotateY")
+                    cmds.connectAttr(f"{floatMathRZ}.outFloat",f"{eulerToQuatR}.inputRotateZ")
 
-                        for n,i in enumerate(["TX","TY","TZ","RX","RY","RZ","SX","SY","SZ"]):
-                            cmds.addAttr(create_obj_dic[('Con',clr,'FingerBundle')],ln=f"{create_obj_name}{i}",at="double",dv=0)
-                            cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{create_obj_name}{i}",1,k=True)
-                            cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{create_obj_name}{i}",f"{math_list[n]}.floatB")
-                            if(n<6):
-                                cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{i.lower()}",f"{math_list[n]}.floatA")
+                    math_list = [(floatMathTX,"TX"),(floatMathTY,"TY"),(floatMathTZ,"TZ"),(floatMathRX,"RX"),(floatMathRY,"RY"),(floatMathRZ,"RZ")]
+                    for i in math_list:
+                        cmds.setAttr(f"{i[0]}.operation",2)
+                        cmds.addAttr(create_obj_dic[('Con',clr,'FingerBundle')],ln=f"{name}{i[1]}",at="double",dv=0)
+                        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{i[1].lower()}",f"{i[0]}.floatA")
+                        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",f"{i[0]}.floatB")
+
+                        if(i[1]=="RX" or i[1]=="RZ"):
+                            if(number==1):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",1,k=True)
                             else:
-                                floatMath=cmds.createNode("floatMath")
-                                cmds.setAttr(F"{floatMath}.floatB",-1)
-                                cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{i.lower()}",f"{floatMath}.floatA")
-                                cmds.connectAttr(f"{floatMath}.outFloat",f"{math_list[n]}.floatA")
-                            cmds.setAttr(f"{math_list[n]}.operation",2)
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0,k=True)
+                        elif(i[1]=="RY"):
+                            if(number==1):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",1,k=True)
+                            elif(number==2):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",1.1,k=True)
+                            elif(number==3):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0.9,k=True)
 
+                        if(i[1]=="TX"):
+                            if(number!=1 or finger=="Middle"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0,k=True)
+                            elif(finger=="Thumb"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",10,k=True)
+                            elif(finger=="Index"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",5,k=True)
+                            elif(finger=="Ring"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",5,k=True)
+                            elif(finger=="Little"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",10,k=True)
+
+                        if(i[1]=="TZ"):
+                            if(number!=1 or finger=="Middle"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0,k=True)
+                            elif(finger=="Thumb"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",-10,k=True)
+                            elif(finger=="Index"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",-10,k=True)
+                            elif(finger=="Ring"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",5,k=True)
+                            elif(finger=="Little"):
+                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",10,k=True)
+
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbProximalTY",-5,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexProximalTY",-10,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.MiddleProximalTY",5,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.RingProximalTY",15,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.LittleProximalTY",30,k=True)
+
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbIntermediateTY",-1,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexIntermediateTY",-1,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.MiddleIntermediateTY",-1,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.RingIntermediateTY",-1,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.LittleIntermediateTY",-1,k=True)
+        
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbDistalTY",-2,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexDistalTY",-2,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.MiddleDistalTY",-2,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.RingDistalTY",-2,k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.LittleDistalTY",-2,k=True)
 
     return create_obj_dic
 
@@ -2683,69 +2327,77 @@ def clean_obj(character_name:str,obj_dic:dict):
     -------
         無し
     """
-    unity_setting = obj_dic[('Con','C','UnitySetting')]
+    setting = obj_dic[('Con','C','Setting')]
     root = obj_dic[('Con','C','Root1')]
 
     v_list=("BodyV","HeadV","LegV","LegLeftV","LegRightV","ArmV","ArmLeftV","ArmRightV","HandV","HandLeftV","HandRightV")
     for v in v_list:
-        cmds.addAttr(root,ln=v,at="bool")
-        cmds.setAttr(f"{root}.{v}",1,k=True,l=False)
-    cmds.connectAttr(F"{root}.BodyV",f"{obj_dic[('Grp','C','Body')]}.v")
-    cmds.connectAttr(F"{root}.HeadV",f"{obj_dic[('Grp','C','Heads')]}.v")
-    cmds.connectAttr(F"{root}.LegV",f"{obj_dic[('Grp','C','Leg')]}.v")
-    cmds.connectAttr(F"{root}.LegLeftV",f"{obj_dic[('Grp','L','Leg')]}.v")
-    cmds.connectAttr(F"{root}.LegRightV",f"{obj_dic[('Grp','R','Leg')]}.v")
-    cmds.connectAttr(F"{root}.ArmV",f"{obj_dic[('Grp','C','Arm')]}.v")
-    cmds.connectAttr(F"{root}.ArmLeftV",f"{obj_dic[('Grp','L','Arm')]}.v")
-    cmds.connectAttr(F"{root}.ArmRightV",f"{obj_dic[('Grp','R','Arm')]}.v")
-    cmds.connectAttr(F"{root}.HandV",f"{obj_dic[('Grp','C','Hand')]}.v")
-    cmds.connectAttr(F"{root}.HandLeftV",f"{obj_dic[('Grp','L','Hand')]}.v")
-    cmds.connectAttr(F"{root}.HandRightV",f"{obj_dic[('Grp','R','Hand')]}.v")
+        cmds.addAttr(setting,ln=v,at="bool")
+        cmds.setAttr(f"{setting}.{v}",1,k=True,l=False)
+    cmds.connectAttr(F"{setting}.BodyV",f"{obj_dic[('Grp','C','Body')]}.v")
+    cmds.connectAttr(F"{setting}.HeadV",f"{obj_dic[('Grp','C','Heads')]}.v")
+    cmds.connectAttr(F"{setting}.LegV",f"{obj_dic[('Grp','C','Leg')]}.v")
+    cmds.connectAttr(F"{setting}.LegLeftV",f"{obj_dic[('Grp','L','Leg')]}.v")
+    cmds.connectAttr(F"{setting}.LegRightV",f"{obj_dic[('Grp','R','Leg')]}.v")
+    cmds.connectAttr(F"{setting}.ArmV",f"{obj_dic[('Grp','C','Arm')]}.v")
+    cmds.connectAttr(F"{setting}.ArmLeftV",f"{obj_dic[('Grp','L','Arm')]}.v")
+    cmds.connectAttr(F"{setting}.ArmRightV",f"{obj_dic[('Grp','R','Arm')]}.v")
+    cmds.connectAttr(F"{setting}.HandV",f"{obj_dic[('Grp','C','Hand')]}.v")
+    cmds.connectAttr(F"{setting}.HandLeftV",f"{obj_dic[('Grp','L','Hand')]}.v")
+    cmds.connectAttr(F"{setting}.HandRightV",f"{obj_dic[('Grp','R','Hand')]}.v")
 
-
-
+    #元からあるアトリビュート取得
+    temp = cmds.group(em=True, name='null')
+    temp_atter_list = cmds.listAttr(temp)
+    cmds.delete(temp)
+    
     for obj in obj_dic:
-        attr_list=cmds.listAttr(f"{obj_dic[obj]}")
+        attr_list=cmds.listAttr(obj_dic[obj])
+
+        #初期値保存
+        if obj[0]=='Con':
+            for attr in attr_list:
+                if(attr not in temp_atter_list and cmds.getAttr(f"{obj_dic[obj]}.{attr}", keyable=True)):
+                    data_type=cmds.getAttr(F"{obj_dic[obj]}.{attr}",typ=True)
+                    print(data_type)
+                    if(data_type == "double"):
+                        data=cmds.getAttr(F"{obj_dic[obj]}.{attr}")
+                        cmds.addAttr(obj_dic[obj],ln=f"{attr}_Default",at="double",dv=data)
+                        cmds.setAttr(F"{obj_dic[obj]}.{attr}_Default",k=False)
+                    if(data_type == "float"):
+                        data=cmds.getAttr(F"{obj_dic[obj]}.{attr}")
+                        cmds.addAttr(obj_dic[obj],ln=f"{attr}_Default",at="float",dv=data)
+                        cmds.setAttr(F"{obj_dic[obj]}.{attr}_Default",k=False)
+                    if(data_type == "enum"):
+                        data=cmds.getAttr(F"{obj_dic[obj]}.{attr}")
+                        cmds.addAttr(obj_dic[obj],ln=f"{attr}_Default",at="long",dv=data)
+                        cmds.setAttr(F"{obj_dic[obj]}.{attr}_Default",k=False)
+
         #コントローラー以外ロック
-        if obj[0]=='Grp' or obj[0]=='Drv':
+        if obj[0]=='Grp' or obj[0]=='Drv' or obj[0]=='Dvn':
             cmds.setAttr(f"{obj_dic[obj]}.t",k=False,l=True,cb=True)
             cmds.setAttr(f"{obj_dic[obj]}.s",k=False,l=True,cb=True)
             cmds.setAttr(f"{obj_dic[obj]}.r",k=False,l=True,cb=True)
             cmds.setAttr(f"{obj_dic[obj]}.v",k=False,l=True,cb=True)
             for attr in attr_list:
-                if('.' not in attr):
-                    if(cmds.getAttr(F"{obj_dic[obj]}.{attr}",k=True)):
-                        cmds.setAttr(F"{obj_dic[obj]}.{attr}",l=True)
-        
-        if obj[0]=='Con':
-            for attr in attr_list:
-                if('.' not in attr and obj[2]!='FingerBundle'):
-                    keyable=cmds.getAttr(F"{obj_dic[obj]}.{attr}",k=True)
-                    data_type=cmds.getAttr(F"{obj_dic[obj]}.{attr}",typ=True)
-                    if(keyable==1 and data_type == "double"):
-                        data=cmds.getAttr(F"{obj_dic[obj]}.{attr}")
-                        cmds.addAttr(obj_dic[obj],ln=f"{attr}_Default",at="double",dv=data)
-                        cmds.setAttr(F"{obj_dic[obj]}.{attr}_Default",k=False)
-                    if(keyable==1 and data_type == "float"):
-                        data=cmds.getAttr(F"{obj_dic[obj]}.{attr}")
-                        cmds.addAttr(obj_dic[obj],ln=f"{attr}_Default",at="float",dv=data)
-                        cmds.setAttr(F"{obj_dic[obj]}.{attr}_Default",k=False)
+                if(attr not in temp_atter_list and not cmds.getAttr(f"{obj_dic[obj]}.{attr}", lock=True)):
+                    cmds.setAttr(F"{obj_dic[obj]}.{attr}",l=True)
 
+    #全ノード再計算
+    cmds.dgdirty(a=True)
+    current_time = cmds.currentTime(q=True)
+    cmds.currentTime(current_time, edit=True)
 
     #ピッカー用
     info_obj_name = "ARFH_information"
-    if(len(cmds.ls(info_obj_name))!=0):
-        info_obj=cmds.ls(info_obj_name,l=True)[0]
-        cmds.setAttr(f"{info_obj}.characterName",character_name,typ="string")
-    else:
-        info_obj = cmds.group(em=True,n=info_obj_name)
-        cmds.setAttr(f"{info_obj}.t",k=False,l=True,cb=True)
-        cmds.setAttr(f"{info_obj}.s",k=False,l=True,cb=True)
-        cmds.setAttr(f"{info_obj}.r",k=False,l=True,cb=True)
-        cmds.setAttr(f"{info_obj}.v",0,k=False,l=True,cb=True)
+    info_obj = cmds.group(em=True,n=info_obj_name)
+    cmds.setAttr(f"{info_obj}.t",k=False,l=True,cb=True)
+    cmds.setAttr(f"{info_obj}.s",k=False,l=True,cb=True)
+    cmds.setAttr(f"{info_obj}.r",k=False,l=True,cb=True)
+    cmds.setAttr(f"{info_obj}.v",0,k=False,l=True,cb=True)
 
-        cmds.addAttr(f"{info_obj}",ln="characterName",dt="string")
-        cmds.setAttr(f"{info_obj}.characterName",character_name,typ="string")
+    cmds.addAttr(f"{info_obj}",ln="characterName",dt="string")
+    cmds.setAttr(f"{info_obj}.characterName",character_name,typ="string")
 
     obj_dic_uuid={}
     for key in obj_dic:
@@ -2756,3 +2408,4 @@ def clean_obj(character_name:str,obj_dic:dict):
     cmds.addAttr(f"{info_obj}",ln=character_name,dt="string")
     cmds.setAttr(f"{info_obj}.{character_name}",obj_dic_text,typ="string")
 
+    
