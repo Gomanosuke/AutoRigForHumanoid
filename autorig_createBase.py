@@ -88,7 +88,12 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
         cmds.delete(eulerToQuat01)
         cmds.delete(eulerToQuat02)
         cmds.delete(quatToEuler)
+        #アトリビュート作成
+        cmds.addAttr(joint,ln="name",dt="string")
+        cmds.setAttr(f"{joint}.name",key,typ="string")
 
+
+    """
     #親にほかのjointないjoint取得
     joint_dic_parent = {}
     for k in joint_dic:
@@ -140,7 +145,49 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
             if(j!=k):
                 name=cmds.ls(duplicate_joint_dic[j])[0]
                 duplicate_joint_dic[j]=cmds.rename(name,f"{name.split('|')[-1]}_Dummy")
-        
+    """
+
+    hips = cmds.ls(joint_dic["c_hips"],l=True)[0]
+    hips_name = cmds.ls(hips,l=False)[0]
+    hips_parent = cmds.listRelatives(hips,p=True,f=True)
+    if(hips_parent==None):
+        matrix = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]
+    else:
+        matrix = cmds.xform(hips_parent[0],q=True,ws=True,m=True)
+    cmds.xform(root_grp,ws=True,m=matrix)
+    joint_list = cmds.duplicate(hips,smartTransform=True,f=True,rc=False,n=f"{hips_name}_Dummy")
+    for joint in joint_list:
+        if(len(cmds.ls(joint))!=0):
+            children = cmds.listRelatives(joint,ad=True,f=True)
+            if(children==None):
+                children = [joint]
+            else:
+                children.append(joint)
+            humanoid=False
+            for child in children:
+                if(cmds.objExists(f"{child}.name") == True):
+                    humanoid=True
+            if(humanoid==False):
+                cmds.delete(joint)
+
+    duplicate_hips=cmds.parent(joint_list[0],root_grp,r=False)[0]
+    duplicate_joint = cmds.listRelatives(duplicate_hips,ad=True,f=True)
+
+    for joint in duplicate_joint:
+        name = cmds.ls(joint,l=False)[0]
+        name=name.split("|")[-1]
+        joint = cmds.rename(joint,f"{name}_Dummy")
+
+    duplicate_joint = cmds.listRelatives(duplicate_hips,ad=True,f=True)
+    duplicate_joint.append(duplicate_hips)
+    duplicate_joint_dic = {}
+    for joint in duplicate_joint:
+        if(cmds.objExists(f"{joint}.name") == True):
+            name = cmds.getAttr(f"{joint}.name")
+            duplicate_joint_dic[name] = cmds.ls(joint,l=True)[0]
+    
+    print(duplicate_joint_dic)
+
     for k in duplicate_joint_dic:
         #トランスフォームの一致
         multMatrix = cmds.shadingNode("multMatrix",asUtility=True)

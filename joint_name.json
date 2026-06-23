@@ -56,6 +56,15 @@
   "r_ring3":["RingDistal","ring3","Ring_Distal"],
   "r_little1":["LittleProxima","little1","pinkyProxima","pinky1","Little_Proxima","pinky_Proxima"],
   "r_little2":["LittleIntermediate","little2","pinkyIntermediate","pinky2","Little_Intermediate","pinky_Intermediate"],
-  "r_little3":["LittleDistal","little3","pinkyDistal","pinky3","Little_Distal","pinky_Distal"]
+  "r_little3":["LittleDistal","little3","pinkyDistal","pinky3","Little_Distal","pinky_Distal"],
+
+  "r_index0":["index0","indexMetacarpal","index_Metacarpal"],
+  "r_middle0":["middle0","middleMetacarpal","middle_Metacarpal"],
+  "r_ring0":["ring0","ringMetacarpal","ring_Metacarpal"],
+  "r_little0":["little0","littleMetacarpal","little_Metacarpal"],
+  "l_index0":["index0","indexMetacarpal","index_Metacarpal"],
+  "l_middle0":["middle0","middleMetacarpal","middle_Metacarpal"],
+  "l_ring0":["ring0","ringMetacarpal","ring_Metacarpal"],
+  "l_little0":["little0","littleMetacarpal","little_Metacarpal"]
 
 }

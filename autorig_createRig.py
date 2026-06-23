@@ -2180,6 +2180,7 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         finger_name_list = ("Thumb","Index","Middle","Ring","Little")
         number_name_list=("Root","Proximal","Intermediate","Distal")
 
+
         for finger in finger_name_list:
             for number in range(4):
                 name = f"{finger}{number_name_list[number]}"
@@ -2187,10 +2188,30 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                 if(number==0):
                     create_obj_dic[('Grp',clr,name)]=cmds.group(em=True,n=f"Grp_{clr}_{name}",p=root_obj)
                     create_obj_dic[('Drv',clr,name)]=cmds.group(em=True,n=f"Drv_{clr}_{name}",p=create_obj_dic[('Grp',clr,name)])
-
                     matrix = cmds.xform(orientation_dic[f'{clr_lower}_{finger.lower()}1'],ws=True,q=True,m=True)
-                    cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,name)]}.offsetParentMatrix")
-                    cmds.xform(create_obj_dic[('Grp',clr,name)],ws=True,m=matrix)
+
+                    #中手骨
+                    if(f'{clr_lower}_{finger.lower()}0' in joint_dic):
+                        metacarpal_joint = joint_dic[f'{clr_lower}_{finger.lower()}0']
+                        metacarpal_name = f'{finger}Metacarpal'
+                        create_obj_dic |= autorig_utility.create_controller(metacarpal_name,root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="arrorSingle",con_scl=(1,1,1),drv_scale_offset=(1,scl,1),
+                                                                            con_rot=(90,180,-90),setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
+                        metacarpal_matrix = cmds.xform(orientation_dic[f'{clr_lower}_{finger.lower()}0'],ws=True,q=True,m=True)
+                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,metacarpal_name)]}.offsetParentMatrix")
+                        cmds.xform(create_obj_dic[('Grp',clr,metacarpal_name)],ws=True,m=metacarpal_matrix)
+
+                        cmds.xform(create_obj_dic[('Grp',clr,name)],ws=True,m=matrix)
+                        autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,metacarpal_name)],sclA=create_obj_dic[('Drv',clr,metacarpal_name)],
+                                  rotA=create_obj_dic[('Drv',clr,'Wrist')],rotB=create_obj_dic[('Drv',clr,metacarpal_name)],
+                                  dvn_con=create_obj_dic[('Grp',clr,name)],dvn_grp=create_obj_dic[('Grp',clr,name)])
+                        cmds.addAttr(create_obj_dic[('Con',clr,metacarpal_name)],ln="rotParent",at="float",max=1,min=0,k=True)
+                        cmds.connectAttr(F"{create_obj_dic[('Con',clr,metacarpal_name)]}.rotParent",F"{create_obj_dic[('Grp',clr,name)]}.rotParent")
+
+                        joint=joint_dic[f'{clr_lower}_{finger.lower()}{0}']
+                        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,metacarpal_name)]}",joint)
+                    else:
+                        cmds.connectAttr(F"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,name)]}.offsetParentMatrix")
+                        cmds.xform(create_obj_dic[('Grp',clr,name)],ws=True,m=matrix)
 
                     cmds.addAttr(create_obj_dic[('Drv',clr,name)],ln="WorldBindMatrix",at="matrix")
                     cmds.setAttr(f"{create_obj_dic[('Drv',clr,name)]}.WorldBindMatrix",*matrix,typ="matrix")

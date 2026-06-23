@@ -503,6 +503,35 @@ def lefthand_frame(setup_frame:str, str_cw:int):
     cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little3))
     cmds.button(label="選択",command=lambda *_:auto_apply.select(little3))
 
+    #index0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Index Metacarpal : ")
+    index0 = cmds.textField()
+    textField_dic["l_index0"] = index0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(index0))
+    #middle0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Middle Metacarpal : ")
+    middle0 = cmds.textField()
+    textField_dic["l_middle0"] = middle0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle0))
+    #ring0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Ring Metacarpal : ")
+    ring0 = cmds.textField()
+    textField_dic["l_ring0"] = ring0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring0))
+    #little0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Little Metacarpal : ")
+    little0 = cmds.textField()
+    textField_dic["l_little0"] = little0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(little0))
+
     return textField_dic
 
 def righthand_frame(setup_frame:str, str_cw:int):
@@ -631,6 +660,36 @@ def righthand_frame(setup_frame:str, str_cw:int):
     textField_dic["r_little3"]=little3
     cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little3))
     cmds.button(label="選択",command=lambda *_:auto_apply.select(little3))
+
+    #index0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Index Metacarpal : ")
+    index0 = cmds.textField()
+    textField_dic["r_index0"] = index0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(index0))
+    #middle0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Middle Metacarpal : ")
+    middle0 = cmds.textField()
+    textField_dic["r_middle0"] = middle0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle0))
+    #ring0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Ring Metacarpal : ")
+    ring0 = cmds.textField()
+    textField_dic["r_ring0"] = ring0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring0))
+    #little0
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
+    cmds.text(label="Little Metacarpal : ")
+    little0 = cmds.textField()
+    textField_dic["r_little0"] = little0
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little0))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(little0))
+    
 
     return textField_dic
 
