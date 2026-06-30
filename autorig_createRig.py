@@ -1266,11 +1266,12 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
         #Shoulder
         create_obj_dic |= autorig_utility.create_controller("Shoulder",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="cube",con_scl=(3,3,3),con_rot=(0,0,0),
-                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
+                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'Shoulder')],m=shoulder_matrix,ws=True)
         autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','Root3')],
                                   rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
                                   dvn_con=create_obj_dic[('Con',clr,'Shoulder')],dvn_grp=create_obj_dic[('Grp',clr,'Shoulder')])
+        cmds.setAttr(f"{create_obj_dic[('Grp',clr,'Shoulder')]}.sy",scl)
         autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'Shoulder')], Dvn_Obj=joint_dic[f"{clr_lower}_shoulder"])
         
 
