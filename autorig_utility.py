@@ -53,6 +53,141 @@ def create_nurvs(name="", shape="", position=(0,0,0), rotate=(0,0,0), size=(1,1,
 
     return nurvs
 
+def _advance_blend_axis(con_attr:str, drv_attr:str, setting:str, neutral:float):
+    """
+    1軸ぶんのadvanceブレンド(con_advance_*が軸ごとに混在するときのfallback専用)。
+    setting.advanceが0のときneutral、1のときcon_attrの値をそのままdrv_attrへ流す。
+
+    Parameters
+    ----------
+        string con_attr : ブレンド元("Con.tx"等)
+        string drv_attr : 接続先("Drv.tx"等)
+        string setting : SettingObject(.advanceを持つ)
+        float neutral : advance=0のときの値
+    """
+    floatComposite = cmds.createNode("floatComposite")
+    cmds.setAttr(f"{floatComposite}.operation",2)
+    cmds.setAttr(f"{floatComposite}.floatA",neutral)
+    cmds.connectAttr(con_attr,f"{floatComposite}.floatB")
+    cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
+    cmds.connectAttr(f"{floatComposite}.outFloat",drv_attr)
+
+def _connect_advance_vector(ConObj:str, DrvObj:str, channel:str, con_advance, setting:str, neutral):
+    """
+    Con.translate/Con.rotateのようなXYZ複合アトリビュートを、setting.advanceでブレンドしつつDrvへ接続する。
+
+    3軸とも同じadvance設定(全てTrueまたは全てFalse)ならブレンド計算はblendColors1個にまとめるが、
+    Drv側への接続は必ず軸ごと(tx/ty/tz等)に行う。呼び出し元(autorig_createRig.py)がConからDrvへの
+    特定の軸だけを後からdisconnectAttrして繋ぎ変える箇所があり、コンパウンド接続(translate同士等)に
+    まとめてしまうとその軸だけの切断ができなくなるため。
+    軸ごとに設定が異なる場合だけ、軸ごとにfloatCompositeを作る従来実装にフォールバックする
+    (このリポジトリでは1箇所だけ軸混在の使用例があるため、挙動を変えないよう残している)。
+
+    Parameters
+    ----------
+        string ConObj, DrvObj : 対象オブジェクト
+        string channel : "translate"または"rotate"
+        (bool,bool,bool) con_advance : 軸ごとのadvance有効フラグ
+        string setting : SettingObject
+        (x,y,z) neutral : advance=0のときの値(位置・回転は(0,0,0))
+
+    Returns
+    -------
+        無し
+    """
+    axis_suffix = {"translate":("tx","ty","tz"), "rotate":("rx","ry","rz")}[channel]
+    color_children = ("R","G","B")
+
+    if(all(con_advance)):
+        blend = cmds.createNode("blendColors")
+        cmds.setAttr(f"{blend}.color2",*neutral,type="double3")
+        cmds.connectAttr(f"{ConObj}.{channel}",f"{blend}.color1")
+        cmds.connectAttr(f"{setting}.advance",f"{blend}.blender")
+        for axis,c in zip(axis_suffix,color_children):
+            cmds.connectAttr(f"{blend}.output{c}",f"{DrvObj}.{axis}")
+    elif(not any(con_advance)):
+        for axis in axis_suffix:
+            cmds.connectAttr(f"{ConObj}.{axis}",f"{DrvObj}.{axis}")
+    else:
+        for i,axis in enumerate(axis_suffix):
+            con_attr=f"{ConObj}.{axis}"
+            drv_attr=f"{DrvObj}.{axis}"
+            if(con_advance[i]==True):
+                _advance_blend_axis(con_attr,drv_attr,setting,neutral[i])
+            else:
+                cmds.connectAttr(con_attr,drv_attr)
+
+def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str, drv_scale_offset):
+    """
+    Con.scaleをsetting.advanceでブレンドし、drv_scale_offset(軸ごとの定数倍率)を掛けてDrvへ接続する。
+
+    3軸とも同じadvance設定ならブレンド計算・オフセット乗算はblendColors+multiplyDivideの最大2個にまとめる
+    (offsetが全軸1ならmultiplyDivideも省略)が、Drv側への接続は必ずsx/sy/sz軸ごとに行う(理由は
+    _connect_advance_vectorのdocstring参照)。軸ごとに設定が異なる場合だけ、従来のfloatComposite/floatMath
+    ×軸数の実装にフォールバックする。
+
+    Parameters
+    ----------
+        string ConObj, DrvObj : 対象オブジェクト
+        (bool,bool,bool) con_advance_scl : 軸ごとのadvance有効フラグ
+        string setting : SettingObject
+        (x,y,z) drv_scale_offset : Drv側へ掛ける定数倍率(通常は(1,1,1))
+
+    Returns
+    -------
+        無し
+    """
+    axis_suffix = ("sx","sy","sz")
+    output_children = ("outputX","outputY","outputZ")
+    uniform_offset = tuple(drv_scale_offset)==(1,1,1)
+
+    if(all(con_advance_scl) or not any(con_advance_scl)):
+        if(all(con_advance_scl)):
+            blend = cmds.createNode("blendColors")
+            cmds.setAttr(f"{blend}.color2",1,1,1,type="double3")
+            cmds.connectAttr(f"{ConObj}.scale",f"{blend}.color1")
+            cmds.connectAttr(f"{setting}.advance",f"{blend}.blender")
+            blended_attr = f"{blend}.output"
+        else:
+            blended_attr = f"{ConObj}.scale"
+
+        if(uniform_offset):
+            if(all(con_advance_scl)):
+                for axis,c in zip(axis_suffix,("R","G","B")):
+                    cmds.connectAttr(f"{blended_attr}{c}",f"{DrvObj}.{axis}")
+            else:
+                for axis in axis_suffix:
+                    cmds.connectAttr(f"{ConObj}.{axis}",f"{DrvObj}.{axis}")
+        else:
+            multiplyDivide = cmds.createNode("multiplyDivide")
+            cmds.setAttr(f"{multiplyDivide}.operation",1)  #Multiply
+            cmds.connectAttr(blended_attr,f"{multiplyDivide}.input1")
+            cmds.setAttr(f"{multiplyDivide}.input2",*drv_scale_offset,type="double3")
+            for axis,out in zip(axis_suffix,output_children):
+                cmds.connectAttr(f"{multiplyDivide}.{out}",f"{DrvObj}.{axis}")
+    else:
+        #軸ごとにadvance有無が混在する場合は元の実装のまま1軸ずつ処理する
+        for i,axis in enumerate(axis_suffix):
+            con_attr=f"{ConObj}.{axis}"
+            drv_attr=f"{DrvObj}.{axis}"
+            if(con_advance_scl[i]==True):
+                floatComposite = cmds.createNode("floatComposite")
+                cmds.setAttr(f"{floatComposite}.operation",2)
+                cmds.setAttr(f"{floatComposite}.floatA",1)
+                cmds.connectAttr(con_attr,f"{floatComposite}.floatB")
+                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
+                src_attr = f"{floatComposite}.outFloat"
+            else:
+                src_attr = con_attr
+            if(drv_scale_offset[i]==1):
+                cmds.connectAttr(src_attr,drv_attr)
+            else:
+                floatMath = cmds.createNode("floatMath")
+                cmds.setAttr(f"{floatMath}.operation",2)
+                cmds.connectAttr(src_attr,f"{floatMath}.floatA")
+                cmds.setAttr(f"{floatMath}.floatB",drv_scale_offset[i])
+                cmds.connectAttr(f"{floatMath}.outFloat",drv_attr)
+
 def create_controller(  con_name="",
                         parent_name="",
                         pos=(0,0,0),rot=(0,0,0),scl=(1,1,1),
@@ -156,125 +291,11 @@ def create_controller(  con_name="",
             cmds.connectAttr(f"{ConObj}.r",f"{DrvObj}.r")
             cmds.connectAttr(f"{ConObj}.s",f"{DrvObj}.s")
         else:
-            if(con_advance_pos[0]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",0)
-                cmds.connectAttr(f"{ConObj}.tx",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.tx")
-            else:cmds.connectAttr(f"{ConObj}.tx",f"{DrvObj}.tx")
-            if(con_advance_pos[1]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",0)
-                cmds.connectAttr(f"{ConObj}.ty",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.ty")
-            else:cmds.connectAttr(f"{ConObj}.ty",f"{DrvObj}.ty")
-            if(con_advance_pos[2]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",0)
-                cmds.connectAttr(f"{ConObj}.tz",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.tz")
-            else:cmds.connectAttr(f"{ConObj}.tz",f"{DrvObj}.tz")
-
-            if(con_advance_rot[0]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",0)
-                cmds.connectAttr(f"{ConObj}.rx",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.rx")
-            else:cmds.connectAttr(f"{ConObj}.rx",f"{DrvObj}.rx")
-            if(con_advance_rot[1]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",0)
-                cmds.connectAttr(f"{ConObj}.ry",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.ry")
-            else:cmds.connectAttr(f"{ConObj}.ry",f"{DrvObj}.ry")
-            if(con_advance_rot[2]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",0)
-                cmds.connectAttr(f"{ConObj}.rz",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.rz")
-            else:cmds.connectAttr(f"{ConObj}.rz",f"{DrvObj}.rz")
-
-            if(con_advance_scl[0]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",1)
-                cmds.connectAttr(f"{ConObj}.sx",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                if(drv_scale_offset[0]==1):
-                    cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.sx")
-                else:
-                    floatMath = cmds.createNode("floatMath")
-                    cmds.setAttr(F"{floatMath}.operation",2)
-                    cmds.connectAttr(f"{floatComposite}.outFloat",f"{floatMath}.floatA")
-                    cmds.setAttr(F"{floatMath}.floatB",drv_scale_offset[0])
-                    cmds.connectAttr(f"{floatMath}.outFloat",f"{DrvObj}.sx")
-            else:
-                if(drv_scale_offset[0]==1):
-                    cmds.connectAttr(f"{ConObj}.sx",f"{DrvObj}.sx")
-                else:
-                    floatMath = cmds.createNode("floatMath")
-                    cmds.setAttr(F"{floatMath}.operation",2)
-                    cmds.connectAttr(f"{ConObj}.sx",f"{floatMath}.floatA")
-                    cmds.setAttr(F"{floatMath}.floatB",drv_scale_offset[1])
-                    cmds.connectAttr(f"{floatMath}.outFloat",f"{DrvObj}.sy")
-            if(con_advance_scl[1]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",1)
-                cmds.connectAttr(f"{ConObj}.sy",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                if(drv_scale_offset[1]==1):
-                    cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.sy")
-                else:
-                    floatMath = cmds.createNode("floatMath")
-                    cmds.setAttr(F"{floatMath}.operation",2)
-                    cmds.connectAttr(f"{floatComposite}.outFloat",f"{floatMath}.floatA")
-                    cmds.setAttr(F"{floatMath}.floatB",drv_scale_offset[1])
-                    cmds.connectAttr(f"{floatMath}.outFloat",f"{DrvObj}.sy")
-            else:
-                if(drv_scale_offset[1]==1):
-                    cmds.connectAttr(f"{ConObj}.sy",f"{DrvObj}.sy")
-                else:
-                    floatMath = cmds.createNode("floatMath")
-                    cmds.setAttr(F"{floatMath}.operation",2)
-                    cmds.connectAttr(f"{ConObj}.sy",f"{floatMath}.floatA")
-                    cmds.setAttr(F"{floatMath}.floatB",drv_scale_offset[1])
-                    cmds.connectAttr(f"{floatMath}.outFloat",f"{DrvObj}.sy")
-            if(con_advance_scl[2]==True):
-                floatComposite = cmds.createNode("floatComposite")
-                cmds.setAttr(f"{floatComposite}.operation",2)
-                cmds.setAttr(f"{floatComposite}.floatA",1)
-                cmds.connectAttr(f"{ConObj}.sz",f"{floatComposite}.floatB")
-                cmds.connectAttr(f"{setting}.advance",f"{floatComposite}.factor")
-                if(drv_scale_offset[2]==1):
-                    cmds.connectAttr(f"{floatComposite}.outFloat",f"{DrvObj}.sz")
-                else:
-                    floatMath = cmds.createNode("floatMath")
-                    cmds.setAttr(F"{floatMath}.operation",2)
-                    cmds.connectAttr(f"{floatComposite}.outFloat",f"{floatMath}.floatA")
-                    cmds.setAttr(F"{floatMath}.floatB",drv_scale_offset[2])
-                    cmds.connectAttr(f"{floatMath}.outFloat",f"{DrvObj}.sz")
-            else:
-                if(drv_scale_offset[2]==1):
-                    cmds.connectAttr(f"{ConObj}.sz",f"{DrvObj}.sz")
-                else:
-                    floatMath = cmds.createNode("floatMath")
-                    cmds.setAttr(F"{floatMath}.operation",2)
-                    cmds.connectAttr(f"{ConObj}.sz",f"{floatMath}.floatA")
-                    cmds.setAttr(F"{floatMath}.floatB",drv_scale_offset[2])
-                    cmds.connectAttr(f"{floatMath}.outFloat",f"{DrvObj}.sz")
+            #XYZをまとめて処理する(3軸とも同じadvance設定ならblendColors/multiplyDivide1個ずつに集約され、
+            #floatComposite/floatMathを1軸ずつ作っていた旧実装よりノード数・unitConversionの発生が大幅に減る)
+            _connect_advance_vector(ConObj,DrvObj,"translate",con_advance_pos,setting,neutral=(0,0,0))
+            _connect_advance_vector(ConObj,DrvObj,"rotate",con_advance_rot,setting,neutral=(0,0,0))
+            _connect_advance_scale(ConObj,DrvObj,con_advance_scl,setting,drv_scale_offset)
 
     return obj_dic
 

@@ -1,6 +1,4 @@
 from maya import cmds
-from maya import OpenMaya
-import importlib
 import json
 from pathlib import Path
 
@@ -94,36 +92,50 @@ def check_json(path_list:list, mode:int):
             main(json_load, path_list, mode)
 
 def main(blendshape_dict:dict, path_list:list, mode:int):
+    """
+    FBX(ASCII)内のブレンドシェイプ名を一括置換する
+
+    Parameters
+    ----------
+        dictionary blendshape_dict : {元の名前:変換後の名前}
+        list path_list : [入力fbxパス, jsonパス, 出力fbxパス]
+        int mode : 1で元→変換後、2で変換後→元(戻す)方向に置換する
+
+    Returns
+    -------
+        無し
+    """
+    #置換パターンはblendshape_dictだけから決まり行の内容に依存しないため、
+    #行ごとに作り直さずここで1回だけ構築する(元実装は行数×キー数回分ムダに再構築していて低速だった)
+    replace_map = {}
+    for key,new_key in blendshape_dict.items():
+        replace_map.update({
+            f'P: "{key}", "Number", "", "A",0' : f'P: "{new_key}", "Number", "", "A",0',
+            f'"Geometry::{key}", "Shape"' : f'"Geometry::{new_key}", "Shape"',
+            f' "SubDeformer::{key}", "BlendShapeChannel" ' : f' "SubDeformer::{new_key}", "BlendShapeChannel" ',
+            f';SubDeformer::{key}, Deformer::' : f';SubDeformer::{new_key}, Deformer::',
+            f';Geometry::{key}, SubDeformer::' : f';Geometry::{new_key}, SubDeformer::',
+            f'Channel: "{key}" ' : f'Channel: "{new_key}" ',
+            f'Shape: "{key}" ' : f'Shape: "{new_key}" ',
+            f'Property: "{key}", "Number", "A+N",0' : f'Property: "{new_key}", "Number", "A+N",',
+            f'P: "RootGroup|{key}", "KString", "", "", ""' : f'P: "RootGroup|{new_key}", "KString", "", "", ""',
+            f'Property: "{key}", "Number", "AN",0' : f'Property: "{new_key}", "Number", "AN",',
+        })
+
     with open(path_list[0], 'r', encoding='utf-8', errors='ignore') as f:
         fbx = f.readlines()
 
-        for line_number, line in enumerate(fbx):
-            for key in blendshape_dict:
+    for line_number in range(len(fbx)):
+        for word,replaced in replace_map.items():
+            #mode==1: 元→変換後 / mode==2: 変換後→元 の順で探索元・置換先を入れ替える
+            src,dst = (word,replaced) if mode==1 else (replaced,word)
+            #置換前は毎回fbx[line_number]を参照する(同じ行で複数パターンに一致しても取りこぼさないため)
+            if(src in fbx[line_number]):
+                fbx[line_number] = fbx[line_number].replace(src,dst)
+                print(f"{src}を{dst}に置き換え")
 
-                check_dict = {f'P: "{key}", "Number", "", "A",0' : f'P: "{blendshape_dict[key]}", "Number", "", "A",0',
-                              f'"Geometry::{key}", "Shape"' : f'"Geometry::{blendshape_dict[key]}", "Shape"',
-                              f' "SubDeformer::{key}", "BlendShapeChannel" ' : f' "SubDeformer::{blendshape_dict[key]}", "BlendShapeChannel" ',
-                              f';SubDeformer::{key}, Deformer::' : f';SubDeformer::{blendshape_dict[key]}, Deformer::',
-                              f';Geometry::{key}, SubDeformer::' : f';Geometry::{blendshape_dict[key]}, SubDeformer::',
-                              f'Channel: "{key}" ' : f'Channel: "{blendshape_dict[key]}" ',
-                              f'Shape: "{key}" ' : f'Shape: "{blendshape_dict[key]}" ',
-                              f'Property: "{key}", "Number", "A+N",0' : f'Property: "{blendshape_dict[key]}", "Number", "A+N",',
-                              f'P: "RootGroup|{key}", "KString", "", "", ""' : f'P: "RootGroup|{blendshape_dict[key]}", "KString", "", "", ""',
-                              f'Property: "{key}", "Number", "AN",0' : f'Property: "{blendshape_dict[key]}", "Number", "AN",'}
-                            
-
-                for word in check_dict:
-                    if mode==1:
-                        if word in line:
-                            fbx[line_number] = line.replace(word, check_dict[word])
-                            print(word+"を"+check_dict[word]+"に置き換え")
-                    elif mode==2:
-                        if check_dict[word] in line:
-                            fbx[line_number] = line.replace(check_dict[word], word)
-                            print(check_dict[word] + "を" + word + "に置き換え")
-
-        with open(path_list[2], 'w', encoding='utf-8') as f:
-            f.writelines(fbx)
+    with open(path_list[2], 'w', encoding='utf-8') as f:
+        f.writelines(fbx)
 
 def export_fbx_init(path_list:list,mode:int):
     path=[]

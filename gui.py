@@ -1,5 +1,4 @@
 from maya import cmds
-from maya import OpenMaya
 import importlib
 
 from . import auto_apply
@@ -33,7 +32,7 @@ def create_window():
     if cmds.window(windowname, exists=True):
         cmds.deleteUI(windowname)
     cmds.window(windowname)
-        
+
     # メインレイアウト作成
     main_layout = cmds.scrollLayout(horizontalScrollBarThickness=16, verticalScrollBarThickness=16, childResizable=True)
 
@@ -44,7 +43,7 @@ def create_window():
     setup_list = humanoid_setup(create_frame)
     autorig_frame(create_frame,setup_list[1],setup_list[0])
     blendshape_frame(main_layout,setup_list[0])
-    
+
     #タブの表示
     cmds.showWindow(windowname)
 
@@ -62,7 +61,7 @@ def show_picker(parent_layout:str):
     """
     #フレーム
     picker_frame = cmds.frameLayout(label="Picker",parent=parent_layout,collapsable=True)
-    
+
     cmds.button(label="Picker表示",h=50,command=lambda *_:picker.show_ui())
 
 def fbx_frame(parent_layout:str):
@@ -115,6 +114,31 @@ def fbx_frame(parent_layout:str):
     cmds.rowLayout(nc=1,adjustableColumn=1,p=fbx_frame)
     cmds.button(label="Freeze Scale",command=lambda *_:fbx_shape_rename.fix_skin_scale_offset())
 
+def _joint_field(parent:str, label:str, key:str, textField_dic:dict, str_cw:int):
+    """
+    「ラベル・入力欄・割り当てボタン・選択ボタン」の1行を作成し、textField_dicへ{key: 入力欄}を登録する。
+    joint系の入力欄はどれもこの並びの繰り返しのため、共通処理として切り出している。
+
+    Parameters
+    ----------
+        string parent : 親のレイアウト名
+        string label : 表示ラベル
+        string key : textField_dicへ登録するキー(joint_name.jsonのキーと対応させる)
+        dictionary textField_dic : 登録先の辞書
+        int str_cw : ラベル列の幅
+
+    Returns
+    -------
+        string : 作成した入力欄(textField)の名前
+    """
+    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=parent)
+    cmds.text(label=f"{label} : ")
+    field = cmds.textField()
+    textField_dic[key]=field
+    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(field))
+    cmds.button(label="選択",command=lambda *_:auto_apply.select(field))
+    return field
+
 def humanoid_setup(parent_layout:str):
     """
     モデルの情報入力する場所作る
@@ -137,11 +161,10 @@ def humanoid_setup(parent_layout:str):
     cmds.text(label="キャラクター名 : ")
     character_name = cmds.textField(tx="name")
 
-    textField_dic:dict
     textField_dic = body_frame(setup_frame,str_cw)
     textField_dic |= head_frame(setup_frame,str_cw)
-    textField_dic |= lefthand_frame(setup_frame,str_cw)
-    textField_dic |= righthand_frame(setup_frame,str_cw)
+    textField_dic |= hand_frame(setup_frame,str_cw,"l","Left")
+    textField_dic |= hand_frame(setup_frame,str_cw,"r","Right")
 
     auto_apply_frame(setup_frame,textField_dic)
 
@@ -162,162 +185,30 @@ def body_frame(setup_frame:str, str_cw:int):
     """
     textField_dic={}
 
-    #body
     body_tab = cmds.frameLayout(label="Body",parent=setup_frame,collapsable=True,p=setup_frame)
+
     #Body
-    body_frame = cmds.frameLayout(label="Body",parent=body_tab,collapsable=True,p=setup_frame)
-    #hips
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=body_frame)
-    cmds.text(label="Hips : ")
-    hips = cmds.textField()
-    textField_dic["c_hips"]=hips
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(hips))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(hips))
-    #spine
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=body_frame)
-    cmds.text(label="Spine : ")
-    spine = cmds.textField()
-    textField_dic["c_spine"]=spine
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(spine))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(spine))
-    #chest
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=body_frame)
-    cmds.text(label="Chest : ")
-    chest = cmds.textField()
-    textField_dic["c_chest"]=chest
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(chest))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(chest))
-    #upper_chest
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=body_frame)
-    cmds.text(label="Upper Chest : ")
-    upper_chest = cmds.textField()
-    textField_dic["c_upperChest"]=upper_chest
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(upper_chest))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(upper_chest))
+    body_part_frame = cmds.frameLayout(label="Body",parent=body_tab,collapsable=True,p=setup_frame)
+    _joint_field(body_part_frame,"Hips","c_hips",textField_dic,str_cw)
+    _joint_field(body_part_frame,"Spine","c_spine",textField_dic,str_cw)
+    _joint_field(body_part_frame,"Chest","c_chest",textField_dic,str_cw)
+    _joint_field(body_part_frame,"Upper Chest","c_upperChest",textField_dic,str_cw)
 
-    #LeftArm
-    LeftArm_frame = cmds.frameLayout(label="Left Arm",parent=body_tab,collapsable=True,p=setup_frame)
-    #shoulder
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftArm_frame)
-    cmds.text(label="Shoulder : ")
-    left_shoulder = cmds.textField()
-    textField_dic["l_shoulder"]=left_shoulder
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_shoulder))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_shoulder))
-    #upper_arm
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftArm_frame)
-    cmds.text(label="Upper Arm : ")
-    left_upper_arm = cmds.textField()
-    textField_dic["l_upperArm"]=left_upper_arm
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_upper_arm))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_upper_arm))
-    #lower_arm
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftArm_frame)
-    cmds.text(label="Lower Arm : ")
-    left_lower_arm = cmds.textField()
-    textField_dic["l_lowerArm"]=left_lower_arm
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_lower_arm))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_lower_arm))
-    #hand
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftArm_frame)
-    cmds.text(label="Hand : ")
-    left_hand = cmds.textField()
-    textField_dic["l_hand"]=left_hand
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_hand))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_hand))
+    #Arm(Left→Rightの順に表示。左右対称なので共通処理でまとめる)
+    for side,side_label in (("l","Left"),("r","Right")):
+        arm_frame = cmds.frameLayout(label=f"{side_label} Arm",parent=body_tab,collapsable=True,p=setup_frame)
+        _joint_field(arm_frame,"Shoulder",f"{side}_shoulder",textField_dic,str_cw)
+        _joint_field(arm_frame,"Upper Arm",f"{side}_upperArm",textField_dic,str_cw)
+        _joint_field(arm_frame,"Lower Arm",f"{side}_lowerArm",textField_dic,str_cw)
+        _joint_field(arm_frame,"Hand",f"{side}_hand",textField_dic,str_cw)
 
-    #RightArm
-    RightArm_frame = cmds.frameLayout(label="Right Arm",parent=body_tab,collapsable=True,p=setup_frame)
-    #shoulder
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightArm_frame)
-    cmds.text(label="Shoulder : ")
-    right_shoulder = cmds.textField()
-    textField_dic["r_shoulder"]=right_shoulder
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_shoulder))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_shoulder))
-    #upper_arm
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightArm_frame)
-    cmds.text(label="Upper Arm : ")
-    right_upper_arm = cmds.textField()
-    textField_dic["r_upperArm"]=right_upper_arm
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_upper_arm))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_upper_arm))
-    #lower_arm
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightArm_frame)
-    cmds.text(label="Lower Arm : ")
-    right_lower_arm = cmds.textField()
-    textField_dic["r_lowerArm"]=right_lower_arm
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_lower_arm))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_lower_arm))
-    #hand
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightArm_frame)
-    cmds.text(label="Hand : ")
-    right_hand = cmds.textField()
-    textField_dic["r_hand"]=right_hand
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_hand))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_hand))
-
-    #LeftLeg
-    LeftLeg_frame = cmds.frameLayout(label="Left Leg",parent=body_tab,collapsable=True,p=setup_frame)
-    #upper_leg
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftLeg_frame)
-    cmds.text(label="Upper Leg : ")
-    left_upper_leg = cmds.textField()
-    textField_dic["l_upperLeg"]=left_upper_leg
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_upper_leg))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_upper_leg))
-    #lower_leg
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftLeg_frame)
-    cmds.text(label="Lower Leg : ")
-    left_lower_leg = cmds.textField()
-    textField_dic["l_lowerLeg"]=left_lower_leg
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_lower_leg))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_lower_leg))
-    #Foot
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftLeg_frame)
-    cmds.text(label="Foot : ")
-    left_foot = cmds.textField()
-    textField_dic["l_foot"]=left_foot
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_foot))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_foot))
-    #Toes
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=LeftLeg_frame)
-    cmds.text(label="Toes : ")
-    left_toes = cmds.textField()
-    textField_dic["l_toes"]=left_toes
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_toes))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_toes))
-
-    #RightLeg
-    RightLeg_frame = cmds.frameLayout(label="Right Leg",parent=body_tab,collapsable=True,p=setup_frame)
-    #upper_leg
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightLeg_frame)
-    cmds.text(label="Upper Leg : ")
-    right_upper_leg = cmds.textField()
-    textField_dic["r_upperLeg"]=right_upper_leg
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_upper_leg))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_upper_leg))
-    #lower_leg
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightLeg_frame)
-    cmds.text(label="Lower Leg : ")
-    right_lower_leg = cmds.textField()
-    textField_dic["r_lowerLeg"]=right_lower_leg
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_lower_leg))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_lower_leg))
-    #Foot
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightLeg_frame)
-    cmds.text(label="Foot : ")
-    right_foot = cmds.textField()
-    textField_dic["r_foot"]=right_foot
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_foot))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_foot))
-    #Toes
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=RightLeg_frame)
-    cmds.text(label="Toes : ")
-    right_toes = cmds.textField()
-    textField_dic["r_toes"]=right_toes
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_toes))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_toes))
+    #Leg(Left→Rightの順に表示)
+    for side,side_label in (("l","Left"),("r","Right")):
+        leg_frame = cmds.frameLayout(label=f"{side_label} Leg",parent=body_tab,collapsable=True,p=setup_frame)
+        _joint_field(leg_frame,"Upper Leg",f"{side}_upperLeg",textField_dic,str_cw)
+        _joint_field(leg_frame,"Lower Leg",f"{side}_lowerLeg",textField_dic,str_cw)
+        _joint_field(leg_frame,"Foot",f"{side}_foot",textField_dic,str_cw)
+        _joint_field(leg_frame,"Toes",f"{side}_toes",textField_dic,str_cw)
 
     return textField_dic
 
@@ -336,54 +227,31 @@ def head_frame(setup_frame:str, str_cw:int):
     """
     textField_dic={}
 
-    #head
     head_tab = cmds.frameLayout(label="Head",parent=setup_frame,collapsable=True,p=setup_frame)
-    #neck
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Neck : ")
-    neck = cmds.textField()
-    textField_dic["c_neck"]=neck
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(neck))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(neck))
-    #head
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Head : ")
-    head = cmds.textField()
-    textField_dic["c_head"]=head
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(head))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(head))
-    #left eye
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Left Eye : ")
-    left_eye = cmds.textField()
-    textField_dic["l_eye"]=left_eye
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(left_eye))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(left_eye))
-    #right eye
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Right Eye : ")
-    right_eye = cmds.textField()
-    textField_dic["r_eye"]=right_eye
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(right_eye))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(right_eye))
-    #jaw
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Jaw : ")
-    jaw = cmds.textField()
-    textField_dic["c_jaw"]=jaw
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(jaw))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(jaw))
+    _joint_field(head_tab,"Neck","c_neck",textField_dic,str_cw)
+    _joint_field(head_tab,"Head","c_head",textField_dic,str_cw)
+    _joint_field(head_tab,"Left Eye","l_eye",textField_dic,str_cw)
+    _joint_field(head_tab,"Right Eye","r_eye",textField_dic,str_cw)
+    _joint_field(head_tab,"Jaw","c_jaw",textField_dic,str_cw)
 
     return textField_dic
 
-def lefthand_frame(setup_frame:str, str_cw:int):
+#指の並び(表示名, 関節ラベル)。joint_name.jsonのキーは f"{side}_{指名.lower()}{番号}" の形。
+_FINGERS = ("Thumb","Index","Middle","Ring","Little")
+_PHALANGES = (("1","Proximal"),("2","Intermediate"),("3","Distal"))
+#Metacarpal(0番目の関節)はThumbには存在しない
+_METACARPAL_FINGERS = ("index","middle","ring","little")
+
+def hand_frame(setup_frame:str, str_cw:int, side:str, side_label:str):
     """
-    Lefthandの入力欄
+    片手ぶんの指の入力欄(旧lefthand_frame/righthand_frameの共通実装)
 
     Parameters
     ----------
         string setup_frame : 親のレイアウト名
         int str_cw : 文字の横幅
+        string side : "l"または"r"(joint_name.jsonのキー接頭辞と対応)
+        string side_label : 表示用ラベル("Left"/"Right")
 
     Returns
     -------
@@ -391,305 +259,14 @@ def lefthand_frame(setup_frame:str, str_cw:int):
     """
     textField_dic={}
 
-    #hand
-    head_tab = cmds.frameLayout(label="Left Hand",parent=setup_frame,collapsable=True,p=setup_frame)
-    #thumb1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Thumb Proximal : ")
-    thumb1 = cmds.textField()
-    textField_dic["l_thumb1"]=thumb1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(thumb1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(thumb1))
-    #thumb2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Thumb Intermediate : ")
-    thumb2 = cmds.textField()
-    textField_dic["l_thumb2"]=thumb2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(thumb2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(thumb2))
-    #thumb1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Thumb Distal : ")
-    thumb3 = cmds.textField()
-    textField_dic["l_thumb3"]=thumb3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(thumb3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(thumb3))
+    hand_tab = cmds.frameLayout(label=f"{side_label} Hand",parent=setup_frame,collapsable=True,p=setup_frame)
 
-    #index1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Proximal : ")
-    index1 = cmds.textField()
-    textField_dic["l_index1"]=index1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index1))
-    #index2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Intermediate : ")
-    index2 = cmds.textField()
-    textField_dic["l_index2"]=index2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index2))
-    #index1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Distal : ")
-    index3 = cmds.textField()
-    textField_dic["l_index3"]=index3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index3))
+    for finger in _FINGERS:
+        for number,phalange_label in _PHALANGES:
+            _joint_field(hand_tab,f"{finger} {phalange_label}",f"{side}_{finger.lower()}{number}",textField_dic,str_cw)
 
-    #middle1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Proximal : ")
-    middle1 = cmds.textField()
-    textField_dic["l_middle1"]=middle1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle1))
-    #middle2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Intermediate : ")
-    middle2 = cmds.textField()
-    textField_dic["l_middle2"]=middle2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle2))
-    #middle1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Distal : ")
-    middle3 = cmds.textField()
-    textField_dic["l_middle3"]=middle3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle3))
-
-    #ring1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Proximal : ")
-    ring1 = cmds.textField()
-    textField_dic["l_ring1"]=ring1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring1))
-    #ring2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Intermediate : ")
-    ring2 = cmds.textField()
-    textField_dic["l_ring2"]=ring2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring2))
-    #ring1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Distal : ")
-    ring3 = cmds.textField()
-    textField_dic["l_ring3"]=ring3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring3))
-
-    #little1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Proximal : ")
-    little1 = cmds.textField()
-    textField_dic["l_little1"]=little1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little1))
-    #little2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Intermediate : ")
-    little2 = cmds.textField()
-    textField_dic["l_little2"]=little2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little2))
-    #little1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Distal : ")
-    little3 = cmds.textField()
-    textField_dic["l_little3"]=little3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little3))
-
-    #index0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Metacarpal : ")
-    index0 = cmds.textField()
-    textField_dic["l_index0"] = index0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index0))
-    #middle0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Metacarpal : ")
-    middle0 = cmds.textField()
-    textField_dic["l_middle0"] = middle0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle0))
-    #ring0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Metacarpal : ")
-    ring0 = cmds.textField()
-    textField_dic["l_ring0"] = ring0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring0))
-    #little0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Metacarpal : ")
-    little0 = cmds.textField()
-    textField_dic["l_little0"] = little0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little0))
-
-    return textField_dic
-
-def righthand_frame(setup_frame:str, str_cw:int):
-    """
-    Lefthandの入力欄
-
-    Parameters
-    ----------
-        string setup_frame : 親のレイアウト名
-        int str_cw : 文字の横幅
-
-    Returns
-    -------
-        dictionary : テキストフィールドの辞書
-    """
-    textField_dic={}
-
-    #hand
-    head_tab = cmds.frameLayout(label="Right Hand",parent=setup_frame,collapsable=True,p=setup_frame)
-    #thumb1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Thumb Proximal : ")
-    thumb1 = cmds.textField()
-    textField_dic["r_thumb1"]=thumb1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(thumb1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(thumb1))
-    #thumb2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Thumb Intermediate : ")
-    thumb2 = cmds.textField()
-    textField_dic["r_thumb2"]=thumb2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(thumb2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(thumb2))
-    #thumb1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Thumb Distal : ")
-    thumb3 = cmds.textField()
-    textField_dic["r_thumb3"]=thumb3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(thumb3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(thumb3))
-
-    #index1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Proximal : ")
-    index1 = cmds.textField()
-    textField_dic["r_index1"]=index1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index1))
-    #index2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Intermediate : ")
-    index2 = cmds.textField()
-    textField_dic["r_index2"]=index2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index2))
-    #index1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Distal : ")
-    index3 = cmds.textField()
-    textField_dic["r_index3"]=index3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index3))
-
-    #middle1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Proximal : ")
-    middle1 = cmds.textField()
-    textField_dic["r_middle1"]=middle1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle1))
-    #middle2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Intermediate : ")
-    middle2 = cmds.textField()
-    textField_dic["r_middle2"]=middle2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle2))
-    #middle1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Distal : ")
-    middle3 = cmds.textField()
-    textField_dic["r_middle3"]=middle3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle3))
-
-    #ring1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Proximal : ")
-    ring1 = cmds.textField()
-    textField_dic["r_ring1"]=ring1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring1))
-    #ring2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Intermediate : ")
-    ring2 = cmds.textField()
-    textField_dic["r_ring2"]=ring2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring2))
-    #ring1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Distal : ")
-    ring3 = cmds.textField()
-    textField_dic["r_ring3"]=ring3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring3))
-
-    #little1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Proximal : ")
-    little1 = cmds.textField()
-    textField_dic["r_little1"]=little1
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little1))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little1))
-    #little2
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Intermediate : ")
-    little2 = cmds.textField()
-    textField_dic["r_little2"]=little2
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little2))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little2))
-    #little1
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Distal : ")
-    little3 = cmds.textField()
-    textField_dic["r_little3"]=little3
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little3))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little3))
-
-    #index0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Index Metacarpal : ")
-    index0 = cmds.textField()
-    textField_dic["r_index0"] = index0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(index0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(index0))
-    #middle0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Middle Metacarpal : ")
-    middle0 = cmds.textField()
-    textField_dic["r_middle0"] = middle0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(middle0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(middle0))
-    #ring0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Ring Metacarpal : ")
-    ring0 = cmds.textField()
-    textField_dic["r_ring0"] = ring0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(ring0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(ring0))
-    #little0
-    cmds.rowLayout(nc=4,adjustableColumn=2,cw=[1,str_cw],p=head_tab)
-    cmds.text(label="Little Metacarpal : ")
-    little0 = cmds.textField()
-    textField_dic["r_little0"] = little0
-    cmds.button(label="割り当て",command=lambda *_:auto_apply.attach(little0))
-    cmds.button(label="選択",command=lambda *_:auto_apply.select(little0))
-    
+    for finger in _METACARPAL_FINGERS:
+        _joint_field(hand_tab,f"{finger.capitalize()} Metacarpal",f"{side}_{finger}0",textField_dic,str_cw)
 
     return textField_dic
 
@@ -785,7 +362,7 @@ def blendshape_frame(parent_layout:str,character_name:str):
     blendShape = cmds.textField()
     cmds.button(label="自動割り当て",command=lambda *_:blendshape.sourcenodeattach(blendShape,skinCluster,"blendShape"))
     cmds.button(label="選択",command=lambda *_:auto_apply.select(blendShape))
-    
+
     cmds.rowLayout(nc=1,adjustableColumn=2,p=blendshape_frame)
     optionMenus = []
     cmds.button(label="適用",command=lambda *_:blendshape.setOptionMenu(optionMenus,blendShape))
@@ -856,4 +433,3 @@ def blendshape_frame(parent_layout:str,character_name:str):
     optionMenus.append(blendshape4_2x2)
     cmds.rowLayout(nc=1,adjustableColumn=2,p=frame2x2)
     cmds.button(label="作成",command=lambda *_:blendshape.create2x2con(blendShape,name2x2,color2x2,blendshape1_2x2,blendshape2_2x2,blendshape3_2x2,blendshape4_2x2))
-

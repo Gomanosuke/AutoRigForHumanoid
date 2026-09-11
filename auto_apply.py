@@ -1,7 +1,5 @@
 from maya import cmds
-from maya import OpenMaya
 from pathlib import Path
-import importlib
 import json
 
 #json読み込み
@@ -47,14 +45,11 @@ def auto(fullpath:bool, textfield:dict):
                     match_condition.append(j)
                 if(k_split[0]=="r" and pos<0):
                     match_condition.append(j)
-            #まだ複数ある時は一番親採用
+            #まだ複数ある時は他の候補の子供(祖先が候補に含まれるもの)を除外し、一番親のものだけ残す
+            #  ※フルパスの前方一致で祖先判定するため、直接の親子関係でなくても正しく判定できる
             if(len(match_condition)>1):
-                for j in match_condition:
-                    parents = cmds.listRelatives(j,ap=True,f=True)
-                    for p in parents:
-                        for c in match_condition:
-                            if(p==c):
-                                match_condition.remove(j)
+                match_condition = [j for j in match_condition
+                                    if not any(c!=j and j.startswith(f"{c}|") for c in match_condition)]
             #まだ複数ある時は一番名前が短いジョイント採用(Twistとかついてるやつ省く)
             if(len(match_condition)>1):
                 joint = match_condition[0]

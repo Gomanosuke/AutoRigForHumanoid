@@ -1,5 +1,4 @@
 from maya import cmds
-from maya.api import OpenMaya
 import importlib
 from pathlib import Path
 import json
@@ -36,15 +35,24 @@ def create_rig(textField_dic:dict,character_name:str):
     character_name = cmds.textField(character_name,q=True,tx=True)
     
     if(check_bool==True):
-        #親グループ
-        root_grp = cmds.group(em=True,n=f"{character_name}_Rig")
-        cmds.setAttr(f"{root_grp}.t",lock=True)
-        cmds.setAttr(f"{root_grp}.r",lock=True)
-        cmds.setAttr(f"{root_grp}.s",lock=True)
-        humanoid_dummy_joint = create_dummyHumanoid(joint_dic,character_name,root_grp)
-        orientation_dic = get_orientation(character_name)
-        pos_dic=get_pos(character_name)
-        autorig_createRig.init_createRig(humanoid_dummy_joint,character_name,root_grp,orientation_dic,pos_dic)
+        #リグ生成は数百〜数千個のノード生成・接続を伴うため、Undoを1操作にまとめビューポート再描画を止めて高速化する
+        #  (途中で例外が起きても必ずfinallyで元に戻す)
+        cmds.undoInfo(openChunk=True, chunkName="AutoRigForHumanoid_CreateRig")
+        cmds.refresh(suspend=True)
+        try:
+            #親グループ
+            root_grp = cmds.group(em=True,n=f"{character_name}_Rig")
+            cmds.setAttr(f"{root_grp}.t",lock=True)
+            cmds.setAttr(f"{root_grp}.r",lock=True)
+            cmds.setAttr(f"{root_grp}.s",lock=True)
+            humanoid_dummy_joint = create_dummyHumanoid(joint_dic,character_name,root_grp)
+            orientation_dic = get_orientation(character_name)
+            pos_dic=get_pos(character_name)
+            autorig_createRig.init_createRig(humanoid_dummy_joint,character_name,root_grp,orientation_dic,pos_dic)
+        finally:
+            cmds.refresh(suspend=False)
+            cmds.undoInfo(closeChunk=True)
+            cmds.refresh()
 
 def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
     """
@@ -68,6 +76,11 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
     cmds.setAttr(f"{root_grp}.v",0,lock=False,k=False)
 
     #元のジョイントの正規化
+    #  rotate(r)とjointOrientを合成した回転をrに書き戻し、jointOrientを0にする(＝見た目を変えずにOrientをRotateへ吸収する)。
+    #  quatProdの入力にjoint.r自身が使われているため、そのままquatToEuler.outputRotateをjoint.rへ常時接続すると
+    #  「joint.r → …(このネットワーク)… → joint.r」の循環参照になってしまう。
+    #  そのため一度だけconnect→即disconnectして「合成済みの回転」をquatToEuler.inputQuatへ静的値として焼き付け、
+    #  その後にquatToEuler.outputRotateをjoint.rへ接続することで循環を作らずに済ませている。
     for key in joint_dic:
         joint = joint_dic[key]
         eulerToQuat01 = cmds.createNode("eulerToQuat")
@@ -80,7 +93,7 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
         cmds.connectAttr(f"{eulerToQuat01}.outputQuat",f"{quatProd}.input1Quat")
         cmds.connectAttr(f"{eulerToQuat02}.outputQuat",f"{quatProd}.input2Quat")
         cmds.connectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
-        cmds.disconnectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
+        cmds.disconnectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")  #循環参照回避のため値を焼き付けて切断
         cmds.connectAttr(f"{quatToEuler}.outputRotate",f"{joint}.r")
         cmds.setAttr(f"{joint}.jointOrientX",0)
         cmds.setAttr(f"{joint}.jointOrientY",0)
@@ -92,61 +105,7 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
         cmds.addAttr(joint,ln="name",dt="string")
         cmds.setAttr(f"{joint}.name",key,typ="string")
 
-
-    """
-    #親にほかのjointないjoint取得
-    joint_dic_parent = {}
-    for k in joint_dic:
-        exist_parent = False
-        parent_obj = cmds.listRelatives(joint_dic[k],f=True,p=True)
-        for i in parent_obj:
-            if(i in joint_dic.values()):
-                exist_parent=True
-        if(exist_parent==False):
-            joint_dic_parent[k]=joint_dic[k]
-    
-    #複製
-    for k in joint_dic_parent:
-        k_split=k.split("_")
-        parent_obj = cmds.group(em=True,n=f"Grp_{k_split[0].upper()}_{joint_name[k][0]}_DummyParent")
-        cmds.parent(parent_obj,root_grp)
-        matrix = cmds.xform(joint_dic_parent[k],q=True,ws=False,m=True)
-        cmds.xform(joint_dic_parent[k],ws=False,m=(1.0,0.0,0.0,0.0, 0.0,1.0,0.0,0.0, 0.0,0.0,1.0,0.0, 0.0,0.0,0.0,1.0))
-        cmds.xform(parent_obj,ws=True,m=cmds.xform(joint_dic_parent[k],q=True,ws=True,m=True))
-        cmds.xform(joint_dic_parent[k],ws=False,m=matrix)
-        joint_list = cmds.duplicate(joint_dic_parent[k],smartTransform=True,f=True)
-        duplicate_joint_dic = {}
-        #Humanoid以外削除
-        for i in joint_list:
-            if(i!=joint_list[0]):
-                old_path = f"{joint_dic_parent[k]}|{i.lstrip(joint_list[0])}"
-                if(old_path not in list(joint_dic.values())):
-                    #子供になかったら
-                    child_obj = cmds.listRelatives(joint_dic[k],f=True,c=True,ad=True)
-                    for c in child_obj:
-                        child_old_path = f"{joint_dic_parent[k]}|{c.lstrip(joint_dic_parent[k])}"
-                        if(child_old_path not in joint_dic.values()):
-                            if(cmds.ls(i)!=[]):
-                                cmds.delete(i)
-                elif(cmds.ls(i,uid=True)!=[]):
-                    #HumanoidJointだったら
-                    duplicate_joint_dic[[k for k, v in joint_dic.items() if v == old_path][0]]=cmds.ls(i,uid=True)[0]
-            else:
-                duplicate_joint_dic[k]=cmds.ls(i,uid=True)[0]
-
-        k_shortname = cmds.ls(joint_dic_parent[k],l=False)[0]
-        duplicate_path=cmds.ls(duplicate_joint_dic[k],l=True)
-        duplicate_joint_dic[k]=cmds.parent(joint_list[0],parent_obj,r=False)
-        duplicate_joint_dic[k]=cmds.rename(duplicate_joint_dic[k],f"{k_shortname}_Dummy")
-        duplicate_joint_dic[k]=cmds.ls(duplicate_joint_dic[k],l=True)[0]
-        
-        #辞書修正
-        for j in duplicate_joint_dic:
-            if(j!=k):
-                name=cmds.ls(duplicate_joint_dic[j])[0]
-                duplicate_joint_dic[j]=cmds.rename(name,f"{name.split('|')[-1]}_Dummy")
-    """
-
+    #以下、hipsを起点に階層ごとduplicateしてHumanoid以外を削除する現行方式に置き換え済み
     hips = cmds.ls(joint_dic["c_hips"],l=True)[0]
     hips_name = cmds.ls(hips,l=False)[0]
     hips_parent = cmds.listRelatives(hips,p=True,f=True)

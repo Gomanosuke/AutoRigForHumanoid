@@ -8,6 +8,107 @@ from maya.api import OpenMaya
 CURRENT_DIR = os.path.dirname(__file__)
 UI_FILE_PATH = os.path.join(CURRENT_DIR, "designer_ui.ui")
 
+#(UIウィジェット名, コントローラー名, 左右中央) : __init__でselect_conボタンを一括接続するための対応表
+SELECT_CON_BUTTONS = [
+    ("select_c_head", "Head", "C"),
+    ("select_c_neck", "Neck", "C"),
+    ("select_l_shoulder", "Shoulder", "L"),
+    ("select_r_shoulder", "Shoulder", "R"),
+    ("select_l_upperarmfk", "UpperArmFK", "L"),
+    ("select_l_lowerarmfk", "LowerArmFK", "L"),
+    ("select_r_upperarmfk", "UpperArmFK", "R"),
+    ("select_r_lowerarmfk", "LowerArmFK", "R"),
+    ("select_l_wrist1", "Wrist", "L"),
+    ("select_r_wrist1", "Wrist", "R"),
+    ("select_l_wrist2", "Wrist", "L"),
+    ("select_r_wrist2", "Wrist", "R"),
+    ("select_l_eye", "Eye", "L"),
+    ("select_r_eye", "Eye", "R"),
+    ("select_c_eyeaim", "EyeAim", "C"),
+    ("select_l_eyeaim", "EyeAim", "L"),
+    ("select_r_eyeaim", "EyeAim", "R"),
+    ("select_l_armpv", "ArmPV", "L"),
+    ("select_r_armpv", "ArmPV", "R"),
+    ("select_l_armik", "HandIK", "L"),
+    ("select_r_armik", "HandIK", "R"),
+    ("select_c_chestik", "ChestIK", "C"),
+    ("select_c_chestfk", "ChestFK", "C"),
+    ("select_c_spineik", "SpineIK", "C"),
+    ("select_c_spinefk", "SpineFK", "C"),
+    ("select_c_upperChest", "UpperChest", "C"),
+    ("select_c_waist", "Waist", "C"),
+    ("select_c_hips", "Hips", "C"),
+    ("select_l_upperlegfk", "UpperLegFK", "L"),
+    ("select_l_lowerlegfk", "LowerLegFK", "L"),
+    ("select_r_upperlegfk", "UpperLegFK", "R"),
+    ("select_r_lowerlegfk", "LowerLegFK", "R"),
+    ("select_l_footfk", "FootFK", "L"),
+    ("select_l_toesfk", "ToesFK", "L"),
+    ("select_r_footfk", "FootFK", "R"),
+    ("select_r_toesfk", "ToesFK", "R"),
+    ("select_l_legik", "LegIK", "L"),
+    ("select_r_legik", "LegIK", "R"),
+    ("select_l_footik", "FootIK", "L"),
+    ("select_r_footik", "FootIK", "R"),
+    ("select_l_toesik", "ToesIK", "L"),
+    ("select_r_toesik", "ToesIK", "R"),
+    ("select_l_legroot", "LegRoot", "L"),
+    ("select_r_legroot", "LegRoot", "R"),
+    ("select_l_legpv", "LegPV", "L"),
+    ("select_r_legpv", "LegPV", "R"),
+    ("select_c_root1", "Root1", "C"),
+    ("select_c_root2", "Root2", "C"),
+    ("select_c_root3", "Root3", "C"),
+    ("select_c_setting", "UnitySetting", "C"),
+    ("select_l_fingerbundle", "FingerBundle", "L"),
+    ("select_r_fingerbundle", "FingerBundle", "R"),
+    ("select_l_thumbproximal", "ThumbProximal", "L"),
+    ("select_l_thumbintermediate", "ThumbIntermediate", "L"),
+    ("select_l_thumbdistal", "ThumbDistal", "L"),
+    ("select_l_indexproximal", "IndexProximal", "L"),
+    ("select_l_indexintermediate", "IndexIntermediate", "L"),
+    ("select_l_indexdistal", "IndexDistal", "L"),
+    ("select_l_middleproximal", "MiddleProximal", "L"),
+    ("select_l_middleintermediate", "MiddleIntermediate", "L"),
+    ("select_l_middledistal", "MiddleDistal", "L"),
+    ("select_l_ringproximal", "RingProximal", "L"),
+    ("select_l_ringintermediate", "RingIntermediate", "L"),
+    ("select_l_ringdistal", "RingDistal", "L"),
+    ("select_l_littleproximal", "LittleProximal", "L"),
+    ("select_l_littleintermediate", "LittleIntermediate", "L"),
+    ("select_l_littledistal", "LittleDistal", "L"),
+    ("select_r_thumbproximal", "ThumbProximal", "R"),
+    ("select_r_thumbintermediate", "ThumbIntermediate", "R"),
+    ("select_r_thumbdistal", "ThumbDistal", "R"),
+    ("select_r_indexproximal", "IndexProximal", "R"),
+    ("select_r_indexintermediate", "IndexIntermediate", "R"),
+    ("select_r_indexdistal", "IndexDistal", "R"),
+    ("select_r_middleproximal", "MiddleProximal", "R"),
+    ("select_r_middleintermediate", "MiddleIntermediate", "R"),
+    ("select_r_middledistal", "MiddleDistal", "R"),
+    ("select_r_ringproximal", "RingProximal", "R"),
+    ("select_r_ringintermediate", "RingIntermediate", "R"),
+    ("select_r_ringdistal", "RingDistal", "R"),
+    ("select_r_littleproximal", "LittleProximal", "R"),
+    ("select_r_littleintermediate", "LittleIntermediate", "R"),
+    ("select_r_littledistal", "LittleDistal", "R"),
+]
+
+#(UIウィジェット名, Settingオブジェクトの可視性アトリビュート名) : switch_visボタンを一括接続するための対応表
+SWITCH_VIS_BUTTONS = [
+    ("vis_body", "BodyV"),
+    ("vis_head", "HeadV"),
+    ("vis_arm", "ArmV"),
+    ("vis_leg", "LegV"),
+    ("vis_hand", "HandV"),
+    ("vis_l_arm", "ArmLeftV"),
+    ("vis_r_arm", "ArmRightV"),
+    ("vis_l_leg", "LegLeftV"),
+    ("vis_r_leg", "LegRightV"),
+    ("vis_l_hand", "HandLeftV"),
+    ("vis_r_hand", "HandRightV"),
+]
+
 class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(TRSConnectorWindow, self).__init__(*args, **kwargs)
@@ -29,107 +130,18 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         self.zoom_level = 1.0
 
         #ボタンの設定
-        #選択
-        self.ui_content.select_c_head.clicked.connect(lambda: self.select_con("Head", "C"))
-        self.ui_content.select_c_neck.clicked.connect(lambda: self.select_con("Neck", "C"))
-        self.ui_content.select_l_shoulder.clicked.connect(lambda: self.select_con("Shoulder", "L"))
-        self.ui_content.select_r_shoulder.clicked.connect(lambda: self.select_con("Shoulder", "R"))
-        self.ui_content.select_l_upperarmfk.clicked.connect(lambda: self.select_con("UpperArmFK", "L"))
-        self.ui_content.select_l_lowerarmfk.clicked.connect(lambda: self.select_con("LowerArmFK", "L"))
-        self.ui_content.select_r_upperarmfk.clicked.connect(lambda: self.select_con("UpperArmFK", "R"))
-        self.ui_content.select_r_lowerarmfk.clicked.connect(lambda: self.select_con("LowerArmFK", "R"))
-        self.ui_content.select_l_wrist1.clicked.connect(lambda: self.select_con("Wrist", "L"))
-        self.ui_content.select_r_wrist1.clicked.connect(lambda: self.select_con("Wrist", "R"))
-        self.ui_content.select_l_wrist2.clicked.connect(lambda: self.select_con("Wrist", "L"))
-        self.ui_content.select_r_wrist2.clicked.connect(lambda: self.select_con("Wrist", "R"))
-        self.ui_content.select_l_eye.clicked.connect(lambda: self.select_con("Eye", "L"))
-        self.ui_content.select_r_eye.clicked.connect(lambda: self.select_con("Eye", "R"))
-        self.ui_content.select_c_eyeaim.clicked.connect(lambda: self.select_con("EyeAim", "C"))
-        self.ui_content.select_l_eyeaim.clicked.connect(lambda: self.select_con("EyeAim", "L"))
-        self.ui_content.select_r_eyeaim.clicked.connect(lambda: self.select_con("EyeAim", "R"))
-        self.ui_content.select_l_armpv.clicked.connect(lambda: self.select_con("ArmPV", "L"))
-        self.ui_content.select_r_armpv.clicked.connect(lambda: self.select_con("ArmPV", "R"))
-        self.ui_content.select_l_armik.clicked.connect(lambda: self.select_con("HandIK", "L"))
-        self.ui_content.select_r_armik.clicked.connect(lambda: self.select_con("HandIK", "R"))
-        self.ui_content.select_c_chestik.clicked.connect(lambda: self.select_con("ChestIK", "C"))
-        self.ui_content.select_c_chestfk.clicked.connect(lambda: self.select_con("ChestFK", "C"))
-        self.ui_content.select_c_spineik.clicked.connect(lambda: self.select_con("SpineIK", "C"))
-        self.ui_content.select_c_spinefk.clicked.connect(lambda: self.select_con("SpineFK", "C"))
-        self.ui_content.select_c_upperChest.clicked.connect(lambda: self.select_con("UpperChest", "C"))
-        self.ui_content.select_c_waist.clicked.connect(lambda: self.select_con("Waist", "C"))
-        self.ui_content.select_c_hips.clicked.connect(lambda: self.select_con("Hips", "C"))
-        self.ui_content.select_l_upperlegfk.clicked.connect(lambda: self.select_con("UpperLegFK", "L"))
-        self.ui_content.select_l_lowerlegfk.clicked.connect(lambda: self.select_con("LowerLegFK", "L"))
-        self.ui_content.select_r_upperlegfk.clicked.connect(lambda: self.select_con("UpperLegFK", "R"))
-        self.ui_content.select_r_lowerlegfk.clicked.connect(lambda: self.select_con("LowerLegFK", "R"))
-        self.ui_content.select_l_footfk.clicked.connect(lambda: self.select_con("FootFK", "L"))
-        self.ui_content.select_l_toesfk.clicked.connect(lambda: self.select_con("ToesFK", "L"))
-        self.ui_content.select_r_footfk.clicked.connect(lambda: self.select_con("FootFK", "R"))
-        self.ui_content.select_r_toesfk.clicked.connect(lambda: self.select_con("ToesFK", "R"))
-        self.ui_content.select_l_legik.clicked.connect(lambda: self.select_con("LegIK", "L"))
-        self.ui_content.select_r_legik.clicked.connect(lambda: self.select_con("LegIK", "R"))
-        self.ui_content.select_l_footik.clicked.connect(lambda: self.select_con("FootIK", "L"))
-        self.ui_content.select_r_footik.clicked.connect(lambda: self.select_con("FootIK", "R"))
-        self.ui_content.select_l_toesik.clicked.connect(lambda: self.select_con("ToesIK", "L"))
-        self.ui_content.select_r_toesik.clicked.connect(lambda: self.select_con("ToesIK", "R"))
-        self.ui_content.select_l_legroot.clicked.connect(lambda: self.select_con("LegRoot", "L"))
-        self.ui_content.select_r_legroot.clicked.connect(lambda: self.select_con("LegRoot", "R"))
-        self.ui_content.select_l_legpv.clicked.connect(lambda: self.select_con("LegPV", "L"))
-        self.ui_content.select_r_legpv.clicked.connect(lambda: self.select_con("LegPV", "R"))
-        self.ui_content.select_c_root1.clicked.connect(lambda: self.select_con("Root1", "C"))
-        self.ui_content.select_c_root2.clicked.connect(lambda: self.select_con("Root2", "C"))
-        self.ui_content.select_c_root3.clicked.connect(lambda: self.select_con("Root3", "C"))
-        self.ui_content.select_c_setting.clicked.connect(lambda: self.select_con("UnitySetting", "C"))
-        self.ui_content.select_l_fingerbundle.clicked.connect(lambda: self.select_con("FingerBundle", "L"))
-        self.ui_content.select_r_fingerbundle.clicked.connect(lambda: self.select_con("FingerBundle", "R"))
-
-        self.ui_content.select_l_thumbproximal.clicked.connect(lambda: self.select_con("ThumbProximal", "L"))
-        self.ui_content.select_l_thumbintermediate.clicked.connect(lambda: self.select_con("ThumbIntermediate", "L"))
-        self.ui_content.select_l_thumbdistal.clicked.connect(lambda: self.select_con("ThumbDistal", "L"))
-        self.ui_content.select_l_indexproximal.clicked.connect(lambda: self.select_con("IndexProximal", "L"))
-        self.ui_content.select_l_indexintermediate.clicked.connect(lambda: self.select_con("IndexIntermediate", "L"))
-        self.ui_content.select_l_indexdistal.clicked.connect(lambda: self.select_con("IndexDistal", "L"))
-        self.ui_content.select_l_middleproximal.clicked.connect(lambda: self.select_con("MiddleProximal", "L"))
-        self.ui_content.select_l_middleintermediate.clicked.connect(lambda: self.select_con("MiddleIntermediate", "L"))
-        self.ui_content.select_l_middledistal.clicked.connect(lambda: self.select_con("MiddleDistal", "L"))
-        self.ui_content.select_l_ringproximal.clicked.connect(lambda: self.select_con("RingProximal", "L"))
-        self.ui_content.select_l_ringintermediate.clicked.connect(lambda: self.select_con("RingIntermediate", "L"))
-        self.ui_content.select_l_ringdistal.clicked.connect(lambda: self.select_con("RingDistal", "L"))
-        self.ui_content.select_l_littleproximal.clicked.connect(lambda: self.select_con("LittleProximal", "L"))
-        self.ui_content.select_l_littleintermediate.clicked.connect(lambda: self.select_con("LittleIntermediate", "L"))
-        self.ui_content.select_l_littledistal.clicked.connect(lambda: self.select_con("LittleDistal", "L"))
-
-        self.ui_content.select_r_thumbproximal.clicked.connect(lambda: self.select_con("ThumbProximal", "R"))
-        self.ui_content.select_r_thumbintermediate.clicked.connect(lambda: self.select_con("ThumbIntermediate", "R"))
-        self.ui_content.select_r_thumbdistal.clicked.connect(lambda: self.select_con("ThumbDistal", "R"))
-        self.ui_content.select_r_indexproximal.clicked.connect(lambda: self.select_con("IndexProximal", "R"))
-        self.ui_content.select_r_indexintermediate.clicked.connect(lambda: self.select_con("IndexIntermediate", "R"))
-        self.ui_content.select_r_indexdistal.clicked.connect(lambda: self.select_con("IndexDistal", "R"))
-        self.ui_content.select_r_middleproximal.clicked.connect(lambda: self.select_con("MiddleProximal", "R"))
-        self.ui_content.select_r_middleintermediate.clicked.connect(lambda: self.select_con("MiddleIntermediate", "R"))
-        self.ui_content.select_r_middledistal.clicked.connect(lambda: self.select_con("MiddleDistal", "R"))
-        self.ui_content.select_r_ringproximal.clicked.connect(lambda: self.select_con("RingProximal", "R"))
-        self.ui_content.select_r_ringintermediate.clicked.connect(lambda: self.select_con("RingIntermediate", "R"))
-        self.ui_content.select_r_ringdistal.clicked.connect(lambda: self.select_con("RingDistal", "R"))
-        self.ui_content.select_r_littleproximal.clicked.connect(lambda: self.select_con("LittleProximal", "R"))
-        self.ui_content.select_r_littleintermediate.clicked.connect(lambda: self.select_con("LittleIntermediate", "R"))
-        self.ui_content.select_r_littledistal.clicked.connect(lambda: self.select_con("LittleDistal", "R"))
+        #選択(コントローラー選択ボタン)。(UIウィジェット名, コントローラー名, 左右中央)の対応表から機械的に接続する。
+        for widget_name,con_name,pos in SELECT_CON_BUTTONS:
+            getattr(self.ui_content,widget_name).clicked.connect(
+                lambda checked=False,n=con_name,p=pos: self.select_con(n,p))
 
         self.ui_content.select_l_allfinger.clicked.connect(lambda: self.select_allfinger("L"))
         self.ui_content.select_r_allfinger.clicked.connect(lambda: self.select_allfinger("R"))
 
-        #表示切替
-        self.ui_content.vis_body.clicked.connect(lambda: self.switch_vis("BodyV"))
-        self.ui_content.vis_head.clicked.connect(lambda: self.switch_vis("HeadV"))
-        self.ui_content.vis_arm.clicked.connect(lambda: self.switch_vis("ArmV"))
-        self.ui_content.vis_leg.clicked.connect(lambda: self.switch_vis("LegV"))
-        self.ui_content.vis_hand.clicked.connect(lambda: self.switch_vis("HandV"))
-        self.ui_content.vis_l_arm.clicked.connect(lambda: self.switch_vis("ArmLeftV"))
-        self.ui_content.vis_r_arm.clicked.connect(lambda: self.switch_vis("ArmRightV"))
-        self.ui_content.vis_l_leg.clicked.connect(lambda: self.switch_vis("LegLeftV"))
-        self.ui_content.vis_r_leg.clicked.connect(lambda: self.switch_vis("LegRightV"))
-        self.ui_content.vis_l_hand.clicked.connect(lambda: self.switch_vis("HandLeftV"))
-        self.ui_content.vis_r_hand.clicked.connect(lambda: self.switch_vis("HandRightV"))
+        #表示切替。(UIウィジェット名, Settingオブジェクトの可視性アトリビュート名)の対応表から機械的に接続する。
+        for widget_name,attr in SWITCH_VIS_BUTTONS:
+            getattr(self.ui_content,widget_name).clicked.connect(
+                lambda checked=False,a=attr: self.switch_vis(a))
 
         #オレンジ 特殊機能
         self.ui_content.select_all.clicked.connect(lambda: self.select_all())
@@ -149,10 +161,39 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         #シェーダー
         self.ui_content.flat_shade.clicked.connect(lambda: self.flat_shade())
 
+    def _load_obj_dic(self):
+        """
+        現在のキャラクターの{("Con","L","Head")等: オブジェクトのフルパス}相当の対応辞書を読み込む。
+        リグ作成時にシーンの"ARFH_information.<characterName>"アトリビュートへJSON文字列として保存されている。
+        (各ボタン処理の先頭で必ず読み込むため共通処理として切り出している)
+
+        Returns
+        -------
+            dict : {"('Con', 'C', 'Head')"のような文字列キー : オブジェクトのフルパス}
+        """
+        character_name = cmds.getAttr("ARFH_information.characterName")
+        obj_dic_text = cmds.getAttr(f"ARFH_information.{character_name}")
+        return json.loads(obj_dic_text)
+
+    def _parse_obj_keys(self, obj_dic:dict):
+        """
+        obj_dicの各キー("('Con', 'C', 'Head')"のようなタプルのrepr文字列)を
+        ["Con","C","Head"]の3要素リストへ変換したものを列挙する。
+        (obj_dicのキーはPythonのタプルをそのままrepr文字列化してシーンへ保存しているため、
+        ここで文字列から["type","pos","name"]を復元している)
+
+        Parameters
+        ----------
+            dict obj_dic : self._load_obj_dic()で得られる対応辞書
+
+        Returns
+        -------
+            list[list[str]] : [[type,pos,name], ...]
+        """
+        return [[part[1:-1].replace("'", "") for part in key[1:-1].split(",")] for key in obj_dic]
+
     def select_con(self, name:str,pos:str):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         select_obj = f"('Con', '{pos}', '{name}')"
         obj=cmds.ls(obj_dic[select_obj])
@@ -169,9 +210,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 cmds.select(obj[0],r=True,add=False)
 
     def select_allfinger(self,pos:str):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         modifiers = QtWidgets.QApplication.keyboardModifiers()
 
@@ -189,9 +228,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 cmds.select(obj[0],r=False,add=True)
 
     def switch_vis(self,attr):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         setting = cmds.ls(obj_dic["('Con', 'C', 'Setting')"])[0]
 
@@ -203,10 +240,8 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             cmds.setAttr(f"{setting}.{attr}",0)
 
     def select_all(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
-        convert_obj_dic = [[x[1:-1].replace("'", '') for x in i[1:-1].split(',')] for i in obj_dic]
+        obj_dic = self._load_obj_dic()
+        convert_obj_dic = self._parse_obj_keys(obj_dic)
 
         cmds.select(cl=True)
 
@@ -217,12 +252,8 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 cmds.select(obj,tgl=True)
 
     def reset_pose(self):
-        from maya import cmds
-        import json
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
-        convert_obj_dic = [[x[1:-1].replace("'", '') for x in i[1:-1].split(',')] for i in obj_dic]
+        obj_dic = self._load_obj_dic()
+        convert_obj_dic = self._parse_obj_keys(obj_dic)
 
         for obj in convert_obj_dic:
             if(obj[0]=="Con"):
@@ -246,10 +277,8 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 cmds.xform(obj,ws=False,m=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
 
     def mirror_pose(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
-        convert_obj_dic = [[x[1:-1].replace("'", '') for x in i[1:-1].split(',')] for i in obj_dic]
+        obj_dic = self._load_obj_dic()
+        convert_obj_dic = self._parse_obj_keys(obj_dic)
 
         cmds.select(cl=True)
 
@@ -283,9 +312,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                         cmds.xform(obj,ws=False,m=newMatrix)
 
     def arm_iktofk_l(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         upperArmFK_con=cmds.ls(obj_dic["('Con', 'L', 'UpperArmFK')"])[0]
         upperArmFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'UpperArmFK')"])[0]
@@ -310,9 +337,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         cmds.setAttr(F"{shoulder_con}.IKFK",1)
 
     def arm_iktofk_r(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         upperArmFK_con=cmds.ls(obj_dic["('Con', 'R', 'UpperArmFK')"])[0]
         upperArmFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'UpperArmFK')"])[0]
@@ -344,9 +369,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         if pos=="L": factor=1
         else: factor=-1
 
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         handIK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'HandIK')"])[0]
         handIK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'HandIK')"])[0]
@@ -381,9 +404,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         cmds.setAttr(F"{handIK_con}.smoothIK",0)
 
     def leg_iktofk_l(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         upperLegFK_con=cmds.ls(obj_dic["('Con', 'L', 'UpperLegFK')"])[0]
         upperLegFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'UpperLegFK')"])[0]
@@ -428,9 +449,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         cmds.setAttr(F"{root_con}.IKFK",1)
 
     def leg_iktofk_r(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
         upperLegFK_con=cmds.ls(obj_dic["('Con', 'R', 'UpperLegFK')"])[0]
         upperLegFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'UpperLegFK')"])[0]
@@ -478,9 +497,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         cmds.setAttr(F"{root_con}.IKFK",1)
 
     def leg_fktoik_l(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
 
         legIK_con=cmds.ls(obj_dic["('Con', 'L', 'LegIK')"])[0]
@@ -529,9 +546,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         cmds.xform(toesIK_con,m=list(toes_matrix),ws=True)
 
     def leg_fktoik_r(self):
-        character_name=cmds.getAttr(F"ARFH_information.characterName")
-        obj_dic_text=cmds.getAttr(F"ARFH_information.{character_name}")
-        obj_dic=json.loads(obj_dic_text)
+        obj_dic = self._load_obj_dic()
 
 
         legIK_con=cmds.ls(obj_dic["('Con', 'R', 'LegIK')"])[0]
