@@ -276,40 +276,130 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
 
                 cmds.xform(obj,ws=False,m=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
 
+    #"C"のコントローラーのうちワールド反転の対象にしないもの
+    #  EyeAim : 左右のEyeAimコントローラー自体は左右スワップされるため中央側は据え置きにする(元々の挙動を維持)
+    #  Setting : 全アトリビュートがロックされたUI用オブジェクトで、姿勢を持たないため対象外
+    _MIRROR_CENTER_SKIP = ("EyeAim","Setting")
+
+    @staticmethod
+    def _reflect_local_matrix(matrix, axis):
+        """
+        ローカル行列(親からの相対値)を、ローカル軸axis(0=X,1=Y,2=Z)を法線とする平面で反転する。
+        共役変換(Reflect*M*Reflect)そのものなので、matrixが単位行列(レスト、無ポーズ)なら
+        結果も必ず単位行列になる=レスト状態のコントローラーは絶対に動かない。
+
+        Parameters
+        ----------
+            list matrix : 反転前のローカル行列(16要素)
+            int axis : 反転する軸(0=X, 1=Y, 2=Z)
+
+        Returns
+        -------
+            list : 反転後のローカル行列(16要素)
+        """
+        sign = [1.0,1.0,1.0]
+        sign[axis] = -1.0
+        out = list(matrix)
+        for i in range(3):
+            for j in range(3):
+                out[i*4+j] = matrix[i*4+j] * sign[i] * sign[j]
+        for j in range(3):
+            out[12+j] = matrix[12+j] * sign[j]
+        return out
+
+    @staticmethod
+    def _mirror_axis_of(obj):
+        """
+        objの親(Grp)のワールド姿勢から、「キャラクターの左右(ワールドX)」に一番近い
+        ローカル軸を求める。スパイン系はprimary_axisの選択やジョイントのロール角次第で
+        ローカルXが必ずしも左右方向を向いているとは限らない(例: ローカルXがボーンの
+        長手方向=ワールドYに近く、ローカルYの方が左右に近いことがある)ため、決め打ちせず
+        親の姿勢から実測する。親(Grp)はmirror_poseで一切書き換えないため、この軸判定は
+        呼び出し順序に依存せず安定する。
+
+        Parameters
+        ----------
+            string obj : 対象のCon(親がGrp)
+
+        Returns
+        -------
+            int : 0=X, 1=Y, 2=Zのいずれか
+        """
+        parent = cmds.listRelatives(obj,parent=True,fullPath=True)[0]
+        parent_world = cmds.xform(parent,ws=True,q=True,m=True)
+        #各ローカル軸(行0,1,2)のワールドX成分の絶対値が最大のものを選ぶ
+        rows_x = [abs(parent_world[0]),abs(parent_world[4]),abs(parent_world[8])]
+        return rows_x.index(max(rows_x))
+
     def mirror_pose(self):
+        """
+        現在のポーズを左右反転する。
+
+        左右(L/R)のコントローラーは、リグ作成時に左右のGrpへ互いに鏡像になるよう
+        ローカル軸の反転(autorig_createRig.pyの各部位で"clr=='R'のときGrp.sx/sy=-1"となっている箇所)が
+        仕込まれているため、ローカル行列をそのまま入れ替えるだけで正しい鏡映ポーズになる。
+        ローカル行列は自分の直接の親からの相対値でしかないため、他のコントローラーを
+        どんな順序で処理しても影響を受けない。
+
+        中央(C)のコントローラーは左右のペアが無いため、自分自身のローカル行列を
+        (親を固定したまま)反転する。以前はワールド空間でキャラクターの左右軸(ワールドX)を
+        直接反転していたが、これだと「親(Grp)の姿勢がわずかでもワールドXに対して非対称
+        (ガイド配置の誤差等で厳密な左右対称からずれている)」場合に、無ポーズ(ローカル単位行列)の
+        コントローラーまでズレた位置へ再配置されてしまう不具合があった
+        (親を固定して子だけ動かす都合上、親の非対称分を子が肩代わりする形で補正されてしまうため)。
+        親からの相対値であるローカル行列を、ローカル軸を法線とする平面で反転(共役変換)する形に
+        変更したことで、無ポーズなら単位行列は単位行列のまま=レスト状態は必ずレストのまま保たれる。
+
+        ただし反転に使うローカル軸(X/Y/Z)は、ボーンごとにバラバラ(スパイン等は
+        primary_axisの選択やジョイントのロール角に依存する)なため決め打ちできず、
+        `_mirror_axis_of`で親(Grp)の姿勢から実測して選ぶ。
+
+        Cのワールド行列は、Hips→Waist→SpineFK→ChestFK→Neck→Headのようにswitch_parent経由で
+        祖先のワールド行列に連動しているが、ここで扱うのはローカル行列(親のワールド状態に
+        依存しない)なので、処理順によって祖先の反転が子孫に二重に乗ることもない
+        (以前ワールド行列で反転していた頃はこの問題があり、2段階構成で対処していたが、
+        ローカル行列化した今は本質的に発生しなくなっている。読み取りと書き込みを分ける
+        2段階構成自体は安全側として残している)。
+
+        Returns
+        -------
+            無し
+        """
         obj_dic = self._load_obj_dic()
         convert_obj_dic = self._parse_obj_keys(obj_dic)
 
         cmds.select(cl=True)
 
+        #1段階目: 書き込みを一切行わず、反転前の値だけを全コントローラーぶん読み切る
+        pending=[]
         for obj_kay in convert_obj_dic:
-            if(obj_kay[0]=="Con"):
-                key=f"('Con', '{obj_kay[1]}', '{obj_kay[2]}')"
-                obj=cmds.ls(obj_dic[key])[0]
-                if(obj_kay[1]=="L"):
-                    key_r=f"('Con', 'R', '{obj_kay[2]}')"
-                    r_obj=cmds.ls(obj_dic[key_r])[0]
-                    l_matrix = cmds.xform(obj,ws=False,q=True,m=True)
-                    r_matrix = cmds.xform(r_obj,ws=False,q=True,m=True)
+            if(obj_kay[0]!="Con"):
+                continue
+            key=f"('Con', '{obj_kay[1]}', '{obj_kay[2]}')"
+            obj=cmds.ls(obj_dic[key])[0]
 
-                    cmds.xform(obj,ws=False,m=r_matrix)
-                    cmds.xform(r_obj,ws=False,m=l_matrix)
+            if(obj_kay[1]=="L"):
+                key_r=f"('Con', 'R', '{obj_kay[2]}')"
+                r_obj=cmds.ls(obj_dic[key_r])[0]
+                l_matrix = cmds.xform(obj,ws=False,q=True,m=True)
+                r_matrix = cmds.xform(r_obj,ws=False,q=True,m=True)
+                pending.append(("LR",obj,r_obj,l_matrix,r_matrix))
 
-                if(obj_kay[1]=="C" and obj_kay[2]!="EyeAim"):
-                    if(obj[2]!="EyeAim" and obj[2]!="Root1" and obj_kay[2]!="Root2" and obj_kay[2]!="Root3"):
-                        matrix = cmds.xform(obj,ws=False,q=True,m=True)
-                        newMatrix = [matrix[0],-matrix[1],matrix[2],matrix[3]
-                                    ,-matrix[4],matrix[5],matrix[6],matrix[7]
-                                    ,matrix[8],-matrix[9],matrix[10],matrix[11]
-                                    ,matrix[12],-matrix[13],matrix[14],matrix[15]]
-                        cmds.xform(obj,ws=False,m=newMatrix)
-                    else:
-                        matrix = cmds.xform(obj,ws=False,q=True,m=True)
-                        newMatrix = [matrix[0],matrix[1],-matrix[2],matrix[3]
-                                    ,-matrix[4],matrix[5],matrix[6],matrix[7]
-                                    ,matrix[8],-matrix[9],matrix[10],matrix[11]
-                                    ,-matrix[12],matrix[13],matrix[14],matrix[15]]
-                        cmds.xform(obj,ws=False,m=newMatrix)
+            elif(obj_kay[1]=="C" and obj_kay[2] not in self._MIRROR_CENTER_SKIP):
+                axis = self._mirror_axis_of(obj)
+                matrix = cmds.xform(obj,ws=False,q=True,m=True)
+                pending.append(("C",obj,matrix,axis))
+
+        #2段階目: 1段階目で読み取った(まだ誰も反転していない時点の)値をもとに書き込む
+        for entry in pending:
+            if(entry[0]=="LR"):
+                _,obj,r_obj,l_matrix,r_matrix = entry
+                cmds.xform(obj,ws=False,m=r_matrix)
+                cmds.xform(r_obj,ws=False,m=l_matrix)
+            else:
+                _,obj,matrix,axis = entry
+                newMatrix = self._reflect_local_matrix(matrix,axis)
+                cmds.xform(obj,ws=False,m=newMatrix)
 
     def arm_iktofk_l(self):
         obj_dic = self._load_obj_dic()

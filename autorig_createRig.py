@@ -340,6 +340,9 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     chest_matrix = cmds.xform(orientation_dic["c_chest"],m=True,ws=True,q=True)
     eye_l_matrix = cmds.xform(orientation_dic["l_eye"],m=True,ws=True,q=True)
     eye_r_matrix = cmds.xform(orientation_dic["r_eye"],m=True,ws=True,q=True)
+    has_upperChest = 'c_upperChest' in joint_dic
+    if(has_upperChest):
+        upperChest_matrix = cmds.xform(orientation_dic["c_upperChest"],m=True,ws=True,q=True)
 
     #Neck
     create_obj_dic |= autorig_utility.create_controller("Neck",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(0,0,90),
@@ -397,8 +400,23 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     cmds.connectAttr(f"{multMatrix}.matrixSum",f"{rootDecomposeMatrix}.inputMatrix")
     cmds.connectAttr(f"{rootDecomposeMatrix}.outputScale",f"{outputComposeMatrix}.inputScale")
 
-    cmds.addAttr(F"{create_obj_dic[('Con','C','Head')]}",ln="rotParent",at="enum",en="root:chest:neck:",k=True)
-    cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",1)
+    #UpperChestが存在する場合のみ、rotParentの選択肢に追加する(無い場合は元のroot:chest:neckのまま)
+    if(has_upperChest):
+        cmds.addAttr(create_obj_dic[('Con','C','Head')],ln="upperChestMatrix",at="matrix")
+        matrix = OpenMaya.MMatrix(head_matrix)*OpenMaya.MMatrix(upperChest_matrix).inverse()
+        matrix = list(matrix)
+        cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.upperChestMatrix",matrix,typ="matrix",l=True)
+        multMatrix = cmds.createNode("multMatrix")
+        upperChestDecomposeMatrix = cmds.createNode("decomposeMatrix")
+        cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.upperChestMatrix",f"{multMatrix}.matrixIn[0]")
+        cmds.connectAttr(f"{obj_dic[('Drv','C','UpperChest')]}.worldMatrix[0]",f"{multMatrix}.matrixIn[1]")
+        cmds.connectAttr(f"{multMatrix}.matrixSum",f"{upperChestDecomposeMatrix}.inputMatrix")
+
+        cmds.addAttr(F"{create_obj_dic[('Con','C','Head')]}",ln="rotParent",at="enum",en="root:chest:neck:upperChest",k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",3)
+    else:
+        cmds.addAttr(F"{create_obj_dic[('Con','C','Head')]}",ln="rotParent",at="enum",en="root:chest:neck:",k=True)
+        cmds.setAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",1)
 
     rootCondition = cmds.createNode("condition")
     cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",f"{rootCondition}.firstTerm")
@@ -417,6 +435,13 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     cmds.setAttr(f"{neckCondition}.secondTerm",2)
     cmds.setAttr(f"{neckCondition}.colorIfTrueR",1)
     cmds.setAttr(f"{neckCondition}.colorIfFalseR",0)
+
+    if(has_upperChest):
+        upperChestCondition = cmds.createNode("condition")
+        cmds.connectAttr(f"{create_obj_dic[('Con','C','Head')]}.rotParent",f"{upperChestCondition}.firstTerm")
+        cmds.setAttr(f"{upperChestCondition}.secondTerm",3)
+        cmds.setAttr(f"{upperChestCondition}.colorIfTrueR",1)
+        cmds.setAttr(f"{upperChestCondition}.colorIfFalseR",0)
 
     for i in {"X","Y","Z","W"}:
         rootFloatMath = cmds.createNode("floatMath")
@@ -439,7 +464,19 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         cmds.connectAttr(f"{chestFloatMath}.outFloat",f"{addFloatMath1}.floatB")
         cmds.connectAttr(f"{neckFloatMath}.outFloat",f"{addFloatMath2}.floatA")
         cmds.connectAttr(f"{addFloatMath1}.outFloat",f"{addFloatMath2}.floatB")
-        cmds.connectAttr(f"{addFloatMath2}.outFloat",f"{outputComposeMatrix}.inputQuat{i}")
+
+        if(has_upperChest):
+            upperChestFloatMath = cmds.createNode("floatMath")
+            cmds.setAttr(F"{upperChestFloatMath}.operation",2)
+            cmds.connectAttr(f"{upperChestDecomposeMatrix}.outputQuat{i}",f"{upperChestFloatMath}.floatA")
+            cmds.connectAttr(f"{upperChestCondition}.outColorR",f"{upperChestFloatMath}.floatB")
+            addFloatMath3 = cmds.createNode("floatMath")
+            cmds.setAttr(F"{addFloatMath3}.operation",0)
+            cmds.connectAttr(f"{addFloatMath2}.outFloat",f"{addFloatMath3}.floatA")
+            cmds.connectAttr(f"{upperChestFloatMath}.outFloat",f"{addFloatMath3}.floatB")
+            cmds.connectAttr(f"{addFloatMath3}.outFloat",f"{outputComposeMatrix}.inputQuat{i}")
+        else:
+            cmds.connectAttr(f"{addFloatMath2}.outFloat",f"{outputComposeMatrix}.inputQuat{i}")
 
     #接続
     autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Neck')]}",joint_dic["c_neck"])
@@ -1298,6 +1335,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
                                     rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','UpperChest')],
                                     dvn_con=create_obj_dic[('Con',clr,'Shoulder')],dvn_grp=create_obj_dic[('Grp',clr,'Shoulder')])
 
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'Shoulder')]}.rotParent",1)
 
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'Shoulder')]}.sy",scl)
         autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'Shoulder')], Dvn_Obj=joint_dic[f"{clr_lower}_shoulder"])
