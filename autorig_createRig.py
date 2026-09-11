@@ -2409,7 +2409,6 @@ def clean_obj(character_name:str,obj_dic:dict):
             for attr in attr_list:
                 if(attr not in temp_atter_list and cmds.getAttr(f"{obj_dic[obj]}.{attr}", keyable=True)):
                     data_type=cmds.getAttr(F"{obj_dic[obj]}.{attr}",typ=True)
-                    print(data_type)
                     if(data_type == "double"):
                         data=cmds.getAttr(F"{obj_dic[obj]}.{attr}")
                         cmds.addAttr(obj_dic[obj],ln=f"{attr}_Default",at="double",dv=data)

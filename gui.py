@@ -13,6 +13,8 @@ from . import fbx_shape_rename
 importlib.reload(fbx_shape_rename)
 from . import picker
 importlib.reload(picker)
+from . import control_shape
+importlib.reload(control_shape)
 
 def create_window():
     """
@@ -42,6 +44,7 @@ def create_window():
     create_frame = cmds.frameLayout(label="リギング",parent=main_layout,collapsable=True)
     setup_list = humanoid_setup(create_frame)
     autorig_frame(create_frame,setup_list[1],setup_list[0])
+    control_shape_frame(create_frame)
     blendshape_frame(main_layout,setup_list[0])
 
     #タブの表示
@@ -319,6 +322,42 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
     cmds.button(label="Z",command=lambda *_:autorig_preparation.rotate_90("Z"),w=rotate_w)
 
     cmds.button(label="リグ作成",command=lambda *_:autorig_createBase.create_rig(textField_dic=textField_dic,character_name=character_name),p=setup_frame)
+
+def control_shape_frame(parent_layout:str):
+    """
+    コントローラーのカーブ形状(CV座標)をjsonへ書き出し/読み込みするGUI。
+    シェイプをCV単位で手直しした後にリグを作り直す必要があっても、このjsonを経由すれば
+    手直ししたシェイプを作り直さずに済む(control_shape.py参照)。
+
+    対象は選択中のコントローラー(またはリグのトップグループ等、選択したものの子孫のCon_*)。
+    何も選択していなければシーン内の全Con_*が対象になる。
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+
+    Returns
+    -------
+        無し
+    """
+    #フレーム
+    shape_frame = cmds.frameLayout(label="コントロールシェイプ",parent=parent_layout,collapsable=True)
+
+    cmds.rowLayout(nc=3,adjustableColumn=2,p=shape_frame)
+    cmds.text(label="出力先 : ")
+    export_path_field = cmds.textField()
+    cmds.button(label="参照",command=lambda *_:control_shape.browse_export_path(export_path_field))
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=shape_frame)
+    cmds.button(label="シェイプ出力(選択中/未選択なら全て)",command=lambda *_:control_shape.export_shapes(cmds.textField(export_path_field,q=True,tx=True)))
+
+    cmds.rowLayout(nc=3,adjustableColumn=2,p=shape_frame)
+    cmds.text(label="入力元 : ")
+    import_path_field = cmds.textField()
+    cmds.button(label="参照",command=lambda *_:control_shape.browse_import_path(import_path_field))
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=shape_frame)
+    cmds.button(label="シェイプ読み込み",command=lambda *_:control_shape.import_shapes(cmds.textField(import_path_field,q=True,tx=True)))
 
 def blendshape_frame(parent_layout:str,character_name:str):
     """
