@@ -296,6 +296,18 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','ChestIK')]}",joint_dic["c_chest"])
     autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','SpineIK')]}",joint_dic["c_spine"])
 
+    # UpperChest作成
+    if(f'c_upperChest' in joint_dic):
+        upperChest_matrix = cmds.xform(orientation_dic["c_upperChest"],m=True,ws=True,q=True)
+        create_obj_dic |= autorig_utility.create_controller("UpperChest",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
+                                                            setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
+        cmds.xform(create_obj_dic[('Grp','C','UpperChest')],m=upperChest_matrix,ws=True)
+        autorig_utility.switch_parent(posA=create_obj_dic[('Drv','C','ChestIK')],
+                                  rotB=create_obj_dic[('Drv','C','ChestIK')],rotA=create_obj_dic[('Drv','C','Waist')],
+                                  sclB=create_obj_dic[('Drv','C','ChestIK')],sclA=create_obj_dic[('Drv','C','Waist')],
+                                  dvn_con=create_obj_dic[('Con','C','UpperChest')],dvn_grp=create_obj_dic[('Grp','C','UpperChest')],postScl=True)
+        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','UpperChest')]}",joint_dic["c_upperChest"])
+
     return create_obj_dic
 
 def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,orientation_dic:dict):
@@ -332,9 +344,16 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     create_obj_dic |= autorig_utility.create_controller("Neck",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(0,0,90),
                                                         setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
     cmds.xform(create_obj_dic[('Grp','C','Neck')],m=neck_matrix,ws=True)
-    autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','ChestIK')],
-                                  rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
-                                  dvn_con=create_obj_dic[('Con','C','Neck')],dvn_grp=create_obj_dic[('Grp','C','Neck')])
+    
+    if(f'c_upperChest' not in joint_dic):
+        autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','ChestIK')],
+                                    rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
+                                    dvn_con=create_obj_dic[('Con','C','Neck')],dvn_grp=create_obj_dic[('Grp','C','Neck')])
+    else:
+        autorig_utility.switch_parent(posA=obj_dic[('Drv','C','UpperChest')],sclA=obj_dic[('Drv','C','UpperChest')],
+                                    rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','UpperChest')],
+                                    dvn_con=create_obj_dic[('Con','C','Neck')],dvn_grp=create_obj_dic[('Grp','C','Neck')])
+
     cmds.setAttr(f"{create_obj_dic[('Con','C','Neck')]}.rotParent",1)
 
 
@@ -1268,9 +1287,17 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         create_obj_dic |= autorig_utility.create_controller("Shoulder",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="cube",con_scl=(3,3,3),con_rot=(0,0,0),
                                                             setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'Shoulder')],m=shoulder_matrix,ws=True)
-        autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','Root3')],
-                                  rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
-                                  dvn_con=create_obj_dic[('Con',clr,'Shoulder')],dvn_grp=create_obj_dic[('Grp',clr,'Shoulder')])
+
+        if(f'c_upperChest' not in joint_dic):
+            autorig_utility.switch_parent(posA=obj_dic[('Drv','C','ChestIK')],sclA=obj_dic[('Drv','C','Root3')],
+                                    rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','ChestIK')],
+                                    dvn_con=create_obj_dic[('Con',clr,'Shoulder')],dvn_grp=create_obj_dic[('Grp',clr,'Shoulder')])
+        else:
+            autorig_utility.switch_parent(posA=obj_dic[('Drv','C','UpperChest')],sclA=obj_dic[('Drv','C','Root3')],
+                                    rotA=obj_dic[('Drv','C','Root3')],rotB=obj_dic[('Drv','C','UpperChest')],
+                                    dvn_con=create_obj_dic[('Con',clr,'Shoulder')],dvn_grp=create_obj_dic[('Grp',clr,'Shoulder')])
+
+
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'Shoulder')]}.sy",scl)
         autorig_utility.matrix_constraint(Drv_Obj=create_obj_dic[('Drv',clr,'Shoulder')], Dvn_Obj=joint_dic[f"{clr_lower}_shoulder"])
         

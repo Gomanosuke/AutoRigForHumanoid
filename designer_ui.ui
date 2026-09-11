@@ -174,9 +174,9 @@ QPushButton:pressed {
    <property name="geometry">
     <rect>
      <x>220</x>
-     <y>130</y>
+     <y>150</y>
      <width>60</width>
-     <height>30</height>
+     <height>15</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -211,9 +211,9 @@ QPushButton:pressed {
    <property name="geometry">
     <rect>
      <x>220</x>
-     <y>165</y>
+     <y>170</y>
      <width>60</width>
-     <height>20</height>
+     <height>15</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -3992,6 +3992,43 @@ QPushButton:pressed {
    </property>
    <property name="text">
     <string>All Finger</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_c_upperChest">
+   <property name="geometry">
+    <rect>
+     <x>220</x>
+     <y>130</y>
+     <width>60</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 170, 255);
+    border-radius: 3px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 190, 255);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 130, 215);
+}</string>
+   </property>
+   <property name="text">
+    <string/>
    </property>
   </widget>
  </widget>

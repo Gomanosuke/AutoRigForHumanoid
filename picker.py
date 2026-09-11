@@ -55,6 +55,7 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         self.ui_content.select_c_chestfk.clicked.connect(lambda: self.select_con("ChestFK", "C"))
         self.ui_content.select_c_spineik.clicked.connect(lambda: self.select_con("SpineIK", "C"))
         self.ui_content.select_c_spinefk.clicked.connect(lambda: self.select_con("SpineFK", "C"))
+        self.ui_content.select_c_upperChest.clicked.connect(lambda: self.select_con("UpperChest", "C"))
         self.ui_content.select_c_waist.clicked.connect(lambda: self.select_con("Waist", "C"))
         self.ui_content.select_c_hips.clicked.connect(lambda: self.select_con("Hips", "C"))
         self.ui_content.select_l_upperlegfk.clicked.connect(lambda: self.select_con("UpperLegFK", "L"))
