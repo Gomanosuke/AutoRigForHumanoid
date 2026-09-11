@@ -76,12 +76,17 @@ def _connect_advance_vector(ConObj:str, DrvObj:str, channel:str, con_advance, se
     """
     Con.translate/Con.rotateのようなXYZ複合アトリビュートを、setting.advanceでブレンドしつつDrvへ接続する。
 
-    3軸とも同じadvance設定(全てTrueまたは全てFalse)ならブレンド計算はblendColors1個にまとめるが、
-    Drv側への接続は必ず軸ごと(tx/ty/tz等)に行う。呼び出し元(autorig_createRig.py)がConからDrvへの
-    特定の軸だけを後からdisconnectAttrして繋ぎ変える箇所があり、コンパウンド接続(translate同士等)に
-    まとめてしまうとその軸だけの切断ができなくなるため。
+    3軸とも同じadvance設定(全てTrueまたは全てFalse)なら、ブレンド計算・Drvへの接続ともに
+    複合アトリビュート同士(例: translate→translate)でまとめて1本にする。blendColors/multiplyDivide等の
+    出力を複合のまま単位型(linear/angular)の複合アトリビュートへ繋いでもunitConversionは発生しない
+    (decomposeMatrixの出力を直結する場合と同じ)。軸ごと(.outputR→.tx等)に分解して繋ぐと
+    軸の数だけunitConversionが増えるため、まとめられる場合は必ず複合のまま繋ぐ。
     軸ごとに設定が異なる場合だけ、軸ごとにfloatCompositeを作る従来実装にフォールバックする
     (このリポジトリでは1箇所だけ軸混在の使用例があるため、挙動を変えないよう残している)。
+
+    呼び出し元(autorig_createRig.py)にConからDrvへの接続を後から繋ぎ変える箇所が1つあるが、
+    そちらも複合アトリビュート単位でdisconnectAttrするよう合わせてあるので、
+    ここでの複合接続と矛盾しない。
 
     Parameters
     ----------
@@ -96,18 +101,15 @@ def _connect_advance_vector(ConObj:str, DrvObj:str, channel:str, con_advance, se
         無し
     """
     axis_suffix = {"translate":("tx","ty","tz"), "rotate":("rx","ry","rz")}[channel]
-    color_children = ("R","G","B")
 
     if(all(con_advance)):
         blend = cmds.createNode("blendColors")
         cmds.setAttr(f"{blend}.color2",*neutral,type="double3")
         cmds.connectAttr(f"{ConObj}.{channel}",f"{blend}.color1")
         cmds.connectAttr(f"{setting}.advance",f"{blend}.blender")
-        for axis,c in zip(axis_suffix,color_children):
-            cmds.connectAttr(f"{blend}.output{c}",f"{DrvObj}.{axis}")
+        cmds.connectAttr(f"{blend}.output",f"{DrvObj}.{channel}")
     elif(not any(con_advance)):
-        for axis in axis_suffix:
-            cmds.connectAttr(f"{ConObj}.{axis}",f"{DrvObj}.{axis}")
+        cmds.connectAttr(f"{ConObj}.{channel}",f"{DrvObj}.{channel}")
     else:
         for i,axis in enumerate(axis_suffix):
             con_attr=f"{ConObj}.{axis}"
@@ -121,10 +123,13 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
     """
     Con.scaleをsetting.advanceでブレンドし、drv_scale_offset(軸ごとの定数倍率)を掛けてDrvへ接続する。
 
-    3軸とも同じadvance設定ならブレンド計算・オフセット乗算はblendColors+multiplyDivideの最大2個にまとめる
-    (offsetが全軸1ならmultiplyDivideも省略)が、Drv側への接続は必ずsx/sy/sz軸ごとに行う(理由は
-    _connect_advance_vectorのdocstring参照)。軸ごとに設定が異なる場合だけ、従来のfloatComposite/floatMath
-    ×軸数の実装にフォールバックする。
+    3軸とも同じadvance設定なら、ブレンド計算・オフセット乗算をblendColors+multiplyDivideの最大2個に
+    まとめる(offsetが全軸1ならmultiplyDivideも省略)。これらの出力をDrvへ繋ぐ側は複合アトリビュート
+    (.scale)のままにしてunitConversionを避ける(_connect_advance_vectorのdocstring参照)が、
+    ConObj側の.scaleを複合のまま読むのは避け、必ずsx/sy/sz個別に読む。uniform_scale=Trueの
+    コントローラーはConObj自身の中でsx→sy/szが接続されており、.scaleを複合のまま他ノードの入力へ
+    繋ぐとMayaのサイクル検出が誤検知して警告を出すため(実害はないが不要な警告なので避ける)。
+    軸ごとに設定が異なる場合だけ、従来のfloatComposite/floatMath×軸数の実装にフォールバックする。
 
     Parameters
     ----------
@@ -138,33 +143,36 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
         無し
     """
     axis_suffix = ("sx","sy","sz")
-    output_children = ("outputX","outputY","outputZ")
+    color_children = ("R","G","B")
     uniform_offset = tuple(drv_scale_offset)==(1,1,1)
 
     if(all(con_advance_scl) or not any(con_advance_scl)):
         if(all(con_advance_scl)):
             blend = cmds.createNode("blendColors")
             cmds.setAttr(f"{blend}.color2",1,1,1,type="double3")
-            cmds.connectAttr(f"{ConObj}.scale",f"{blend}.color1")
+            for axis,c in zip(axis_suffix,color_children):
+                cmds.connectAttr(f"{ConObj}.{axis}",f"{blend}.color1{c}")
             cmds.connectAttr(f"{setting}.advance",f"{blend}.blender")
             blended_attr = f"{blend}.output"
         else:
-            blended_attr = f"{ConObj}.scale"
+            blended_attr = None  #advance無し(直結)の場合はDrvへ軸ごとに直接繋ぐ
 
         if(uniform_offset):
-            if(all(con_advance_scl)):
-                for axis,c in zip(axis_suffix,("R","G","B")):
-                    cmds.connectAttr(f"{blended_attr}{c}",f"{DrvObj}.{axis}")
+            if(blended_attr is not None):
+                cmds.connectAttr(blended_attr,f"{DrvObj}.scale")
             else:
                 for axis in axis_suffix:
                     cmds.connectAttr(f"{ConObj}.{axis}",f"{DrvObj}.{axis}")
         else:
             multiplyDivide = cmds.createNode("multiplyDivide")
             cmds.setAttr(f"{multiplyDivide}.operation",1)  #Multiply
-            cmds.connectAttr(blended_attr,f"{multiplyDivide}.input1")
+            if(blended_attr is not None):
+                cmds.connectAttr(blended_attr,f"{multiplyDivide}.input1")
+            else:
+                for axis,x in zip(axis_suffix,("X","Y","Z")):
+                    cmds.connectAttr(f"{ConObj}.{axis}",f"{multiplyDivide}.input1{x}")
             cmds.setAttr(f"{multiplyDivide}.input2",*drv_scale_offset,type="double3")
-            for axis,out in zip(axis_suffix,output_children):
-                cmds.connectAttr(f"{multiplyDivide}.{out}",f"{DrvObj}.{axis}")
+            cmds.connectAttr(f"{multiplyDivide}.output",f"{DrvObj}.scale")
     else:
         #軸ごとにadvance有無が混在する場合は元の実装のまま1軸ずつ処理する
         for i,axis in enumerate(axis_suffix):

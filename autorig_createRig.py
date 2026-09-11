@@ -259,9 +259,10 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     decomposeMatrix2 = cmds.createNode("decomposeMatrix")
     composeMatrix1 = cmds.createNode("composeMatrix")
     floatMath1 = cmds.createNode("floatMath")
-    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.tx",f"{create_obj_dic[('Drv','C','ChestIK')]}.tx")
-    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.ty",f"{create_obj_dic[('Drv','C','ChestIK')]}.ty")
-    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.tz",f"{create_obj_dic[('Drv','C','ChestIK')]}.tz")
+    #ChestIKはcon_advance_pos未指定(=(False,False,False)一律)のため、Con.translate→Drv.translateが
+    #複合アトリビュートのまま1本で繋がっている(autorig_utility._connect_advance_vector参照)。
+    #ここでDrv.tを別系統(colorComposite1経由)へ繋ぎ変えるので、複合単位でdisconnectする。
+    cmds.disconnectAttr(f"{create_obj_dic[('Con','C','ChestIK')]}.translate",f"{create_obj_dic[('Drv','C','ChestIK')]}.translate")
     cmds.addAttr(create_obj_dic[('Con','C','ChestIK')],ln="stretch",at="float",max=1,min=0,k=True)
     cmds.setAttr(f"{floatMath1}.operation",3)
     cmds.setAttr(f"{colorMath1}.operation",3)
@@ -2287,62 +2288,62 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                     cmds.connectAttr(f"{quatToEuler1}.outputRotate",f"{create_obj_dic[('Dvn',clr,name)]}.rotate")
                     cmds.connectAttr(f"{create_obj_dic[('Dvn',clr,name)]}.rotateOrder",f"{quatToEuler1}.inputRotateOrder")
 
-                    floatMathTX = cmds.createNode("floatMath")
-                    floatMathTY = cmds.createNode("floatMath")
-                    floatMathTZ = cmds.createNode("floatMath")
-                    floatMathRX = cmds.createNode("floatMath")
-                    floatMathRY = cmds.createNode("floatMath")
-                    floatMathRZ = cmds.createNode("floatMath")
-                    cmds.connectAttr(f"{floatMathTX}.outFloat",f"{eulerToQuatT}.inputRotateX")
-                    cmds.connectAttr(f"{floatMathTY}.outFloat",f"{eulerToQuatT}.inputRotateY")
-                    cmds.connectAttr(f"{floatMathTZ}.outFloat",f"{eulerToQuatT}.inputRotateZ")
-                    cmds.connectAttr(f"{floatMathRX}.outFloat",f"{eulerToQuatR}.inputRotateX")
-                    cmds.connectAttr(f"{floatMathRY}.outFloat",f"{eulerToQuatR}.inputRotateY")
-                    cmds.connectAttr(f"{floatMathRZ}.outFloat",f"{eulerToQuatR}.inputRotateZ")
+                    #一括制御用(グリップポーズ): FingerBundleのtranslate/rotateに関節ごとの重み
+                    #(name+軸のカスタムAttr)を掛けてeulerToQuatT/Rへ渡す。
+                    #  以前は軸ごとにfloatMath(乗算)を作りeulerToQuatT/R.inputRotateX/Y/Zへ個別接続していたが、
+                    #  floatMathの出力(単位型を持たない一般のfloat)を角度チャンネルへ軸ごとに直結すると
+                    #  Mayaが自動でunitConversionノードを挟む(このリグのunitConversionの半数以上がここ由来だった)。
+                    #  multiplyDivide1個+.inputRotateへの複合アトリビュート接続にまとめて回避する。
+                    fingerBundle_con = create_obj_dic[('Con',clr,'FingerBundle')]
+                    for i1 in ("TX","TY","TZ","RX","RY","RZ"):
+                        cmds.addAttr(fingerBundle_con,ln=f"{name}{i1}",at="double",dv=0)
 
-                    math_list = [(floatMathTX,"TX"),(floatMathTY,"TY"),(floatMathTZ,"TZ"),(floatMathRX,"RX"),(floatMathRY,"RY"),(floatMathRZ,"RZ")]
-                    for i in math_list:
-                        cmds.setAttr(f"{i[0]}.operation",2)
-                        cmds.addAttr(create_obj_dic[('Con',clr,'FingerBundle')],ln=f"{name}{i[1]}",at="double",dv=0)
-                        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{i[1].lower()}",f"{i[0]}.floatA")
-                        cmds.connectAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",f"{i[0]}.floatB")
-
-                        if(i[1]=="RX" or i[1]=="RZ"):
+                        if(i1=="RX" or i1=="RZ"):
                             if(number==1):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",1,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",1,k=True)
                             else:
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0,k=True)
-                        elif(i[1]=="RY"):
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",0,k=True)
+                        elif(i1=="RY"):
                             if(number==1):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",1,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",1,k=True)
                             elif(number==2):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",1.1,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",1.1,k=True)
                             elif(number==3):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0.9,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",0.9,k=True)
 
-                        if(i[1]=="TX"):
+                        if(i1=="TX"):
                             if(number!=1 or finger=="Middle"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",0,k=True)
                             elif(finger=="Thumb"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",10,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",10,k=True)
                             elif(finger=="Index"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",5,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",5,k=True)
                             elif(finger=="Ring"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",5,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",5,k=True)
                             elif(finger=="Little"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",10,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",10,k=True)
 
-                        if(i[1]=="TZ"):
+                        if(i1=="TZ"):
                             if(number!=1 or finger=="Middle"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",0,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",0,k=True)
                             elif(finger=="Thumb"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",-10,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",-10,k=True)
                             elif(finger=="Index"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",-10,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",-10,k=True)
                             elif(finger=="Ring"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",5,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",5,k=True)
                             elif(finger=="Little"):
-                                cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{name}{i[1]}",10,k=True)
+                                cmds.setAttr(f"{fingerBundle_con}.{name}{i1}",10,k=True)
+
+                    #T(translate系)・R(rotate系)それぞれをmultiplyDivide1個にまとめ、.inputRotateへ複合接続する
+                    for eulerToQuatNode,channel,axes in ((eulerToQuatT,"translate",("TX","TY","TZ")),
+                                                          (eulerToQuatR,"rotate",("RX","RY","RZ"))):
+                        multiplyDivide = cmds.createNode("multiplyDivide")
+                        cmds.setAttr(f"{multiplyDivide}.operation",1)  #Multiply
+                        cmds.connectAttr(f"{fingerBundle_con}.{channel}",f"{multiplyDivide}.input1")
+                        for axis,input2_child in zip(axes,("input2X","input2Y","input2Z")):
+                            cmds.connectAttr(f"{fingerBundle_con}.{name}{axis}",f"{multiplyDivide}.{input2_child}")
+                        cmds.connectAttr(f"{multiplyDivide}.output",f"{eulerToQuatNode}.inputRotate")
 
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbProximalTY",-5,k=True)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexProximalTY",-10,k=True)
