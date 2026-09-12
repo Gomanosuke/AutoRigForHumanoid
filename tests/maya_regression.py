@@ -76,6 +76,14 @@ for undo_enabled in (True,False):
     original_check=base.autorig_preparation.check_textfield
     original_field=cmds.textField
     original_build=base.create_dummyHumanoid
+    original_refresh=cmds.refresh
+    refresh_calls=[]
+    def checked_refresh(*args,**kwargs):
+        # Batch mode can silently accept flags rejected by interactive Maya.
+        assert not any(flag in kwargs for flag in ('q','query','e','edit'))
+        refresh_calls.append(kwargs.copy())
+        return original_refresh(*args,**kwargs)
+    cmds.refresh=checked_refresh
     base.autorig_preparation.check_textfield=lambda *args:(True,{'c_hips':'sourceRoot'})
     cmds.textField=lambda *args,**kwargs:'sample'
     def fail(*args):
@@ -91,12 +99,13 @@ for undo_enabled in (True,False):
         assert set(cmds.ls())==expected_nodes
         assert error(expected_matrix,matrix('sourceRoot'))<1e-10
         assert cmds.undoInfo(q=True,state=True)==undo_enabled
-        assert not cmds.refresh(q=True,suspend=True)
+        assert refresh_calls==[{'suspend':True},{'suspend':False},{}]
         results['rollback_'+str(undo_enabled)]=True
     finally:
         base.autorig_preparation.check_textfield=original_check
         cmds.textField=original_field
         base.create_dummyHumanoid=original_build
+        cmds.refresh=original_refresh
 
 cmds.file(new=True,force=True)
 node=cmds.createNode('transform')

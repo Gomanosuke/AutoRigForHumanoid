@@ -43,7 +43,6 @@ def create_rig(textField_dic:dict,character_name:str):
         if len(cmds.ls(group,type="transform",long=True)) != 1:
             raise ValueError("A unique orientation and position guide set is required")
     undo_enabled = cmds.undoInfo(q=True,state=True)
-    refresh_suspended = cmds.refresh(q=True,suspend=True)
     if not undo_enabled:
         cmds.undoInfo(stateWithoutFlush=True)
     cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_CreateRig")
@@ -59,8 +58,12 @@ def create_rig(textField_dic:dict,character_name:str):
             pos_dic = get_pos(character_name)
             autorig_createRig.init_createRig(humanoid_dummy_joint,character_name,root_grp,orientation_dic,pos_dic)
         finally:
-            cmds.undoInfo(closeChunk=True)
-            cmds.refresh(suspend=refresh_suspended)
+            # refresh is not queryable. Keep its undoable calls inside this chunk.
+            try:
+                cmds.refresh(suspend=False)
+                cmds.refresh()
+            finally:
+                cmds.undoInfo(closeChunk=True)
     except Exception:
         # Deleting the rig does not undo edits/connections on the source joints.
         cmds.undo()
@@ -68,8 +71,6 @@ def create_rig(textField_dic:dict,character_name:str):
     finally:
         if not undo_enabled:
             cmds.undoInfo(stateWithoutFlush=False)
-        if not refresh_suspended:
-            cmds.refresh()
     return root_grp
 
 
