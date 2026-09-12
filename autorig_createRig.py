@@ -309,6 +309,8 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                                   dvn_con=create_obj_dic[('Con','C','UpperChest')],dvn_grp=create_obj_dic[('Grp','C','UpperChest')],postScl=True)
         autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','UpperChest')]}",joint_dic["c_upperChest"])
 
+        cmds.setAttr(f"{create_obj_dic[('Con','C','UpperChest')]}.rotParent",1)
+
     return create_obj_dic
 
 def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,orientation_dic:dict):
@@ -338,8 +340,11 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     neck_matrix = cmds.xform(orientation_dic["c_neck"],m=True,ws=True,q=True)
     head_matrix = cmds.xform(orientation_dic["c_head"],m=True,ws=True,q=True)
     chest_matrix = cmds.xform(orientation_dic["c_chest"],m=True,ws=True,q=True)
-    eye_l_matrix = cmds.xform(orientation_dic["l_eye"],m=True,ws=True,q=True)
-    eye_r_matrix = cmds.xform(orientation_dic["r_eye"],m=True,ws=True,q=True)
+    #デフォルメモデル等、目のジョイントが無いキャラクターも許容する(無ければ目関連は丸ごと作らない)
+    has_eyes = 'l_eye' in joint_dic and 'r_eye' in joint_dic
+    if(has_eyes):
+        eye_l_matrix = cmds.xform(orientation_dic["l_eye"],m=True,ws=True,q=True)
+        eye_r_matrix = cmds.xform(orientation_dic["r_eye"],m=True,ws=True,q=True)
     has_upperChest = 'c_upperChest' in joint_dic
     if(has_upperChest):
         upperChest_matrix = cmds.xform(orientation_dic["c_upperChest"],m=True,ws=True,q=True)
@@ -482,56 +487,57 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Neck')]}",joint_dic["c_neck"])
     autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv','C','Head')]}",joint_dic["c_head"])
 
-    #目
-    eye_c_pos = [(v*0.5) + (cmds.xform(orientation_dic["r_eye"],t=True,ws=True,q=True)[n] * 0.5) for n,v in enumerate(cmds.xform(orientation_dic["l_eye"],t=True,ws=True,q=True))]
-    eye_c_pos[2]+=eye_c_pos[1]/2
-    create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR="C",con_color=(0.6,0.6,0),con_shape="scuare",con_scl=(3,3,6),con_pos=(0,0,0),con_rot=(90,0,90),
-                                                        setting=setting,uniform_scale=True)
-    cmds.xform(create_obj_dic[('Grp','C','EyeAim')],t=eye_c_pos,ws=True)
-    autorig_utility.switch_parent(dvn_grp=create_obj_dic[('Grp','C','EyeAim')],dvn_con=create_obj_dic[('Con','C','EyeAim')],
-                                  posA=obj_dic[('Drv','C','Root3')],posB=create_obj_dic[('Drv','C','Head')],
-                                  rotA=obj_dic[('Drv','C','Root3')],rotB=create_obj_dic[('Drv','C','Head')],
-                                  sclA=obj_dic[('Drv','C','Root3')],sclB=create_obj_dic[('Drv','C','Head')])
-    
-    lr = {}
-    lr["L"] = eye_l_matrix
-    lr["R"] = eye_r_matrix
-    move_matrix = [1,0,0,0,0,1,0,0,0,0,1,0,eye_c_pos[1]/2,0,0,1]
-    composeMatrix1 = cmds.createNode("composeMatrix")
-    cmds.setAttr(F"{composeMatrix1}.inputTranslateY",1)
-    for i in lr:
-        if(i == "L"):
-            scl = 1
-        else:
-            scl = -1
-        create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR=i,con_color=(0.6,0.6,0),con_shape="circle",con_scl=(2,2,2),con_rot=(90,0,90),
-                                                            setting=setting,con_scl_lock=(True,True,True),con_rot_lock=(True,True,True),drv_scale_offset=(1,-1,1))
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.worldMatrix",f"{create_obj_dic[('Grp',i,'EyeAim')]}.offsetParentMatrix")
-        matrix = OpenMaya.MMatrix(move_matrix)*OpenMaya.MMatrix(lr[i])
-        cmds.xform(create_obj_dic[('Grp',i,'EyeAim')],m=list(matrix),ws=True)
-        cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.r",*(0,0,0),typ="double3")
-        cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.s",*(scl,1,1),typ="double3")
+    #目(デフォルメモデル等、目のジョイントが無いキャラクターは丸ごとスキップする)
+    if(has_eyes):
+        eye_c_pos = [(v*0.5) + (cmds.xform(orientation_dic["r_eye"],t=True,ws=True,q=True)[n] * 0.5) for n,v in enumerate(cmds.xform(orientation_dic["l_eye"],t=True,ws=True,q=True))]
+        eye_c_pos[2]+=eye_c_pos[1]/2
+        create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR="C",con_color=(0.6,0.6,0),con_shape="scuare",con_scl=(3,3,6),con_pos=(0,0,0),con_rot=(90,0,90),
+                                                            setting=setting,uniform_scale=True)
+        cmds.xform(create_obj_dic[('Grp','C','EyeAim')],t=eye_c_pos,ws=True)
+        autorig_utility.switch_parent(dvn_grp=create_obj_dic[('Grp','C','EyeAim')],dvn_con=create_obj_dic[('Con','C','EyeAim')],
+                                      posA=obj_dic[('Drv','C','Root3')],posB=create_obj_dic[('Drv','C','Head')],
+                                      rotA=obj_dic[('Drv','C','Root3')],rotB=create_obj_dic[('Drv','C','Head')],
+                                      sclA=obj_dic[('Drv','C','Root3')],sclB=create_obj_dic[('Drv','C','Head')])
 
-        aim_target = cmds.group(em=True, name=f"Grp_{i}_EyeAimTarget", parent=root_obj)
-        cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.worldMatrix",f"{aim_target}.offsetParentMatrix")
-        cmds.xform(aim_target,m=lr[i],ws=True)
+        lr = {}
+        lr["L"] = eye_l_matrix
+        lr["R"] = eye_r_matrix
+        move_matrix = [1,0,0,0,0,1,0,0,0,0,1,0,eye_c_pos[1]/2,0,0,1]
+        composeMatrix1 = cmds.createNode("composeMatrix")
+        cmds.setAttr(F"{composeMatrix1}.inputTranslateY",1)
+        for i in lr:
+            if(i == "L"):
+                scl = 1
+            else:
+                scl = -1
+            create_obj_dic |= autorig_utility.create_controller("EyeAim",root_obj,pos_CLR=i,con_color=(0.6,0.6,0),con_shape="circle",con_scl=(2,2,2),con_rot=(90,0,90),
+                                                                setting=setting,con_scl_lock=(True,True,True),con_rot_lock=(True,True,True),drv_scale_offset=(1,-1,1))
+            cmds.connectAttr(f"{create_obj_dic[('Drv','C','EyeAim')]}.worldMatrix",f"{create_obj_dic[('Grp',i,'EyeAim')]}.offsetParentMatrix")
+            matrix = OpenMaya.MMatrix(move_matrix)*OpenMaya.MMatrix(lr[i])
+            cmds.xform(create_obj_dic[('Grp',i,'EyeAim')],m=list(matrix),ws=True)
+            cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.r",*(0,0,0),typ="double3")
+            cmds.setAttr(f"{create_obj_dic[('Grp',i,'EyeAim')]}.s",*(scl,1,1),typ="double3")
 
-        create_obj_dic |= autorig_utility.create_controller("Eye",root_obj,pos_CLR=i,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(2,2,2),con_rot=(90,90,0),
-                                                            setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,-1,1),uniform_scale=True)
-        
-        aimMatrix = cmds.createNode("aimMatrix")
-        multMatrix1 = cmds.createNode("multMatrix")
-        cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{aimMatrix}.inputMatrix")
-        cmds.connectAttr(f"{create_obj_dic[('Drv',i,'EyeAim')]}.worldMatrix[0]",f"{aimMatrix}.primaryTargetMatrix")
-        cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
-        cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
-        cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix}.secondaryTargetMatrix")
-        cmds.setAttr(f"{aimMatrix}.secondaryMode",1)
-        cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{create_obj_dic[('Grp',i,'Eye')]}.offsetParentMatrix")
+            aim_target = cmds.group(em=True, name=f"Grp_{i}_EyeAimTarget", parent=root_obj)
+            cmds.connectAttr(f"{create_obj_dic[('Drv','C','Head')]}.worldMatrix",f"{aim_target}.offsetParentMatrix")
+            cmds.xform(aim_target,m=lr[i],ws=True)
 
-        cmds.setAttr(f"{create_obj_dic[('Grp',i,'Eye')]}.sy",scl)
-        
-        autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',i,'Eye')]}",joint_dic[f"{i.lower()}_eye"])
+            create_obj_dic |= autorig_utility.create_controller("Eye",root_obj,pos_CLR=i,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(2,2,2),con_rot=(90,90,0),
+                                                                setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,-1,1),uniform_scale=True)
+
+            aimMatrix = cmds.createNode("aimMatrix")
+            multMatrix1 = cmds.createNode("multMatrix")
+            cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{aimMatrix}.inputMatrix")
+            cmds.connectAttr(f"{create_obj_dic[('Drv',i,'EyeAim')]}.worldMatrix[0]",f"{aimMatrix}.primaryTargetMatrix")
+            cmds.connectAttr(f"{composeMatrix1}.outputMatrix",f"{multMatrix1}.matrixIn[0]")
+            cmds.connectAttr(f"{aim_target}.worldMatrix[0]",f"{multMatrix1}.matrixIn[1]")
+            cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{aimMatrix}.secondaryTargetMatrix")
+            cmds.setAttr(f"{aimMatrix}.secondaryMode",1)
+            cmds.connectAttr(f"{aimMatrix}.outputMatrix",f"{create_obj_dic[('Grp',i,'Eye')]}.offsetParentMatrix")
+
+            cmds.setAttr(f"{create_obj_dic[('Grp',i,'Eye')]}.sy",scl)
+
+            autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',i,'Eye')]}",joint_dic[f"{i.lower()}_eye"])
 
     return create_obj_dic
 
@@ -605,6 +611,11 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         lowerLeg_ik = cmds.parent(lowerLeg_ik,upperLeg_ik)[0]
         foot_ik = cmds.parent(foot_ik,lowerLeg_ik)[0]
         toes_ik = cmds.parent(toes_ik,foot_ik)[0]
+        #IK側の根本関節の複製直後(向きの補正・IK構築より前)のワールド行列を、
+        #ik_twist_offsetの目標値として控えておく。orientation_dicのガイド行列は
+        #primary_axisの選択でローカル軸が入れ替わっており、joint(upperLeg_ik)自身の
+        #座標系とは一致しないため、目標には使えない。
+        upperLeg_ik_bind_matrix = cmds.xform(upperLeg_ik,ws=True,q=True,m=True)
 
         create_obj_dic[('Joint',clr,'UpperLegFK')]=upperLeg_fk
         create_obj_dic[('Joint',clr,'UpperLegIK')]=upperLeg_ik
@@ -1179,11 +1190,20 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         #lowerLegに一番近いfootとupperLeg結んだ直線状の点特定
         upperLeg_length = math.dist(upperLeg_pos,lowerLeg_pos)
         lowerLeg_length = math.dist(lowerLeg_pos,foot_pos)
-        hiritu = upperLeg_length/(upperLeg_length+lowerLeg_length)
+        total_leg_length = upperLeg_length+lowerLeg_length
+        hiritu = upperLeg_length/total_leg_length
         pos = [(foot_pos[i]-upperLeg_pos[i])*hiritu for i in range(3)]
         length = math.sqrt(((pos[0]+upperLeg_pos[0])-lowerLeg_pos[0])**2+((pos[1]+upperLeg_pos[1])-lowerLeg_pos[1])**2+((pos[2]+upperLeg_pos[2])-lowerLeg_pos[2])**2)
-        baitiru = ((upperLeg_length+lowerLeg_length)*0.6)/length
-        pv_pos = [((lowerLeg_pos[i]-upperLeg_pos[i])-pos[i])*baitiru+(pos[i]+upperLeg_pos[i]) for i in range(3) ]
+        if(length < total_leg_length*1e-4):
+            #upperLeg-lowerLeg-footが(ほぼ)一直線(アーティストが意図して曲げたのではない、
+            #浮動小数点誤差レベルの微小なズレのみ)の場合、
+            #直線からのズレの方向でpole vectorの向きを決めようとすると、そのノイズの
+            #方向に引っ張られて不安定・不定になる。この場合は膝が前方に曲がる想定で、
+            #ワールドZ軸前方を既定の向きにする。
+            pv_pos = [(pos[i]+upperLeg_pos[i])+(0,0,1)[i]*total_leg_length*0.6 for i in range(3)]
+        else:
+            baitiru = (total_leg_length*0.6)/length
+            pv_pos = [((lowerLeg_pos[i]-upperLeg_pos[i])-pos[i])*baitiru+(pos[i]+upperLeg_pos[i]) for i in range(3) ]
 
         create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=[pv_pos[i]-(pos[i]+upperLeg_pos[i]) for i in range(3)],
                                                             setting=setting,connect_drv=False,uniform_scale=True)
@@ -1238,8 +1258,12 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
         cmds.connectAttr(f"{decomposeMatrixA}.outputScale",f"{outputComposeMatrix}.inputScale")
 
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="twist",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",0,k=True)
+        #twist=0のままだと、jointOrientが最初から0のスケルトン等でMayaの回転面ソルバーの
+        #初期解決が不安定になり、レストポーズが元のバインドポーズからひねれてズレることがある
+        #(autorig_utility.ik_twist_offset参照)。必要なひねり量を探索して初期値にする。
+        default_twist = autorig_utility.ik_twist_offset(ikHandle,upperLeg_ik,upperLeg_ik_bind_matrix)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="twist",at="float",dv=default_twist)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",default_twist,k=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",f"{ikHandle}.twist")
 
         #IKFKSwitch
@@ -1354,6 +1378,9 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         lowerArm_ik = cmds.parent(lowerArm_ik,upperArm_ik)[0]
         hand_ik = cmds.parent(hand_ik,lowerArm_ik)[0]
         cmds.xform(hand_ik,m=hand_matrix,ws=True)
+        #IK側の根本関節の複製直後(向きの補正・IK構築より前)のワールド行列を、
+        #ik_twist_offsetの目標値として控えておく(理由はcreate_legの同様の箇所を参照)。
+        upperArm_ik_bind_matrix = cmds.xform(upperArm_ik,ws=True,q=True,m=True)
 
         create_obj_dic[('Joint',clr,'UpperArmFK')]=upperArm_fk
         create_obj_dic[('Joint',clr,'UpperArmIK')]=upperArm_ik
@@ -2136,12 +2163,20 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         lowerArm_length = math.sqrt((hand_pos[0]-lowerArm_pos[0])**2+(hand_pos[1]-lowerArm_pos[1])**2+(hand_pos[2]-lowerArm_pos[2])**2)
 
         #lowerArmに一番近いhandとupperArm結んだ直線状の点特定
-        hiritu = upperArm_length/(upperArm_length+lowerArm_length)
+        total_arm_length = upperArm_length+lowerArm_length
+        hiritu = upperArm_length/total_arm_length
         pos = [(hand_pos[i]-upperArm_pos[i])*hiritu for i in range(3)]
         length = math.sqrt(((pos[0]+upperArm_pos[0])-lowerArm_pos[0])**2+((pos[1]+upperArm_pos[1])-lowerArm_pos[1])**2+((pos[2]+upperArm_pos[2])-lowerArm_pos[2])**2)
-        baitiru = ((upperArm_length+lowerArm_length)*0.6)/length
-
-        pv_pos = [((lowerArm_pos[i]-upperArm_pos[i])-pos[i])*baitiru+(pos[i]+upperArm_pos[i]) for i in range(3) ]
+        if(length < total_arm_length*1e-4):
+            #upperArm-lowerArm-handが(ほぼ)一直線(アーティストが意図して曲げたのではない、
+            #浮動小数点誤差レベルの微小なズレのみ)の場合、
+            #直線からのズレの方向でpole vectorの向きを決めようとすると、そのノイズの
+            #方向に引っ張られて不安定・不定になる。この場合は肘が後方に曲がる想定で、
+            #ワールドZ軸後方を既定の向きにする。
+            pv_pos = [(pos[i]+upperArm_pos[i])+(0,0,-1)[i]*total_arm_length*0.6 for i in range(3)]
+        else:
+            baitiru = (total_arm_length*0.6)/length
+            pv_pos = [((lowerArm_pos[i]-upperArm_pos[i])-pos[i])*baitiru+(pos[i]+upperArm_pos[i]) for i in range(3) ]
 
 
         create_obj_dic |= autorig_utility.create_controller("ArmPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=[pv_pos[i]-(pos[i]+upperArm_pos[i]) for i in range(3)],
@@ -2154,8 +2189,12 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.xform(f"{create_obj_dic[('Drv',clr,'ArmPV')]}",t=pv_pos,ws=True)
         cmds.poleVectorConstraint(create_obj_dic[('Drv',clr,'ArmPV')],ikHandle)
 
-        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="twist",at="float")
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",0,k=True)
+        #twist=0のままだと、jointOrientが最初から0のスケルトン等でMayaの回転面ソルバーの
+        #初期解決が不安定になり、レストポーズが元のバインドポーズからひねれてズレることがある
+        #(autorig_utility.ik_twist_offset参照)。必要なひねり量を探索して初期値にする。
+        default_twist = autorig_utility.ik_twist_offset(ikHandle,upperArm_ik,upperArm_ik_bind_matrix)
+        cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="twist",at="float",dv=default_twist)
+        cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",default_twist,k=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",f"{ikHandle}.twist")
 
         cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleX",0)
@@ -2249,8 +2288,15 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
 
 
         for finger in finger_name_list:
+            #Proximal(付け根)が無いモデル(デフォルメモデル等、末端がHandでそこから先に指の
+            #ジョイントが無いキャラクター)は、この指をまるごとスキップする
+            if(f'{clr_lower}_{finger.lower()}1' not in joint_dic):
+                continue
             for number in range(4):
                 name = f"{finger}{number_name_list[number]}"
+                #途中の関節から先が無い(Distalだけ無い等)場合はそこで打ち切る
+                if(number>0 and f'{clr_lower}_{finger.lower()}{number}' not in joint_dic):
+                    break
                 #根本
                 if(number==0):
                     create_obj_dic[('Grp',clr,name)]=cmds.group(em=True,n=f"Grp_{clr}_{name}",p=root_obj)
@@ -2383,23 +2429,18 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                             cmds.connectAttr(f"{fingerBundle_con}.{name}{axis}",f"{multiplyDivide}.{input2_child}")
                         cmds.connectAttr(f"{multiplyDivide}.output",f"{eulerToQuatNode}.inputRotate")
 
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbProximalTY",-5,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexProximalTY",-10,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.MiddleProximalTY",5,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.RingProximalTY",15,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.LittleProximalTY",30,k=True)
-
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbIntermediateTY",-1,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexIntermediateTY",-1,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.MiddleIntermediateTY",-1,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.RingIntermediateTY",-1,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.LittleIntermediateTY",-1,k=True)
-        
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.ThumbDistalTY",-2,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.IndexDistalTY",-2,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.MiddleDistalTY",-2,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.RingDistalTY",-2,k=True)
-        cmds.setAttr(f"{create_obj_dic[('Con',clr,'FingerBundle')]}.LittleDistalTY",-2,k=True)
+        #各指のグリップ用カーブ具合の初期値(指のジョイントが無いモデルではそもそも
+        #対応するアトリビュートが作られていないので、存在するものだけ設定する)
+        grip_defaults = (
+            ("Proximal", {"Thumb":-5, "Index":-10, "Middle":5, "Ring":15, "Little":30}),
+            ("Intermediate", {"Thumb":-1, "Index":-1, "Middle":-1, "Ring":-1, "Little":-1}),
+            ("Distal", {"Thumb":-2, "Index":-2, "Middle":-2, "Ring":-2, "Little":-2}),
+        )
+        for number_name,values in grip_defaults:
+            for finger_name,value in values.items():
+                attr = f"{create_obj_dic[('Con',clr,'FingerBundle')]}.{finger_name}{number_name}TY"
+                if(cmds.objExists(attr)):
+                    cmds.setAttr(attr,value,k=True)
 
     return create_obj_dic
 
@@ -2476,23 +2517,45 @@ def clean_obj(character_name:str,obj_dic:dict):
     cmds.currentTime(current_time, edit=True)
 
     #ピッカー用
+    #すでに別キャラクターのリグ用にARFH_informationが存在する場合は、そのノードを
+    #再利用し、このキャラクターぶんの属性だけを追加する(1シーンに複数キャラクターの
+    #リグが共存できるようにするため)。ARFH_information.characterNameを書き換えるだけで
+    #Picker(picker.py)が対象にするキャラクターを切り替えられる仕様になる。
     info_obj_name = "ARFH_information"
-    info_obj = cmds.group(em=True,n=info_obj_name)
-    cmds.setAttr(f"{info_obj}.t",k=False,l=True,cb=True)
-    cmds.setAttr(f"{info_obj}.s",k=False,l=True,cb=True)
-    cmds.setAttr(f"{info_obj}.r",k=False,l=True,cb=True)
-    cmds.setAttr(f"{info_obj}.v",0,k=False,l=True,cb=True)
+    if(cmds.objExists(info_obj_name)):
+        info_obj = info_obj_name
+    else:
+        info_obj = cmds.group(em=True,n=info_obj_name)
+        cmds.setAttr(f"{info_obj}.t",k=False,l=True,cb=True)
+        cmds.setAttr(f"{info_obj}.s",k=False,l=True,cb=True)
+        cmds.setAttr(f"{info_obj}.r",k=False,l=True,cb=True)
+        cmds.setAttr(f"{info_obj}.v",0,k=False,l=True,cb=True)
 
-    cmds.addAttr(f"{info_obj}",ln="characterName",dt="string")
+    if(not cmds.attributeQuery("characterName",node=info_obj,exists=True)):
+        cmds.addAttr(f"{info_obj}",ln="characterName",dt="string")
     cmds.setAttr(f"{info_obj}.characterName",character_name,typ="string")
 
     obj_dic_uuid={}
+    obj_dic_name={}
     for key in obj_dic:
-        uuid=cmds.ls(obj_dic[key],uuid=True)[0]
-        obj_dic_uuid[key]=uuid
+        full_name=cmds.ls(obj_dic[key],l=True)[0]
+        obj_dic_uuid[key]=cmds.ls(full_name,uuid=True)[0]
+        obj_dic_name[key]=full_name
     obj_dic_text = json.dumps({str(k): v for k, v in obj_dic_uuid.items()})
 
-    cmds.addAttr(f"{info_obj}",ln=character_name,dt="string")
+    if(not cmds.attributeQuery(character_name,node=info_obj,exists=True)):
+        cmds.addAttr(f"{info_obj}",ln=character_name,dt="string")
     cmds.setAttr(f"{info_obj}.{character_name}",obj_dic_text,typ="string")
+
+    #別ファイルで作ったrigを後からrig_import.pyでシーンへ読み込む際に使う。
+    #Mayaのインポート(cmds.file(...,i=True))は、衝突が無くてもノードのUUIDを
+    #再割り当てしてしまう(維持されない)ため、インポート直後に元のUUIDへ書き戻せる
+    #よう、各ノードのフルパス名も併せて記録しておく。既存のPicker等が読む
+    #{character_name}属性(tuple_key→uuidのみ)の形式は変えていない。
+    obj_dic_name_text = json.dumps({str(k): v for k, v in obj_dic_name.items()})
+    names_attr = f"{character_name}_names"
+    if(not cmds.attributeQuery(names_attr,node=info_obj,exists=True)):
+        cmds.addAttr(f"{info_obj}",ln=names_attr,dt="string")
+    cmds.setAttr(f"{info_obj}.{names_attr}",obj_dic_name_text,typ="string")
 
     

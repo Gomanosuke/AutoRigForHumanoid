@@ -15,6 +15,8 @@ from . import picker
 importlib.reload(picker)
 from . import control_shape
 importlib.reload(control_shape)
+from . import rig_import
+importlib.reload(rig_import)
 
 def create_window():
     """
@@ -44,6 +46,7 @@ def create_window():
     create_frame = cmds.frameLayout(label="リギング",parent=main_layout,collapsable=True)
     setup_list = humanoid_setup(create_frame)
     autorig_frame(create_frame,setup_list[1],setup_list[0])
+    rig_import_frame(create_frame)
     control_shape_frame(create_frame)
     blendshape_frame(main_layout,setup_list[0])
 
@@ -322,6 +325,35 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
     cmds.button(label="Z",command=lambda *_:autorig_preparation.rotate_90("Z"),w=rotate_w)
 
     cmds.button(label="リグ作成",command=lambda *_:autorig_createBase.create_rig(textField_dic=textField_dic,character_name=character_name),p=setup_frame)
+
+def rig_import_frame(parent_layout:str):
+    """
+    別ファイルで作成したrigを現在のシーンへ読み込むGUI。
+
+    Picker(picker.py)はコントローラー等をUUIDで管理しているため、単純な
+    インポートでは(Mayaのインポートは名前の衝突が無くてもUUIDを再割り当てして
+    しまうため)読み込み後にPickerが対象を見つけられなくなる。ここから読み込むと、
+    リグ作成時に記録されている元のUUIDへ復元してから読み込みを完了する
+    (詳細はrig_import.py参照)。
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+
+    Returns
+    -------
+        無し
+    """
+    #フレーム
+    import_frame = cmds.frameLayout(label="リグ読み込み",parent=parent_layout,collapsable=True)
+
+    cmds.rowLayout(nc=3,adjustableColumn=2,p=import_frame)
+    cmds.text(label="読み込むrig : ")
+    import_rig_path_field = cmds.textField()
+    cmds.button(label="参照",command=lambda *_:rig_import.browse_import_rig_path(import_rig_path_field))
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=import_frame)
+    cmds.button(label="rig読み込み(UUID維持)",command=lambda *_:rig_import.import_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
 
 def control_shape_frame(parent_layout:str):
     """

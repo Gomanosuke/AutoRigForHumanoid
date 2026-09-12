@@ -106,6 +106,16 @@ def target_controllers(targets=None):
     子孫のCon_*をまとめて対象にできる(複数キャラクターが同じシーンにいる場合の
     絞り込みに使う)。
 
+    targets/選択の中にCon_*が1つも見つからない場合(例えば、リグ作成直後に無関係な
+    オブジェクトが選択されたまま残っている等)は、絞り込むつもりの選択ではなく
+    「たまたま何か選択されているだけ」とみなし、警告した上でシーン内の全Con_*へ
+    フォールバックする。これをしないと、無関係なものが選択されているだけで
+    出力・読み込みの対象が0件になり、全コントローラーが「見つからない」扱いに
+    なってしまう(実際に発生した不具合: リグ作成直後に何かが選択されたまま
+    シェイプ読み込みを行うと全件スキップになり、一見シーンを開き直さないと
+    直らないように見えていた。開き直すと選択が外れるため直って見えていただけで、
+    原因は選択によるフィルタそのものだった)。
+
     Parameters
     ----------
         list targets : 対象を絞るノード。省略可
@@ -115,10 +125,17 @@ def target_controllers(targets=None):
         list : Con_*トランスフォーム(ロングネーム)のリスト
     """
     if(targets):
-        return _expand_to_controllers(cmds.ls(targets,long=True))
-    sel = cmds.ls(sl=True,long=True)
-    if(sel):
-        return _expand_to_controllers(sel)
+        scoped = _expand_to_controllers(cmds.ls(targets,long=True))
+        if(scoped):
+            return scoped
+        cmds.warning("指定された対象にコントローラーが含まれていないため、シーン内の全Con_*を対象にします")
+    else:
+        sel = cmds.ls(sl=True,long=True)
+        if(sel):
+            scoped = _expand_to_controllers(sel)
+            if(scoped):
+                return scoped
+            cmds.warning("選択中のオブジェクトにコントローラーが含まれていないため、シーン内の全Con_*を対象にします")
     return cmds.ls("Con_*",type="transform",long=True) or []
 
 def export_shapes(path:str, targets=None):
@@ -175,19 +192,19 @@ def import_shapes(path:str, targets=None):
     with open(path,"r",encoding="utf-8") as f:
         data = json.load(f)
 
-    #targets/選択があるときだけ対象を絞り込む。無指定時はシーン全体から名前一致で探す
-    scope = target_controllers(targets) if (targets or cmds.ls(sl=True)) else None
+    #target_controllersは対象が1件も無ければ常にシーン内の全Con_*へフォールバックするため、
+    #ここでは常にその結果だけを対象にすればよい(「絞り込み無し」を別扱いする必要が無い)
+    scope = target_controllers(targets)
     scope_by_name = {}
-    if(scope is not None):
-        for o in scope:
-            scope_by_name.setdefault(o.split("|")[-1],[]).append(o)
+    for o in scope:
+        scope_by_name.setdefault(o.split("|")[-1],[]).append(o)
 
     applied=0
     skipped=0
     cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_ImportControlShapes")
     try:
         for short_name,shape_list in data.items():
-            candidates = scope_by_name.get(short_name,[]) if(scope is not None) else (cmds.ls(short_name,type="transform",long=True) or [])
+            candidates = scope_by_name.get(short_name,[])
 
             if(not candidates):
                 cmds.warning(f"{short_name} : 対象が見つからないためスキップしました")

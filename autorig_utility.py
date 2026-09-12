@@ -800,3 +800,58 @@ def create_controller_legacy(  con_name="",
         cmds.connectAttr(f"{multMatrix}.matrixSum",f"{DrvObj}.offsetParentMatrix")
 
     return obj_dic
+
+def ik_twist_offset(ik_handle:str, root_obj:str, target_matrix, coarse_step=5.0, fine_step=0.05):
+    """
+    IKハンドルのtwist属性に設定すべき初期値(度)を求める。
+
+    IKハンドル作成〜poleVectorConstraint設定までの間、Mayaの回転面(RP)ソルバーは
+    jointのjointOrientをpreferredAngleのヒントとして初期解決を行う。jointOrientが
+    最初から0(向きが全て.rotateへ焼き込まれているスケルトン等)のキャラクターでは
+    このヒントが効かず、ポールベクターを後から正しく設定しても「末端の位置・関節の曲がり方向は
+    合っているのに、根本の向きだけ数十度ズレる」という食い違いが残ることがある。
+
+    この食い違いはtwistを振れば解消できるが、twistと得られる姿勢の関係はIKソルバーが
+    ポールベクター方向を回転させて毎回チェーン全体を再計算する非線形な処理を経るため、
+    現在の姿勢と目標の姿勢を比較するだけの単純な式(スウィング・ツイスト分解等)では
+    正しい値を求められない(実際に試したところ、大きく外れた値になった)。そのため、
+    実際にtwistを振りながらroot_objのワールド行列がtarget_matrix(ガイドから求めた
+    元のバインド行列)に最も近づく値を探索して求める(粗探索→周辺の精密探索の2段階)。
+
+    Parameters
+    ----------
+        string ik_handle : 対象のikHandle
+        string root_obj : ワールド姿勢を測るオブジェクト(IKダミーの根本関節等)
+        list target_matrix : 本来あるべきワールド行列(16要素。ガイドのワールド行列等)
+        float coarse_step : 0〜360度を粗く探索する刻み幅(度)
+        float fine_step : 粗探索の最良値の周辺を追い込む精密探索の刻み幅(度)
+
+    Returns
+    -------
+        float : ikHandle.twistへ設定すべき角度(度)
+    """
+    original = cmds.getAttr(f"{ik_handle}.twist")
+
+    def diff_at(twist):
+        cmds.setAttr(f"{ik_handle}.twist",twist)
+        m = cmds.xform(root_obj,ws=True,q=True,m=True)
+        return max(abs(a-b) for a,b in zip(m,target_matrix))
+
+    best_t,best_d = 0.0,diff_at(0.0)
+    t = 0.0
+    while(t<360.0):
+        d = diff_at(t)
+        if(d<best_d):
+            best_d,best_t = d,t
+        t += coarse_step
+
+    t = best_t-coarse_step
+    end = best_t+coarse_step
+    while(t<=end):
+        d = diff_at(t)
+        if(d<best_d):
+            best_d,best_t = d,t
+        t += fine_step
+
+    cmds.setAttr(f"{ik_handle}.twist",original)
+    return best_t

@@ -149,14 +149,14 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         self.ui_content.mirror_pose.clicked.connect(lambda: self.mirror_pose())
 
         #IKFKきりかえ
-        self.ui_content.iktofk_l_arm.clicked.connect(lambda: self.arm_iktofk_l())
-        self.ui_content.iktofk_r_arm.clicked.connect(lambda: self.arm_iktofk_r())
+        self.ui_content.iktofk_l_arm.clicked.connect(lambda: self.arm_iktofk("L"))
+        self.ui_content.iktofk_r_arm.clicked.connect(lambda: self.arm_iktofk("R"))
         self.ui_content.fktoik_l_arm.clicked.connect(lambda: self.arm_fktoik("L"))
         self.ui_content.fktoik_r_arm.clicked.connect(lambda: self.arm_fktoik("R"))
-        self.ui_content.iktofk_l_leg.clicked.connect(lambda: self.leg_iktofk_l())
-        self.ui_content.iktofk_r_leg.clicked.connect(lambda: self.leg_iktofk_r())
-        self.ui_content.fktoik_l_leg.clicked.connect(lambda: self.leg_fktoik_l())
-        self.ui_content.fktoik_r_leg.clicked.connect(lambda: self.leg_fktoik_r())
+        self.ui_content.iktofk_l_leg.clicked.connect(lambda: self.leg_iktofk("L"))
+        self.ui_content.iktofk_r_leg.clicked.connect(lambda: self.leg_iktofk("R"))
+        self.ui_content.fktoik_l_leg.clicked.connect(lambda: self.leg_fktoik("L"))
+        self.ui_content.fktoik_r_leg.clicked.connect(lambda: self.leg_fktoik("R"))
 
         #シェーダー
         self.ui_content.flat_shade.clicked.connect(lambda: self.flat_shade())
@@ -210,6 +210,13 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 cmds.select(obj[0],r=True,add=False)
 
     def select_allfinger(self,pos:str):
+        """
+        指のコントローラーをまとめて選択する。
+
+        指のジョイントが無いモデル(デフォルメモデル等)で作ったリグはobj_dicに
+        指のキー自体が無いため、`cmds.error`(即座に例外を投げて処理を止めてしまう)ではなく
+        `cmds.warning`で個別にスキップする。
+        """
         obj_dic = self._load_obj_dic()
 
         modifiers = QtWidgets.QApplication.keyboardModifiers()
@@ -217,12 +224,15 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         if modifiers != QtCore.Qt.ShiftModifier:
             cmds.select(cl=True)
 
-        fingers = ["ThumbProximal","ThumbIntermediate","ThumbDistal","IndexProximal","IndexIntermediate","IndexDistal","IndexDistal","MiddleProximal","MiddleIntermediate","MiddleDistal","RingProximal","RingIntermediate","RingDistal","LittleProximal","LittleIntermediate","LittleDistal"]
+        fingers = ["ThumbProximal","ThumbIntermediate","ThumbDistal","IndexProximal","IndexIntermediate","IndexDistal","MiddleProximal","MiddleIntermediate","MiddleDistal","RingProximal","RingIntermediate","RingDistal","LittleProximal","LittleIntermediate","LittleDistal"]
         for finger in fingers:
             select_obj = f"('Con', '{pos}', '{finger}')"
+            if(select_obj not in obj_dic):
+                cmds.warning(f"{pos}_{finger}が見つかりません スキップします")
+                continue
             obj=cmds.ls(obj_dic[select_obj])
             if(len(obj)==0):
-                cmds.error(f"{pos}_{finger}が見つかりません スキップします")
+                cmds.warning(f"{pos}_{finger}が見つかりません スキップします")
             else:
                 print(f"Select {obj[0]}")
                 cmds.select(obj[0],r=False,add=True)
@@ -252,29 +262,42 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 cmds.select(obj,tgl=True)
 
     def reset_pose(self):
+        """
+        全コントローラーを初期値(rotParent等の"_Default"付きアトリビュートに保存されている値)へ
+        戻し、ローカル行列も単位行列(無ポーズ)に戻す。多数のコントローラーへまたがる操作なので
+        1回のUndoでまとめて戻せるようundoInfoで囲む。
+
+        Returns
+        -------
+            無し
+        """
         obj_dic = self._load_obj_dic()
         convert_obj_dic = self._parse_obj_keys(obj_dic)
 
-        for obj in convert_obj_dic:
-            if(obj[0]=="Con"):
-                key=f"('Con', '{obj[1]}', '{obj[2]}')"
-                obj=cmds.ls(obj_dic[key])[0]
-                attr_list=cmds.listAttr(obj)
-                for attr in attr_list:
-                    if('.' not in attr and '_Default' in attr):
-                        keyable=cmds.getAttr(F"{obj}.{attr[0:-8]}",k=True)
-                        data_type=cmds.getAttr(F"{obj}.{attr}",typ=True)
-                        if(keyable==1 and data_type == "double"):
-                            data=cmds.getAttr(F"{obj}.{attr}")
-                            cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
-                        if(keyable==1 and data_type == "float"):
-                            data=cmds.getAttr(F"{obj}.{attr}")
-                            cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
-                        if(keyable==1 and data_type == "long"):
-                            data=cmds.getAttr(F"{obj}.{attr}")
-                            cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
+        cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_ResetPose")
+        try:
+            for obj in convert_obj_dic:
+                if(obj[0]=="Con"):
+                    key=f"('Con', '{obj[1]}', '{obj[2]}')"
+                    obj=cmds.ls(obj_dic[key])[0]
+                    attr_list=cmds.listAttr(obj)
+                    for attr in attr_list:
+                        if('.' not in attr and '_Default' in attr):
+                            keyable=cmds.getAttr(F"{obj}.{attr[0:-8]}",k=True)
+                            data_type=cmds.getAttr(F"{obj}.{attr}",typ=True)
+                            if(keyable==1 and data_type == "double"):
+                                data=cmds.getAttr(F"{obj}.{attr}")
+                                cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
+                            if(keyable==1 and data_type == "float"):
+                                data=cmds.getAttr(F"{obj}.{attr}")
+                                cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
+                            if(keyable==1 and data_type == "long"):
+                                data=cmds.getAttr(F"{obj}.{attr}")
+                                cmds.setAttr(F"{obj}.{attr[0:-8]}",data)
 
-                cmds.xform(obj,ws=False,m=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
+                    cmds.xform(obj,ws=False,m=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     #"C"のコントローラーのうちワールド反転の対象にしないもの
     #  EyeAim : 左右のEyeAimコントローラー自体は左右スワップされるため中央側は据え置きにする(元々の挙動を維持)
@@ -401,59 +424,48 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
                 newMatrix = self._reflect_local_matrix(matrix,axis)
                 cmds.xform(obj,ws=False,m=newMatrix)
 
-    def arm_iktofk_l(self):
+    def arm_iktofk(self,pos):
+        """
+        現在のIKの手先位置に合わせてFK側(UpperArmFK/LowerArmFK)を合わせてからFKへ切り替える。
+
+        R側はコントローラーのローカル軸がL側と鏡像(autorig_createRig.pyのGrp.sy=-1)になっているため、
+        ワールド行列をそのまま入れてもL側と同じ見た目にはならず、180度分の補正回転が要る
+        (旧実装ではarm_iktofk_l/arm_iktofk_rという別々の関数になっていたが、
+        「R側だけ最後に180度分回す」という違いしか無かったため1つにまとめた)。
+
+        Parameters
+        ----------
+            string pos : "L"または"R"
+
+        Returns
+        -------
+            無し
+        """
+        flip = (pos=="R")
         obj_dic = self._load_obj_dic()
 
-        upperArmFK_con=cmds.ls(obj_dic["('Con', 'L', 'UpperArmFK')"])[0]
-        upperArmFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'UpperArmFK')"])[0]
-        lowerArmFK_con=cmds.ls(obj_dic["('Con', 'L', 'LowerArmFK')"])[0]
-        lowerArmFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'LowerArmFK')"])[0]
-        upperArmIK_joint=cmds.ls(obj_dic["('Joint', 'L', 'UpperArmIK')"])[0]
-        lowerArmIK_joint=cmds.ls(obj_dic["('Joint', 'L', 'LowerArmIK')"])[0]
-        shoulder_con=cmds.ls(obj_dic["('Con', 'L', 'Shoulder')"])[0]
+        upperArmFK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'UpperArmFK')"])[0]
+        upperArmFK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'UpperArmFK')"])[0]
+        lowerArmFK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LowerArmFK')"])[0]
+        lowerArmFK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'LowerArmFK')"])[0]
+        upperArmIK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'UpperArmIK')"])[0]
+        lowerArmIK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'LowerArmIK')"])[0]
+        shoulder_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'Shoulder')"])[0]
 
-        upperArm_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{upperArmFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{upperArmIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(upperArmIK_joint,q=True,ws=True,m=True))
-        cmds.xform(upperArmFK_con,m=list(upperArm_matrix),ws=True)
+        cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_ArmIkToFk")
+        try:
+            for fk_con,fk_drv,ik_joint in ((upperArmFK_con,upperArmFK_drv,upperArmIK_joint),
+                                            (lowerArmFK_con,lowerArmFK_drv,lowerArmIK_joint)):
+                matrix = OpenMaya.MMatrix(cmds.getAttr(f"{fk_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{ik_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(ik_joint,q=True,ws=True,m=True))
+                cmds.xform(fk_con,m=list(matrix),ws=True)
+                for axis in ("sx","sy","sz"):
+                    cmds.setAttr(f"{fk_con}.{axis}",abs(cmds.getAttr(f"{fk_con}.{axis}")))
+                if(flip):
+                    cmds.xform(fk_con,ro=(180,0,0),r=True,eu=True)
 
-        lowerArm_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{lowerArmFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{lowerArmIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(lowerArmIK_joint,q=True,ws=True,m=True))
-        cmds.xform(lowerArmFK_con,m=list(lowerArm_matrix),ws=True)
-
-        cmds.setAttr(F"{lowerArmFK_con}.sx",abs(cmds.getAttr(F"{lowerArmFK_con}.sx")))
-        cmds.setAttr(F"{lowerArmFK_con}.sy",abs(cmds.getAttr(F"{lowerArmFK_con}.sy")))
-        cmds.setAttr(F"{lowerArmFK_con}.sz",abs(cmds.getAttr(F"{lowerArmFK_con}.sz")))
-        cmds.setAttr(F"{upperArmFK_con}.sx",abs(cmds.getAttr(F"{upperArmFK_con}.sx")))
-        cmds.setAttr(F"{upperArmFK_con}.sy",abs(cmds.getAttr(F"{upperArmFK_con}.sy")))
-        cmds.setAttr(F"{upperArmFK_con}.sz",abs(cmds.getAttr(F"{upperArmFK_con}.sz")))
-        cmds.setAttr(F"{shoulder_con}.IKFK",1)
-
-    def arm_iktofk_r(self):
-        obj_dic = self._load_obj_dic()
-
-        upperArmFK_con=cmds.ls(obj_dic["('Con', 'R', 'UpperArmFK')"])[0]
-        upperArmFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'UpperArmFK')"])[0]
-        lowerArmFK_con=cmds.ls(obj_dic["('Con', 'R', 'LowerArmFK')"])[0]
-        lowerArmFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'LowerArmFK')"])[0]
-        upperArmIK_joint=cmds.ls(obj_dic["('Joint', 'R', 'UpperArmIK')"])[0]
-        lowerArmIK_joint=cmds.ls(obj_dic["('Joint', 'R', 'LowerArmIK')"])[0]
-        shoulder_con=cmds.ls(obj_dic["('Con', 'R', 'Shoulder')"])[0]
-
-        upperArm_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{upperArmFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{upperArmIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(upperArmIK_joint,q=True,ws=True,m=True))
-        cmds.xform(upperArmFK_con,m=list(upperArm_matrix),ws=True)
-
-        cmds.setAttr(F"{upperArmFK_con}.sx",abs(cmds.getAttr(F"{upperArmFK_con}.sx")))
-        cmds.setAttr(F"{upperArmFK_con}.sy",abs(cmds.getAttr(F"{upperArmFK_con}.sy")))
-        cmds.setAttr(F"{upperArmFK_con}.sz",abs(cmds.getAttr(F"{upperArmFK_con}.sz")))
-        cmds.xform(upperArmFK_con,ro=(180,0,0),r=True,eu=True)
-
-        lowerArm_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{lowerArmFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{lowerArmIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(lowerArmIK_joint,q=True,ws=True,m=True))
-        cmds.xform(lowerArmFK_con,m=list(lowerArm_matrix),ws=True)
-
-        cmds.setAttr(F"{lowerArmFK_con}.sx",abs(cmds.getAttr(F"{lowerArmFK_con}.sx")))
-        cmds.setAttr(F"{lowerArmFK_con}.sy",abs(cmds.getAttr(F"{lowerArmFK_con}.sy")))
-        cmds.setAttr(F"{lowerArmFK_con}.sz",abs(cmds.getAttr(F"{lowerArmFK_con}.sz")))
-        cmds.xform(lowerArmFK_con,ro=(180,0,0),r=True,eu=True)
-
-        cmds.setAttr(F"{shoulder_con}.IKFK",1)
+            cmds.setAttr(F"{shoulder_con}.IKFK",1)
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     def arm_fktoik(self,pos):
         if pos=="L": factor=1
@@ -469,225 +481,170 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         handFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'HandFK')"])[0]
         shoulder_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'Shoulder')"])[0]
 
-        #handIK
-        hand_matrix=cmds.xform(handFK_joint,q=True,m=True,ws=True)
-        cmds.xform(handIK_con,m=hand_matrix,ws=True)
+        cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_ArmFkToIk")
+        try:
+            #handIK
+            hand_matrix=cmds.xform(handFK_joint,q=True,m=True,ws=True)
+            cmds.xform(handIK_con,m=hand_matrix,ws=True)
 
-        cmds.setAttr(F"{armPV_con}.t",*(0,0,0),typ="double3")
-        cmds.setAttr(F"{armPV_con}.r",*(0,0,0),typ="double3")
-        origin=OpenMaya.MVector(cmds.xform(armPV_con,ws=True,q=True,t=True))
-        target=OpenMaya.MVector(cmds.xform(lowerArmFK_joint,ws=True,q=True,t=True))
-        up=OpenMaya.MVector((0,1,0))
-        aim=((target - origin)*factor).normalize()
-        side = aim ^ up
-        side.normalize()
-        up = side ^ aim
-        up.normalize()
-        m=[side.x,side.y,side.z,0,
-        up.x,up.y,up.z,0,
-        aim.x,aim.y,aim.z,0,
-        target.x,target.y,target.z,1]
-        cmds.xform(armPV_con,m=m,ws=True)
+            cmds.setAttr(F"{armPV_con}.t",*(0,0,0),typ="double3")
+            cmds.setAttr(F"{armPV_con}.r",*(0,0,0),typ="double3")
+            origin=OpenMaya.MVector(cmds.xform(armPV_con,ws=True,q=True,t=True))
+            target=OpenMaya.MVector(cmds.xform(lowerArmFK_joint,ws=True,q=True,t=True))
+            up=OpenMaya.MVector((0,1,0))
+            aim=((target - origin)*factor).normalize()
+            side = aim ^ up
+            side.normalize()
+            up = side ^ aim
+            up.normalize()
+            m=[side.x,side.y,side.z,0,
+            up.x,up.y,up.z,0,
+            aim.x,aim.y,aim.z,0,
+            target.x,target.y,target.z,1]
+            cmds.xform(armPV_con,m=m,ws=True)
 
-        cmds.setAttr(F"{shoulder_con}.IKFK",0)
-        cmds.setAttr(F"{handIK_con}.stretch",1)
-        cmds.setAttr(F"{handIK_con}.smoothIK",0)
+            cmds.setAttr(F"{shoulder_con}.IKFK",0)
+            cmds.setAttr(F"{handIK_con}.stretch",1)
+            cmds.setAttr(F"{handIK_con}.smoothIK",0)
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
-    def leg_iktofk_l(self):
+    def leg_iktofk(self,pos):
+        """
+        現在のIKの足位置に合わせてFK側(UpperLegFK/LowerLegFK/FootFK/ToesFK)を合わせてから
+        FKへ切り替える。arm_iktofk同様、R側だけ各コントローラーに180度分の補正回転が要る
+        (旧実装はleg_iktofk_l/leg_iktofk_rという別々の関数だった)。
+
+        Parameters
+        ----------
+            string pos : "L"または"R"
+
+        Returns
+        -------
+            無し
+        """
+        flip = (pos=="R")
         obj_dic = self._load_obj_dic()
 
-        upperLegFK_con=cmds.ls(obj_dic["('Con', 'L', 'UpperLegFK')"])[0]
-        upperLegFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'UpperLegFK')"])[0]
-        lowerLegFK_con=cmds.ls(obj_dic["('Con', 'L', 'LowerLegFK')"])[0]
-        lowerLegFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'LowerLegFK')"])[0]
-        footFK_con=cmds.ls(obj_dic["('Con', 'L', 'FootFK')"])[0]
-        footFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'FootFK')"])[0]
-        toesFK_con=cmds.ls(obj_dic["('Con', 'L', 'ToesFK')"])[0]
-        toesFK_drv=cmds.ls(obj_dic["('Drv', 'L', 'ToesFK')"])[0]
-        root_con=cmds.ls(obj_dic["('Con', 'L', 'LegRoot')"])[0]
+        upperLegFK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'UpperLegFK')"])[0]
+        upperLegFK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'UpperLegFK')"])[0]
+        lowerLegFK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LowerLegFK')"])[0]
+        lowerLegFK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'LowerLegFK')"])[0]
+        footFK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'FootFK')"])[0]
+        footFK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'FootFK')"])[0]
+        toesFK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'ToesFK')"])[0]
+        toesFK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'ToesFK')"])[0]
+        root_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegRoot')"])[0]
 
-        upperLegIK_joint=cmds.ls(obj_dic["('Joint', 'L', 'UpperLegIK')"])[0]
-        lowerLegIK_joint=cmds.ls(obj_dic["('Joint', 'L', 'LowerLegIK')"])[0]
-        footIK_joint=cmds.ls(obj_dic["('Joint', 'L', 'FootIK')"])[0]
-        toesIK_joint=cmds.ls(obj_dic["('Joint', 'L', 'ToesIK')"])[0]
+        upperLegIK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'UpperLegIK')"])[0]
+        lowerLegIK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'LowerLegIK')"])[0]
+        footIK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'FootIK')"])[0]
+        toesIK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'ToesIK')"])[0]
 
-        upperLeg_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{upperLegFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{upperLegIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(upperLegIK_joint,q=True,ws=True,m=True))
-        cmds.xform(upperLegFK_con,m=list(upperLeg_matrix),ws=True)
+        cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_LegIkToFk")
+        try:
+            for fk_con,fk_drv,ik_joint in ((upperLegFK_con,upperLegFK_drv,upperLegIK_joint),
+                                            (lowerLegFK_con,lowerLegFK_drv,lowerLegIK_joint),
+                                            (footFK_con,footFK_drv,footIK_joint),
+                                            (toesFK_con,toesFK_drv,toesIK_joint)):
+                matrix = OpenMaya.MMatrix(cmds.getAttr(f"{fk_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{ik_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(ik_joint,q=True,ws=True,m=True))
+                cmds.xform(fk_con,m=list(matrix),ws=True)
+                for axis in ("sx","sy","sz"):
+                    cmds.setAttr(f"{fk_con}.{axis}",abs(cmds.getAttr(f"{fk_con}.{axis}")))
+                if(flip):
+                    cmds.xform(fk_con,ro=(180,0,0),r=True,eu=True)
 
-        lowerLeg_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{lowerLegFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{lowerLegIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(lowerLegIK_joint,q=True,ws=True,m=True))
-        cmds.xform(lowerLegFK_con,m=list(lowerLeg_matrix),ws=True)
+            cmds.setAttr(F"{root_con}.IKFK",1)
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
-        foot_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{footFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{footIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(footIK_joint,q=True,ws=True,m=True))
-        cmds.xform(footFK_con,m=list(foot_matrix),ws=True)
+    def leg_fktoik(self,pos):
+        """
+        現在のFKの足位置に合わせてIK側(LegIK/LegPV/ToesIK)を合わせてからIKへ切り替える。
 
-        toes_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{toesFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{toesIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(toesIK_joint,q=True,ws=True,m=True))
-        cmds.xform(toesFK_con,m=list(toes_matrix),ws=True)
+        R側だけの補正が、他のIKFK切り替え関数(arm_iktofk/leg_iktofk等)とは少し形が違う
+        (legIK自体はY軸周り180度、ToesIKはX軸周り180度+スケールのabs補正が要り、
+        ポールベクターの向きも符号反転ではなく引き算の順序を入れ替える形になっている)。
+        挙動は変えずまとめるため、flip時の処理をそのまま分岐として残した
+        (旧実装はleg_fktoik_l/leg_fktoik_rという別々の関数だった)。
 
+        まとめる過程で、旧実装が実行時に必ずRuntimeError/ValueErrorで落ちる
+        既存の不具合を2つ発見したため、この関数では合わせて修正している
+        (このボタンは元から一度も最後まで正常動作していなかった可能性が高い):
+        1. legIK_conの算出に存在しない属性Grp_*_LegIK.Root3Matrixを参照していた
+           (Root3MatrixはHandIK側のGrpにしか作られない)。arm_fktoikのhandIK側と
+           同様、footFK_jointの現在のワールド行列をそのまま使う形に修正。
+        2. legIK_con.ToeRoll/ToeRotateという存在しない属性を参照していた
+           (create_leg()が実際に作る属性名はToesRoll/ToesRotate)。
 
-        cmds.setAttr(F"{lowerLegFK_con}.sx",abs(cmds.getAttr(F"{lowerLegFK_con}.sx")))
-        cmds.setAttr(F"{lowerLegFK_con}.sy",abs(cmds.getAttr(F"{lowerLegFK_con}.sy")))
-        cmds.setAttr(F"{lowerLegFK_con}.sz",abs(cmds.getAttr(F"{lowerLegFK_con}.sz")))
-        cmds.setAttr(F"{upperLegFK_con}.sx",abs(cmds.getAttr(F"{upperLegFK_con}.sx")))
-        cmds.setAttr(F"{upperLegFK_con}.sy",abs(cmds.getAttr(F"{upperLegFK_con}.sy")))
-        cmds.setAttr(F"{upperLegFK_con}.sz",abs(cmds.getAttr(F"{upperLegFK_con}.sz")))
-        cmds.setAttr(F"{footFK_con}.sx",abs(cmds.getAttr(F"{footFK_con}.sx")))
-        cmds.setAttr(F"{footFK_con}.sy",abs(cmds.getAttr(F"{footFK_con}.sy")))
-        cmds.setAttr(F"{footFK_con}.sz",abs(cmds.getAttr(F"{footFK_con}.sz")))
-        cmds.setAttr(F"{toesFK_con}.sx",abs(cmds.getAttr(F"{toesFK_con}.sx")))
-        cmds.setAttr(F"{toesFK_con}.sy",abs(cmds.getAttr(F"{toesFK_con}.sy")))
-        cmds.setAttr(F"{toesFK_con}.sz",abs(cmds.getAttr(F"{toesFK_con}.sz")))
-        cmds.setAttr(F"{root_con}.IKFK",1)
+        Parameters
+        ----------
+            string pos : "L"または"R"
 
-    def leg_iktofk_r(self):
+        Returns
+        -------
+            無し
+        """
+        flip = (pos=="R")
         obj_dic = self._load_obj_dic()
 
-        upperLegFK_con=cmds.ls(obj_dic["('Con', 'R', 'UpperLegFK')"])[0]
-        upperLegFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'UpperLegFK')"])[0]
-        lowerLegFK_con=cmds.ls(obj_dic["('Con', 'R', 'LowerLegFK')"])[0]
-        lowerLegFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'LowerLegFK')"])[0]
-        footFK_con=cmds.ls(obj_dic["('Con', 'R', 'FootFK')"])[0]
-        footFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'FootFK')"])[0]
-        toesFK_con=cmds.ls(obj_dic["('Con', 'R', 'ToesFK')"])[0]
-        toesFK_drv=cmds.ls(obj_dic["('Drv', 'R', 'ToesFK')"])[0]
-        root_con=cmds.ls(obj_dic["('Con', 'R', 'LegRoot')"])[0]
+        legIK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegIK')"])[0]
+        toesIK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'ToesIK')"])[0]
+        toesIK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'ToesIK')"])[0]
+        legPV_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegPV')"])[0]
+        upperLegFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'UpperLegFK')"])[0]
+        lowerLegFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'LowerLegFK')"])[0]
+        footFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'FootFK')"])[0]
+        toesFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'ToesFK')"])[0]
+        root_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegRoot')"])[0]
 
-        upperLegIK_joint=cmds.ls(obj_dic["('Joint', 'R', 'UpperLegIK')"])[0]
-        lowerLegIK_joint=cmds.ls(obj_dic["('Joint', 'R', 'LowerLegIK')"])[0]
-        footIK_joint=cmds.ls(obj_dic["('Joint', 'R', 'FootIK')"])[0]
-        toesIK_joint=cmds.ls(obj_dic["('Joint', 'R', 'ToesIK')"])[0]
+        cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_LegFkToIk")
+        try:
+            #legIK
+            #Grp_*_LegIKにはarmのHandIKと違いRoot3Matrixが存在しない(createRig側で作られるのは
+            #HandIK側のみ)。旧実装(leg_fktoik_l/r)はこの存在しない属性を参照しており、
+            #このボタンを押すと必ずValueErrorになる不具合が元から存在していた。
+            #arm_fktoikのhandIK側と同じ、FK関節の現在のワールド行列をそのまま使う形に修正する。
+            foot_matrix = cmds.xform(footFK_joint,q=True,m=True,ws=True)
+            cmds.xform(legIK_con,m=foot_matrix,ws=True)
+            if(flip):
+                cmds.xform(legIK_con,ro=(0,180,0),r=True,eu=True)
 
-        upperLeg_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{upperLegFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{upperLegIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(upperLegIK_joint,q=True,ws=True,m=True))
-        cmds.xform(upperLegFK_con,m=list(upperLeg_matrix),ws=True)
-        cmds.setAttr(F"{upperLegFK_con}.sx",abs(cmds.getAttr(F"{upperLegFK_con}.sx")))
-        cmds.setAttr(F"{upperLegFK_con}.sy",abs(cmds.getAttr(F"{upperLegFK_con}.sy")))
-        cmds.setAttr(F"{upperLegFK_con}.sz",abs(cmds.getAttr(F"{upperLegFK_con}.sz")))
-        cmds.xform(upperLegFK_con,ro=(180,0,0),r=True,eu=True)
+            cmds.setAttr(F"{legPV_con}.t",*(0,0,0),typ="double3")
+            cmds.setAttr(F"{legPV_con}.r",*(0,0,0),typ="double3")
+            origin=OpenMaya.MVector(cmds.xform(legPV_con,ws=True,q=True,t=True))
+            target=OpenMaya.MVector(cmds.xform(lowerLegFK_joint,ws=True,q=True,t=True))
+            up=OpenMaya.MVector((0,1,0))
+            aim=((target-origin) if flip else (origin-target)).normalize()
+            side = aim ^ up
+            side.normalize()
+            up = side ^ aim
+            up.normalize()
+            m=[side.x,side.y,side.z,0,
+            up.x,up.y,up.z,0,
+            aim.x,aim.y,aim.z,0,
+            target.x,target.y,target.z,1]
+            cmds.xform(legPV_con,m=m,ws=True)
 
-        lowerLeg_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{lowerLegFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{lowerLegIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(lowerLegIK_joint,q=True,ws=True,m=True))
-        cmds.xform(lowerLegFK_con,m=list(lowerLeg_matrix),ws=True)
-        cmds.setAttr(F"{lowerLegFK_con}.sx",abs(cmds.getAttr(F"{lowerLegFK_con}.sx")))
-        cmds.setAttr(F"{lowerLegFK_con}.sy",abs(cmds.getAttr(F"{lowerLegFK_con}.sy")))
-        cmds.setAttr(F"{lowerLegFK_con}.sz",abs(cmds.getAttr(F"{lowerLegFK_con}.sz")))
-        cmds.xform(lowerLegFK_con,ro=(180,0,0),r=True,eu=True)
+            cmds.setAttr(F"{root_con}.IKFK",0)
+            cmds.setAttr(F"{legIK_con}.stretch",1)
+            cmds.setAttr(F"{legIK_con}.smoothIK",0)
+            cmds.setAttr(F"{legIK_con}.HeelRoll",0)
+            cmds.setAttr(F"{legIK_con}.HeelRotate",0)
+            cmds.setAttr(F"{legIK_con}.Tilt",0)
+            cmds.setAttr(F"{legIK_con}.ToesRoll",0)
+            cmds.setAttr(F"{legIK_con}.ToesRotate",0)
+            cmds.setAttr(F"{legIK_con}.twist",0)
 
-        foot_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{footFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{footIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(footIK_joint,q=True,ws=True,m=True))
-        cmds.xform(footFK_con,m=list(foot_matrix),ws=True)
-        cmds.setAttr(F"{footFK_con}.sx",abs(cmds.getAttr(F"{footFK_con}.sx")))
-        cmds.setAttr(F"{footFK_con}.sy",abs(cmds.getAttr(F"{footFK_con}.sy")))
-        cmds.setAttr(F"{footFK_con}.sz",abs(cmds.getAttr(F"{footFK_con}.sz")))
-        cmds.xform(footFK_con,ro=(180,0,0),r=True,eu=True)
-
-        toes_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{toesFK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{toesIK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(toesIK_joint,q=True,ws=True,m=True))
-        cmds.xform(toesFK_con,m=list(toes_matrix),ws=True)
-        cmds.setAttr(F"{toesFK_con}.sx",abs(cmds.getAttr(F"{toesFK_con}.sx")))
-        cmds.setAttr(F"{toesFK_con}.sy",abs(cmds.getAttr(F"{toesFK_con}.sy")))
-        cmds.setAttr(F"{toesFK_con}.sz",abs(cmds.getAttr(F"{toesFK_con}.sz")))
-        cmds.xform(toesFK_con,ro=(180,0,0),r=True,eu=True)
-
-        cmds.setAttr(F"{root_con}.IKFK",1)
-
-    def leg_fktoik_l(self):
-        obj_dic = self._load_obj_dic()
-
-
-        legIK_con=cmds.ls(obj_dic["('Con', 'L', 'LegIK')"])[0]
-        legIK_grp=cmds.ls(obj_dic["('Grp', 'L', 'LegIK')"])[0]
-        toesIK_con=cmds.ls(obj_dic["('Con', 'L', 'ToesIK')"])[0]
-        toesIK_drv=cmds.ls(obj_dic["('Drv', 'L', 'ToesIK')"])[0]
-        legPV_con=cmds.ls(obj_dic["('Con', 'L', 'LegPV')"])[0]
-        upperLegFK_joint=cmds.ls(obj_dic["('Joint', 'L', 'UpperLegFK')"])[0]
-        lowerLegFK_joint=cmds.ls(obj_dic["('Joint', 'L', 'LowerLegFK')"])[0]
-        footFK_joint=cmds.ls(obj_dic["('Joint', 'L', 'FootFK')"])[0]
-        toesFK_joint=cmds.ls(obj_dic["('Joint', 'L', 'ToesFK')"])[0]
-        root_con=cmds.ls(obj_dic["('Con', 'L', 'LegRoot')"])[0]
-
-        #legIK
-        upperLeg_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{legIK_grp}.Root3Matrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{footFK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(footFK_joint,q=True,ws=True,m=True))
-        cmds.xform(legIK_con,m=list(upperLeg_matrix),ws=True)
-
-        cmds.setAttr(F"{legPV_con}.t",*(0,0,0),typ="double3")
-        cmds.setAttr(F"{legPV_con}.r",*(0,0,0),typ="double3")
-        origin=OpenMaya.MVector(cmds.xform(legPV_con,ws=True,q=True,t=True))
-        target=OpenMaya.MVector(cmds.xform(lowerLegFK_joint,ws=True,q=True,t=True))
-        up=OpenMaya.MVector((0,1,0))
-        aim=(origin-target).normalize()
-        side = aim ^ up
-        side.normalize()
-        up = side ^ aim
-        up.normalize()
-        m=[side.x,side.y,side.z,0,
-        up.x,up.y,up.z,0,
-        aim.x,aim.y,aim.z,0,
-        target.x,target.y,target.z,1]
-        cmds.xform(legPV_con,m=m,ws=True)
-
-        cmds.setAttr(F"{root_con}.IKFK",0)
-        cmds.setAttr(F"{legIK_con}.stretch",1)
-        cmds.setAttr(F"{legIK_con}.smoothIK",0)
-        cmds.setAttr(F"{legIK_con}.HeelRoll",0)
-        cmds.setAttr(F"{legIK_con}.HeelRotate",0)
-        cmds.setAttr(F"{legIK_con}.Tilt",0)
-        cmds.setAttr(F"{legIK_con}.ToeRoll",0)
-        cmds.setAttr(F"{legIK_con}.ToeRotate",0)
-        cmds.setAttr(F"{legIK_con}.twist",0)
-
-        #toeIK
-        toes_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{toesIK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{toesFK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(toesFK_joint,q=True,ws=True,m=True))
-        cmds.xform(toesIK_con,m=list(toes_matrix),ws=True)
-
-    def leg_fktoik_r(self):
-        obj_dic = self._load_obj_dic()
-
-
-        legIK_con=cmds.ls(obj_dic["('Con', 'R', 'LegIK')"])[0]
-        legIK_grp=cmds.ls(obj_dic["('Grp', 'R', 'LegIK')"])[0]
-        toesIK_con=cmds.ls(obj_dic["('Con', 'R', 'ToesIK')"])[0]
-        toesIK_drv=cmds.ls(obj_dic["('Drv', 'R', 'ToesIK')"])[0]
-        legPV_con=cmds.ls(obj_dic["('Con', 'R', 'LegPV')"])[0]
-        upperLegFK_joint=cmds.ls(obj_dic["('Joint', 'R', 'UpperLegFK')"])[0]
-        lowerLegFK_joint=cmds.ls(obj_dic["('Joint', 'R', 'LowerLegFK')"])[0]
-        footFK_joint=cmds.ls(obj_dic["('Joint', 'R', 'FootFK')"])[0]
-        toesFK_joint=cmds.ls(obj_dic["('Joint', 'R', 'ToesFK')"])[0]
-        root_con=cmds.ls(obj_dic["('Con', 'R', 'LegRoot')"])[0]
-
-        #legIK
-        upperLeg_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{legIK_grp}.Root3Matrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{footFK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(footFK_joint,q=True,ws=True,m=True))
-        cmds.xform(legIK_con,m=list(upperLeg_matrix),ws=True)
-        cmds.xform(legIK_con,ro=(0,180,0),r=True,eu=True)
-
-        cmds.setAttr(F"{legPV_con}.t",*(0,0,0),typ="double3")
-        cmds.setAttr(F"{legPV_con}.r",*(0,0,0),typ="double3")
-        origin=OpenMaya.MVector(cmds.xform(legPV_con,ws=True,q=True,t=True))
-        target=OpenMaya.MVector(cmds.xform(lowerLegFK_joint,ws=True,q=True,t=True))
-        up=OpenMaya.MVector((0,1,0))
-        aim=(target-origin).normalize()
-        side = aim ^ up
-        side.normalize()
-        up = side ^ aim
-        up.normalize()
-        m=[side.x,side.y,side.z,0,
-        up.x,up.y,up.z,0,
-        aim.x,aim.y,aim.z,0,
-        target.x,target.y,target.z,1]
-        cmds.xform(legPV_con,m=m,ws=True)
-
-        cmds.setAttr(F"{root_con}.IKFK",0)
-        cmds.setAttr(F"{legIK_con}.stretch",1)
-        cmds.setAttr(F"{legIK_con}.smoothIK",0)
-        cmds.setAttr(F"{legIK_con}.HeelRoll",0)
-        cmds.setAttr(F"{legIK_con}.HeelRotate",0)
-        cmds.setAttr(F"{legIK_con}.Tilt",0)
-        cmds.setAttr(F"{legIK_con}.ToeRoll",0)
-        cmds.setAttr(F"{legIK_con}.ToeRotate",0)
-        cmds.setAttr(F"{legIK_con}.twist",0)
-
-        #toeIK
-        toes_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{toesIK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{toesFK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(toesFK_joint,q=True,ws=True,m=True))
-        cmds.xform(toesIK_con,m=list(toes_matrix),ws=True)
-        cmds.setAttr(F"{toesIK_con}.sx",abs(cmds.getAttr(F"{toesIK_con}.sx")))
-        cmds.setAttr(F"{toesIK_con}.sy",abs(cmds.getAttr(F"{toesIK_con}.sy")))
-        cmds.setAttr(F"{toesIK_con}.sz",abs(cmds.getAttr(F"{toesIK_con}.sz")))
-        cmds.xform(toesIK_con,ro=(180,0,0),r=True,eu=True)
+            #toeIK
+            toes_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{toesIK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{toesFK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(toesFK_joint,q=True,ws=True,m=True))
+            cmds.xform(toesIK_con,m=list(toes_matrix),ws=True)
+            if(flip):
+                for axis in ("sx","sy","sz"):
+                    cmds.setAttr(f"{toesIK_con}.{axis}",abs(cmds.getAttr(f"{toesIK_con}.{axis}")))
+                cmds.xform(toesIK_con,ro=(180,0,0),r=True,eu=True)
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     def flat_shade(self):
         viewport_panels = cmds.getPanel(type="modelPanel")
