@@ -34,25 +34,44 @@ def create_rig(textField_dic:dict,character_name:str):
     joint_dic=check[1]
     character_name = cmds.textField(character_name,q=True,tx=True)
     
-    if(check_bool==True):
-        #リグ生成は数百〜数千個のノード生成・接続を伴うため、Undoを1操作にまとめビューポート再描画を止めて高速化する
-        #  (途中で例外が起きても必ずfinallyで元に戻す)
-        cmds.undoInfo(openChunk=True, chunkName="AutoRigForHumanoid_CreateRig")
-        cmds.refresh(suspend=True)
+    if not check_bool:
+        return
+    # Validate the guide set before touching the source skeleton.
+    if cmds.objExists(f"{character_name}_Rig"):
+        raise ValueError("A rig with this character name already exists")
+    for group in (f"Orient_C_{character_name}", f"Position_C_{character_name}"):
+        if len(cmds.ls(group,type="transform",long=True)) != 1:
+            raise ValueError("A unique orientation and position guide set is required")
+    undo_enabled = cmds.undoInfo(q=True,state=True)
+    refresh_suspended = cmds.refresh(q=True,suspend=True)
+    if not undo_enabled:
+        cmds.undoInfo(stateWithoutFlush=True)
+    cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_CreateRig")
+    try:
         try:
-            #親グループ
+            cmds.refresh(suspend=True)
             root_grp = cmds.group(em=True,n=f"{character_name}_Rig")
             cmds.setAttr(f"{root_grp}.t",lock=True)
             cmds.setAttr(f"{root_grp}.r",lock=True)
             cmds.setAttr(f"{root_grp}.s",lock=True)
             humanoid_dummy_joint = create_dummyHumanoid(joint_dic,character_name,root_grp)
             orientation_dic = get_orientation(character_name)
-            pos_dic=get_pos(character_name)
+            pos_dic = get_pos(character_name)
             autorig_createRig.init_createRig(humanoid_dummy_joint,character_name,root_grp,orientation_dic,pos_dic)
         finally:
-            cmds.refresh(suspend=False)
             cmds.undoInfo(closeChunk=True)
+            cmds.refresh(suspend=refresh_suspended)
+    except Exception:
+        # Deleting the rig does not undo edits/connections on the source joints.
+        cmds.undo()
+        raise
+    finally:
+        if not undo_enabled:
+            cmds.undoInfo(stateWithoutFlush=False)
+        if not refresh_suspended:
             cmds.refresh()
+    return root_grp
+
 
 def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
     """
@@ -75,32 +94,13 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
     cmds.setAttr(f"{root_grp}.s",lock=True)
     cmds.setAttr(f"{root_grp}.v",0,lock=False,k=False)
 
-    #元のジョイントの正規化
-    #  rotate(r)とjointOrientを合成した回転をrに書き戻し、jointOrientを0にする(＝見た目を変えずにOrientをRotateへ吸収する)。
-    #  quatProdの入力にjoint.r自身が使われているため、そのままquatToEuler.outputRotateをjoint.rへ常時接続すると
-    #  「joint.r → …(このネットワーク)… → joint.r」の循環参照になってしまう。
-    #  そのため一度だけconnect→即disconnectして「合成済みの回転」をquatToEuler.inputQuatへ静的値として焼き付け、
-    #  その後にquatToEuler.outputRotateをjoint.rへ接続することで循環を作らずに済ませている。
+    # Preserve the evaluated pose while folding jointOrient into rotate.
+    # xform respects each joint's rotateOrder and avoids temporary quaternion nodes.
     for key in joint_dic:
         joint = joint_dic[key]
-        eulerToQuat01 = cmds.createNode("eulerToQuat")
-        eulerToQuat02 = cmds.createNode("eulerToQuat")
-        quatProd = cmds.createNode("quatProd")
-        quatToEuler = cmds.createNode("quatToEuler")
-        cmds.connectAttr(f"{joint}.r",f"{eulerToQuat01}.inputRotate")
-        cmds.connectAttr(f"{joint}.rotateOrder",f"{eulerToQuat01}.inputRotateOrder")
-        cmds.connectAttr(f"{joint}.jointOrient",f"{eulerToQuat02}.inputRotate")
-        cmds.connectAttr(f"{eulerToQuat01}.outputQuat",f"{quatProd}.input1Quat")
-        cmds.connectAttr(f"{eulerToQuat02}.outputQuat",f"{quatProd}.input2Quat")
-        cmds.connectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
-        cmds.disconnectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")  #循環参照回避のため値を焼き付けて切断
-        cmds.connectAttr(f"{quatToEuler}.outputRotate",f"{joint}.r")
-        cmds.setAttr(f"{joint}.jointOrientX",0)
-        cmds.setAttr(f"{joint}.jointOrientY",0)
-        cmds.setAttr(f"{joint}.jointOrientZ",0)
-        cmds.delete(eulerToQuat01)
-        cmds.delete(eulerToQuat02)
-        cmds.delete(quatToEuler)
+        world_matrix = cmds.xform(joint,q=True,ws=True,m=True)
+        cmds.setAttr(f"{joint}.jointOrient",0,0,0,type="double3")
+        cmds.xform(joint,ws=True,m=world_matrix)
         #アトリビュート作成
         cmds.addAttr(joint,ln="name",dt="string")
         cmds.setAttr(f"{joint}.name",key,typ="string")
@@ -145,7 +145,6 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
             name = cmds.getAttr(f"{joint}.name")
             duplicate_joint_dic[name] = cmds.ls(joint,l=True)[0]
     
-    print(duplicate_joint_dic)
 
     for k in duplicate_joint_dic:
         #トランスフォームの一致

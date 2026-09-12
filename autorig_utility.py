@@ -627,16 +627,14 @@ def matrix_constraint(Drv_Obj:str,Dvn_Obj:str):
     cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",lock=True, keyable=False)
     cmds.setAttr(f"{Dvn_Obj}.jointOrient" ,*(0,0,0),typ="double3")
     #計算
-    multMatrix1 = cmds.createNode("multMatrix")
     multMatrix2 = cmds.createNode("multMatrix")
     decomposeMatrix1 = cmds.createNode("decomposeMatrix")
     inverseMatrix = cmds.createNode("inverseMatrix")
-    cmds.connectAttr(f"{Drv_Obj}.worldMatrix[0]",f"{multMatrix1}.matrixIn[0]",f=True)
-    cmds.connectAttr(f"{Dvn_Obj}.parentInverseMatrix",f"{multMatrix1}.matrixIn[1]",f=True)
     cmds.connectAttr(f"{Drv_Obj}.WorldBindMatrix",f"{inverseMatrix}.inputMatrix",f=True)
     cmds.connectAttr(f"{Dvn_Obj}.WorldBindMatrix",f"{multMatrix2}.matrixIn[0]",f=True)
     cmds.connectAttr(f"{inverseMatrix}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
-    cmds.connectAttr(f"{multMatrix1}.matrixSum",f"{multMatrix2}.matrixIn[2]")
+    cmds.connectAttr(f"{Drv_Obj}.worldMatrix[0]",f"{multMatrix2}.matrixIn[2]")
+    cmds.connectAttr(f"{Dvn_Obj}.parentInverseMatrix[0]",f"{multMatrix2}.matrixIn[3]")
     cmds.connectAttr(f"{multMatrix2}.matrixSum",f"{decomposeMatrix1}.inputMatrix")
     cmds.connectAttr(f"{Dvn_Obj}.rotateOrder",f"{decomposeMatrix1}.inputRotateOrder",f=True)
     cmds.connectAttr(f"{decomposeMatrix1}.outputTranslate",f"{Dvn_Obj}.t",f=True)
@@ -801,57 +799,58 @@ def create_controller_legacy(  con_name="",
 
     return obj_dic
 
-def ik_twist_offset(ik_handle:str, root_obj:str, target_matrix, coarse_step=5.0, fine_step=0.05):
+def set_ik_preferred_angle(joint, end_joint):
+    """Keep a useful bend hint, including an exactly straight chain."""
+    orient = cmds.getAttr(f"{joint}.jointOrient")[0]
+    magnitude = math.sqrt(sum(value*value for value in orient))
+    if magnitude < 1.0:
+        if magnitude > 1e-9:
+            orient = [value/magnitude for value in orient]
+        else:
+            direction = OpenMaya.MVector(cmds.getAttr(f"{end_joint}.translate")[0])
+            if direction.length() < 1e-9:
+                raise ValueError("IK segments must have nonzero length")
+            direction.normalize()
+            basis = min((OpenMaya.MVector(1,0,0),OpenMaya.MVector(0,1,0),
+                         OpenMaya.MVector(0,0,1)),key=lambda axis:abs(direction*axis))
+            # A hint along the bone only twists it and cannot initiate bending.
+            orient = list((direction ^ basis).normal())
+    cmds.setAttr(f"{joint}.preferredAngle",*orient,type="double3")
+
+
+def ik_twist_offset(ik_handle:str, root_obj:str, target_matrix, coarse_step=5.0, fine_step=0.0001):
+    """Find the rest twist (degrees) by evaluating the driven world matrix.
+
+    The twist plug may belong to an IK handle or its controller. Refine the
+    best coarse interval in stages so sub-degree accuracy does not require
+    thousands of evaluations. Always restore the input, including on failure.
     """
-    IKハンドルのtwist属性に設定すべき初期値(度)を求める。
-
-    IKハンドル作成〜poleVectorConstraint設定までの間、Mayaの回転面(RP)ソルバーは
-    jointのjointOrientをpreferredAngleのヒントとして初期解決を行う。jointOrientが
-    最初から0(向きが全て.rotateへ焼き込まれているスケルトン等)のキャラクターでは
-    このヒントが効かず、ポールベクターを後から正しく設定しても「末端の位置・関節の曲がり方向は
-    合っているのに、根本の向きだけ数十度ズレる」という食い違いが残ることがある。
-
-    この食い違いはtwistを振れば解消できるが、twistと得られる姿勢の関係はIKソルバーが
-    ポールベクター方向を回転させて毎回チェーン全体を再計算する非線形な処理を経るため、
-    現在の姿勢と目標の姿勢を比較するだけの単純な式(スウィング・ツイスト分解等)では
-    正しい値を求められない(実際に試したところ、大きく外れた値になった)。そのため、
-    実際にtwistを振りながらroot_objのワールド行列がtarget_matrix(ガイドから求めた
-    元のバインド行列)に最も近づく値を探索して求める(粗探索→周辺の精密探索の2段階)。
-
-    Parameters
-    ----------
-        string ik_handle : 対象のikHandle
-        string root_obj : ワールド姿勢を測るオブジェクト(IKダミーの根本関節等)
-        list target_matrix : 本来あるべきワールド行列(16要素。ガイドのワールド行列等)
-        float coarse_step : 0〜360度を粗く探索する刻み幅(度)
-        float fine_step : 粗探索の最良値の周辺を追い込む精密探索の刻み幅(度)
-
-    Returns
-    -------
-        float : ikHandle.twistへ設定すべき角度(度)
-    """
+    if not (math.isfinite(coarse_step) and math.isfinite(fine_step)
+            and 0 < fine_step <= coarse_step <= 180):
+        raise ValueError("Expected 0 < fine_step <= coarse_step <= 180")
     original = cmds.getAttr(f"{ik_handle}.twist")
-
     def diff_at(twist):
         cmds.setAttr(f"{ik_handle}.twist",twist)
-        m = cmds.xform(root_obj,ws=True,q=True,m=True)
-        return max(abs(a-b) for a,b in zip(m,target_matrix))
-
-    best_t,best_d = 0.0,diff_at(0.0)
-    t = 0.0
-    while(t<360.0):
-        d = diff_at(t)
-        if(d<best_d):
-            best_d,best_t = d,t
-        t += coarse_step
-
-    t = best_t-coarse_step
-    end = best_t+coarse_step
-    while(t<=end):
-        d = diff_at(t)
-        if(d<best_d):
-            best_d,best_t = d,t
-        t += fine_step
-
-    cmds.setAttr(f"{ik_handle}.twist",original)
-    return best_t
+        matrix = cmds.xform(root_obj,ws=True,q=True,m=True)
+        return max(abs(a-b) for a,b in zip(matrix,target_matrix))
+    try:
+        best_t, best_d = original, diff_at(original)
+        for index in range(int(math.ceil(360.0/coarse_step))):
+            t = index*coarse_step
+            distance = diff_at(t)
+            if distance < best_d:
+                best_t, best_d = t, distance
+        step = coarse_step
+        while step > fine_step:
+            radius = step
+            step = max(fine_step,step/10.0)
+            center = best_t
+            count = int(math.ceil(2.0*radius/step))
+            for index in range(count+1):
+                t = center-radius+index*step
+                distance = diff_at(t)
+                if distance < best_d:
+                    best_t, best_d = t, distance
+        return best_t
+    finally:
+        cmds.setAttr(f"{ik_handle}.twist",original)

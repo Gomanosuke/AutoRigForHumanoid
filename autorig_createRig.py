@@ -873,27 +873,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         foot_pos = [foot_matrix[12],foot_matrix[13],foot_matrix[14]]
         cmds.setAttr(F"{ik_parent}.LegLength",math.dist(upperLeg_pos,lowerLeg_pos)+math.dist(lowerLeg_pos,foot_pos),k=False,l=True)
 
-        #upperLeg-lowerLeg-footが(ほぼ)一直線の場合、jointOrient=0のスケルトンでは
-        #ikHandle作成時の初期解決やその後の再解決がpreferredAngleのヒントを
-        #使えず不安定になり、IKが全く曲がらなくなることがある(実例:
-        #straight-limb input)。直前のmakeIdentity(pn=True)でlowerLeg_ik_dummy自身の
-        #(ごく僅かな)曲がりがjointOrientへ焼き込まれているので、その向き自体は
-        #そのまま使い(この僅かな曲がりの向きは実際の(僅かな)膝の曲がりを反映しており
-        #信頼できる)、大きさだけpreferredAngleの効果的なヒントになる程度(1度)へ
-        #拡大してからpreferredAngleへ設定する。生の値(1度に満たない微小な値)を
-        #そのまま使うと、RPソルバーが方向を決められず曲がらないままになる
-        #(mayapy standaloneでの実測: 生の値ではhand/footを大きく引き寄せても
-        #ほぼ無反応、1度相当に拡大すると正しく曲がることを確認)。
-        orient = cmds.getAttr(f"{lowerLeg_ik_dummy}.jointOrient")[0]
-        orient_mag = math.sqrt(sum(v*v for v in orient))
-        if(orient_mag < 1.0):
-            scale = (1.0/orient_mag) if(orient_mag>1e-9) else 0.0
-            orient = [v*scale for v in orient]
-            if(orient_mag<=1e-9):
-                orient = [1.0,0.0,0.0]
-        cmds.setAttr(f"{lowerLeg_ik_dummy}.preferredAngleX",orient[0])
-        cmds.setAttr(f"{lowerLeg_ik_dummy}.preferredAngleY",orient[1])
-        cmds.setAttr(f"{lowerLeg_ik_dummy}.preferredAngleZ",orient[2])
+        autorig_utility.set_ik_preferred_angle(lowerLeg_ik_dummy, foot_ik_dummy)
 
         #IKHandle作成
         ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_LegIkHandle",p=root_obj)
@@ -1287,6 +1267,12 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}",ln="twist",at="float",dv=default_twist)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",default_twist,k=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegIK')]}.twist",f"{ikHandle}.twist")
+        # Capture the solved rest frame after pole-vector and twist initialization.
+        for driver in (upperLeg_ik_dummy, lowerLeg_ik_dummy):
+            rest_matrix = cmds.xform(driver, q=True, ws=True, m=True)
+            cmds.setAttr(f"{driver}.WorldBindMatrix", lock=False)
+            cmds.setAttr(f"{driver}.WorldBindMatrix", *rest_matrix, type="matrix", lock=True)
+
 
         #IKFKSwitch
         cmds.setAttr(f"{ik_parent}.v",0,l=True)
@@ -1700,7 +1686,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         #LeftLowerLeg
         l_lowerLeg_joint_matrix = cmds.xform(joint_dic["l_lowerLeg"],q=True,ws=True,m=True)
         cmds.addAttr(create_obj_dic[('Grp',clr,'HandIK')],ln="LeftLowerLegMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(l_upperLeg_joint_matrix).inverse()
+        matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(l_lowerLeg_joint_matrix).inverse()
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.LeftLowerLegMatrix",list(matrix),typ="matrix")
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.LeftLowerLegMatrix",lock=True, keyable=False)
         head_decomposeMatrix = cmds.createNode("decomposeMatrix")
@@ -1724,7 +1710,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         #LeftFoot
         l_foot_joint_matrix = cmds.xform(joint_dic["l_foot"],q=True,ws=True,m=True)
         cmds.addAttr(create_obj_dic[('Grp',clr,'HandIK')],ln="LeftFootMatrix",at="matrix")
-        matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(l_upperLeg_joint_matrix).inverse()
+        matrix = OpenMaya.MMatrix(hand_matrix)*OpenMaya.MMatrix(l_foot_joint_matrix).inverse()
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.LeftFootMatrix",list(matrix),typ="matrix")
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'HandIK')]}.LeftFootMatrix",lock=True, keyable=False)
         head_decomposeMatrix = cmds.createNode("decomposeMatrix")
@@ -1874,27 +1860,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         autorig_utility.matrix_constraint(lowerArm_ik_dummy,lowerArm_ik)
         autorig_utility.matrix_constraint(hand_ik_dummy,hand_ik)
         
-        #upperArm-lowerArm-handが(ほぼ)一直線の場合、jointOrient=0のスケルトンでは
-        #ikHandle作成時の初期解決やその後の再解決がpreferredAngleのヒントを
-        #使えず不安定になり、IKが全く曲がらなくなることがある(実例:
-        #straight-limb input)。直前のmakeIdentity(pn=True)でlowerArm_ik_dummy自身の
-        #(ごく僅かな)曲がりがjointOrientへ焼き込まれているので、その向き自体は
-        #そのまま使い(この僅かな曲がりの向きは実際の(僅かな)肘の曲がりを反映しており
-        #信頼できる)、大きさだけpreferredAngleの効果的なヒントになる程度(1度)へ
-        #拡大してからpreferredAngleへ設定する。生の値(1度に満たない微小な値)を
-        #そのまま使うと、RPソルバーが方向を決められず曲がらないままになる
-        #(mayapy standaloneでの実測: 生の値ではhandを大きく引き寄せてもほぼ無反応、
-        #1度相当に拡大すると正しく曲がることを確認)。
-        orient = cmds.getAttr(f"{lowerArm_ik_dummy}.jointOrient")[0]
-        orient_mag = math.sqrt(sum(v*v for v in orient))
-        if(orient_mag < 1.0):
-            scale = (1.0/orient_mag) if(orient_mag>1e-9) else 0.0
-            orient = [v*scale for v in orient]
-            if(orient_mag<=1e-9):
-                orient = [1.0,0.0,0.0]
-        cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleX",orient[0])
-        cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleY",orient[1])
-        cmds.setAttr(f"{lowerArm_ik_dummy}.preferredAngleZ",orient[2])
+        autorig_utility.set_ik_preferred_angle(lowerArm_ik_dummy, hand_ik_dummy)
 
         #IKHandle作成
         ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_ArmIkHandle",p=root_obj)
@@ -2235,6 +2201,12 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         cmds.addAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}",ln="twist",at="float",dv=default_twist)
         cmds.setAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",default_twist,k=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'HandIK')]}.twist",f"{ikHandle}.twist")
+        # Capture the solved rest frame after pole-vector and twist initialization.
+        for driver in (upperArm_ik_dummy, lowerArm_ik_dummy):
+            rest_matrix = cmds.xform(driver, q=True, ws=True, m=True)
+            cmds.setAttr(f"{driver}.WorldBindMatrix", lock=False)
+            cmds.setAttr(f"{driver}.WorldBindMatrix", *rest_matrix, type="matrix", lock=True)
+
 
         #IKFKSwitch
         cmds.setAttr(f"{ik_parent}.v",0,l=True)

@@ -481,6 +481,8 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         handFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'HandFK')"])[0]
         shoulder_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'Shoulder')"])[0]
 
+        upper_target = cmds.xform(upperArmFK_joint,q=True,ws=True,m=True)
+        upper_ik = cmds.ls(obj_dic[f"('Joint', '{pos}', 'UpperArmIK')"])[0]
         cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_ArmFkToIk")
         try:
             #handIK
@@ -506,6 +508,9 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             cmds.setAttr(F"{shoulder_con}.IKFK",0)
             cmds.setAttr(F"{handIK_con}.stretch",1)
             cmds.setAttr(F"{handIK_con}.smoothIK",0)
+            from . import autorig_utility
+            twist = autorig_utility.ik_twist_offset(handIK_con,upper_ik,upper_target,fine_step=0.001)
+            cmds.setAttr(handIK_con+".twist",twist)
         finally:
             cmds.undoInfo(closeChunk=True)
 
@@ -559,90 +564,48 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             cmds.undoInfo(closeChunk=True)
 
     def leg_fktoik(self,pos):
-        """
-        現在のFKの足位置に合わせてIK側(LegIK/LegPV/ToesIK)を合わせてからIKへ切り替える。
-
-        R側だけの補正が、他のIKFK切り替え関数(arm_iktofk/leg_iktofk等)とは少し形が違う
-        (legIK自体はY軸周り180度、ToesIKはX軸周り180度+スケールのabs補正が要り、
-        ポールベクターの向きも符号反転ではなく引き算の順序を入れ替える形になっている)。
-        挙動は変えずまとめるため、flip時の処理をそのまま分岐として残した
-        (旧実装はleg_fktoik_l/leg_fktoik_rという別々の関数だった)。
-
-        まとめる過程で、旧実装が実行時に必ずRuntimeError/ValueErrorで落ちる
-        既存の不具合を2つ発見したため、この関数では合わせて修正している
-        (このボタンは元から一度も最後まで正常動作していなかった可能性が高い):
-        1. legIK_conの算出に存在しない属性Grp_*_LegIK.Root3Matrixを参照していた
-           (Root3MatrixはHandIK側のGrpにしか作られない)。arm_fktoikのhandIK側と
-           同様、footFK_jointの現在のワールド行列をそのまま使う形に修正。
-        2. legIK_con.ToeRoll/ToeRotateという存在しない属性を参照していた
-           (create_leg()が実際に作る属性名はToesRoll/ToesRotate)。
-
-        Parameters
-        ----------
-            string pos : "L"または"R"
-
-        Returns
-        -------
-            無し
-        """
-        flip = (pos=="R")
+        """Match the IK foot through its bind offset, then match the bend plane."""
         obj_dic = self._load_obj_dic()
-
-        legIK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegIK')"])[0]
-        toesIK_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'ToesIK')"])[0]
-        toesIK_drv=cmds.ls(obj_dic[f"('Drv', '{pos}', 'ToesIK')"])[0]
-        legPV_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegPV')"])[0]
-        upperLegFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'UpperLegFK')"])[0]
-        lowerLegFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'LowerLegFK')"])[0]
-        footFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'FootFK')"])[0]
-        toesFK_joint=cmds.ls(obj_dic[f"('Joint', '{pos}', 'ToesFK')"])[0]
-        root_con=cmds.ls(obj_dic[f"('Con', '{pos}', 'LegRoot')"])[0]
-
-        cmds.undoInfo(openChunk=True,chunkName="AutoRigForHumanoid_LegFkToIk")
+        def node(kind, name):
+            return cmds.ls(obj_dic[str((kind,pos,name))])[0]
+        leg_con = node('Con','LegIK')
+        foot_con = node('Con','FootIK')
+        foot_drv = node('Drv','FootIK')
+        foot_fk = node('Joint','FootFK')
+        toes_con = node('Con','ToesIK')
+        toes_drv = node('Drv','ToesIK')
+        toes_fk = node('Joint','ToesFK')
+        upper_fk = node('Joint','UpperLegFK')
+        upper_ik = node('Joint','UpperLegIK')
+        lower_fk = node('Joint','LowerLegFK')
+        pv = node('Con','LegPV')
+        root = node('Con','LegRoot')
+        def world(obj):
+            return OpenMaya.MMatrix(cmds.xform(obj,q=True,ws=True,m=True))
+        def bind(obj):
+            return OpenMaya.MMatrix(cmds.getAttr(obj+'.WorldBindMatrix'))
+        foot_target = bind(foot_drv)*bind(foot_fk).inverse()*world(foot_fk)
+        toes_target = bind(toes_drv)*bind(toes_fk).inverse()*world(toes_fk)
+        upper_target = list(world(upper_fk))
+        knee = cmds.xform(lower_fk,q=True,ws=True,t=True)
+        cmds.undoInfo(openChunk=True,chunkName='AutoRigForHumanoid_LegFkToIk')
         try:
-            #legIK
-            #Grp_*_LegIKにはarmのHandIKと違いRoot3Matrixが存在しない(createRig側で作られるのは
-            #HandIK側のみ)。旧実装(leg_fktoik_l/r)はこの存在しない属性を参照しており、
-            #このボタンを押すと必ずValueErrorになる不具合が元から存在していた。
-            #arm_fktoikのhandIK側と同じ、FK関節の現在のワールド行列をそのまま使う形に修正する。
-            foot_matrix = cmds.xform(footFK_joint,q=True,m=True,ws=True)
-            cmds.xform(legIK_con,m=foot_matrix,ws=True)
-            if(flip):
-                cmds.xform(legIK_con,ro=(0,180,0),r=True,eu=True)
-
-            cmds.setAttr(F"{legPV_con}.t",*(0,0,0),typ="double3")
-            cmds.setAttr(F"{legPV_con}.r",*(0,0,0),typ="double3")
-            origin=OpenMaya.MVector(cmds.xform(legPV_con,ws=True,q=True,t=True))
-            target=OpenMaya.MVector(cmds.xform(lowerLegFK_joint,ws=True,q=True,t=True))
-            up=OpenMaya.MVector((0,1,0))
-            aim=((target-origin) if flip else (origin-target)).normalize()
-            side = aim ^ up
-            side.normalize()
-            up = side ^ aim
-            up.normalize()
-            m=[side.x,side.y,side.z,0,
-            up.x,up.y,up.z,0,
-            aim.x,aim.y,aim.z,0,
-            target.x,target.y,target.z,1]
-            cmds.xform(legPV_con,m=m,ws=True)
-
-            cmds.setAttr(F"{root_con}.IKFK",0)
-            cmds.setAttr(F"{legIK_con}.stretch",1)
-            cmds.setAttr(F"{legIK_con}.smoothIK",0)
-            cmds.setAttr(F"{legIK_con}.HeelRoll",0)
-            cmds.setAttr(F"{legIK_con}.HeelRotate",0)
-            cmds.setAttr(F"{legIK_con}.Tilt",0)
-            cmds.setAttr(F"{legIK_con}.ToesRoll",0)
-            cmds.setAttr(F"{legIK_con}.ToesRotate",0)
-            cmds.setAttr(F"{legIK_con}.twist",0)
-
-            #toeIK
-            toes_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{toesIK_drv}.WorldBindMatrix"))*OpenMaya.MMatrix(cmds.getAttr(f"{toesFK_joint}.WorldBindMatrix")).inverse()*OpenMaya.MMatrix(cmds.xform(toesFK_joint,q=True,ws=True,m=True))
-            cmds.xform(toesIK_con,m=list(toes_matrix),ws=True)
-            if(flip):
-                for axis in ("sx","sy","sz"):
-                    cmds.setAttr(f"{toesIK_con}.{axis}",abs(cmds.getAttr(f"{toesIK_con}.{axis}")))
-                cmds.xform(toesIK_con,ro=(180,0,0),r=True,eu=True)
+            for attr in ('HeelRoll','HeelRotate','Tilt','ToesRoll','ToesRotate','SoleRotate','smoothIK'):
+                cmds.setAttr(leg_con+'.'+attr,0)
+            cmds.setAttr(leg_con+'.stretch',1)
+            for attr, value in (('translate',(0,0,0)),('rotate',(0,0,0)),('scale',(1,1,1))):
+                cmds.setAttr(foot_con+'.'+attr,*value)
+            # The controller and foot joint have different rest axes, especially on the right.
+            target = world(leg_con)*world(foot_drv).inverse()*foot_target
+            cmds.xform(leg_con,ws=True,m=list(target))
+            cmds.xform(pv,ws=True,t=knee)
+            cmds.setAttr(root+'.IKFK',0)
+            # Match using the actual driven joint; do not discard the rig's twist offset.
+            from . import autorig_utility
+            twist = autorig_utility.ik_twist_offset(leg_con,upper_ik,upper_target,fine_step=0.001)
+            cmds.setAttr(leg_con+'.twist',twist)
+            target = world(toes_con)*world(toes_drv).inverse()*toes_target
+            cmds.xform(toes_con,ws=True,m=list(target))
         finally:
             cmds.undoInfo(closeChunk=True)
 
