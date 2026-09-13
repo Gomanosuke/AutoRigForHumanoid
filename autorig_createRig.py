@@ -873,7 +873,9 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         foot_pos = [foot_matrix[12],foot_matrix[13],foot_matrix[14]]
         cmds.setAttr(F"{ik_parent}.LegLength",math.dist(upperLeg_pos,lowerLeg_pos)+math.dist(lowerLeg_pos,foot_pos),k=False,l=True)
 
-        autorig_utility.set_ik_preferred_angle(lowerLeg_ik_dummy, foot_ik_dummy)
+        #膝は前方(+Z)へ曲がる想定(PoleVectorの既定方向と揃える。詳細は
+        #autorig_utility.set_ik_preferred_angle、PoleVector計算部分のコメント参照)。
+        autorig_utility.set_ik_preferred_angle(lowerLeg_ik_dummy, foot_ik_dummy, preferred_world_direction=(0,0,1))
 
         #IKHandle作成
         ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_LegIkHandle",p=root_obj)
@@ -1860,7 +1862,9 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         autorig_utility.matrix_constraint(lowerArm_ik_dummy,lowerArm_ik)
         autorig_utility.matrix_constraint(hand_ik_dummy,hand_ik)
         
-        autorig_utility.set_ik_preferred_angle(lowerArm_ik_dummy, hand_ik_dummy)
+        #肘は後方(-Z)へ曲がる想定(PoleVectorの既定方向と揃える。詳細は
+        #autorig_utility.set_ik_preferred_angle、PoleVector計算部分のコメント参照)。
+        autorig_utility.set_ik_preferred_angle(lowerArm_ik_dummy, hand_ik_dummy, preferred_world_direction=(0,0,-1))
 
         #IKHandle作成
         ikHandle_parent = cmds.group(em=True,n=f"Grp_{clr}_ArmIkHandle",p=root_obj)

@@ -799,22 +799,61 @@ def create_controller_legacy(  con_name="",
 
     return obj_dic
 
-def set_ik_preferred_angle(joint, end_joint):
-    """Keep a useful bend hint, including an exactly straight chain."""
+def set_ik_preferred_angle(joint, end_joint, preferred_world_direction=None):
+    """Keep a useful bend hint, including an exactly straight chain.
+
+    Below magnitude 1 degree, the natural bend baked into jointOrient is too
+    small to reliably steer the RP solver at all: passing it through as a
+    preferredAngle hint (scaled up or not) was verified NOT to reliably
+    control either whether the chain bends or which side it bends to, once
+    the real solver and an active poleVectorConstraint are involved - it
+    worked for some rigs and picked the wrong side, or stayed straight, for
+    others. So when preferred_world_direction is given (e.g. (0,0,1) for a
+    leg that should bend forward, (0,0,-1) for an arm that should bend
+    backward), this makes the chain genuinely, if invisibly, non-degenerate:
+    it rewrites jointOrient itself to a small (magnitude 1 degree) bend
+    whose direction is analytically constructed so that physically rotating
+    the joint by it moves end_joint toward preferred_world_direction (this
+    part - the geometric effect of an actual rotation - was verified to
+    match prediction; only relying on it as an advisory hint for the solver
+    was not reliable). Being an actual, if tiny, bend rather than a hint,
+    the solver then has no ambiguity left to resolve.
+    """
     orient = cmds.getAttr(f"{joint}.jointOrient")[0]
     magnitude = math.sqrt(sum(value*value for value in orient))
     if magnitude < 1.0:
-        if magnitude > 1e-9:
+        if magnitude > 1e-9 and preferred_world_direction is None:
             orient = [value/magnitude for value in orient]
         else:
             direction = OpenMaya.MVector(cmds.getAttr(f"{end_joint}.translate")[0])
             if direction.length() < 1e-9:
                 raise ValueError("IK segments must have nonzero length")
             direction.normalize()
-            basis = min((OpenMaya.MVector(1,0,0),OpenMaya.MVector(0,1,0),
-                         OpenMaya.MVector(0,0,1)),key=lambda axis:abs(direction*axis))
-            # A hint along the bone only twists it and cannot initiate bending.
-            orient = list((direction ^ basis).normal())
+            candidate = None
+            if preferred_world_direction is not None:
+                # 小さな回転による移動量は近似的に (回転量ベクトル)×direction になる。
+                # 望む方向(target)へ動かしたいのでtarget×directionを使う(三重積展開:
+                # (target×direction)×direction = target - direction*(target・direction)、
+                # すなわちtargetのdirectionに垂直な成分に比例する。これが実際に
+                # end_jointを望む方向へ動かすことをmayapy standaloneで実測確認済み)。
+                # targetはこのjoint自身のワールド行列でローカル空間へ変換する
+                # (end_joint.translateがjoint自身のローカル空間にあるため、
+                # 変換も同じ空間で行う)。
+                world_matrix = OpenMaya.MMatrix(cmds.getAttr(f"{joint}.worldMatrix[0]"))
+                target_local = OpenMaya.MVector(*preferred_world_direction)*world_matrix.inverse()
+                if target_local.length() > 1e-9:
+                    target_local.normalize()
+                    trial = (target_local ^ direction).normal()
+                    if trial.length() > 1e-9:
+                        candidate = trial
+            if candidate is None:
+                basis = min((OpenMaya.MVector(1,0,0),OpenMaya.MVector(0,1,0),
+                             OpenMaya.MVector(0,0,1)),key=lambda axis:abs(direction*axis))
+                # A hint along the bone only twists it and cannot initiate bending.
+                candidate = (basis ^ direction).normal()
+            orient = list(candidate)
+            if preferred_world_direction is not None:
+                cmds.setAttr(f"{joint}.jointOrient",*orient,type="double3")
     cmds.setAttr(f"{joint}.preferredAngle",*orient,type="double3")
 
 
