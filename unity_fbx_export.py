@@ -7,6 +7,7 @@ The worker runs in a separate mayapy process against an immutable snapshot.
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -391,12 +392,21 @@ def run_job(job_path):
             for n in shapes
             for a in (cmds.aliasAttr(n, query=True) or [])[1::2]
         ]
+        shear_plugs = [
+            n + "." + a
+            for n in nodes
+            for a in ("shearXY", "shearXZ", "shearYZ")
+            if _source(n + "." + a) or cmds.getAttr(n + "." + a) != 0
+        ]
+        plugs += shear_plugs
         unsupported = [
             p
             for p in plugs
             if _source(p)
             and not cmds.nodeType(_source(p).split(".")[0]).startswith("animCurveT")
         ]
+        # Sample driven shear even when directly keyed: FBX cannot retain shear.
+        unsupported += [p for p in shear_plugs if _source(p) and p not in unsupported]
         stage(
             "baking_animation",
             baked_attributes=len(unsupported),
@@ -416,6 +426,38 @@ def run_job(job_path):
                 minimizeRotation=True,
             )
         report["bake_seconds"] = time.time() - started
+        max_shear = 0.0
+        for plug in shear_plugs:
+            values = cmds.keyframe(plug, query=True, valueChange=True) or [
+                cmds.getAttr(plug)
+            ]
+            if not all(math.isfinite(value) for value in values):
+                raise RuntimeError("Non-finite shear animation: " + plug)
+            magnitude = max(abs(value) for value in values)
+            max_shear = max(max_shear, magnitude)
+            if magnitude > 1e-5:
+                raise RuntimeError(
+                    "FBX cannot preserve shear above numerical noise: " + plug
+                )
+        # A baked child can override a still-connected compound. Disconnect the
+        # compound first so removing a child curve cannot expose that old driver.
+        for compound in {p.rsplit(".", 1)[0] + ".shear" for p in shear_plugs}:
+            cmds.setAttr(compound, lock=False)
+            if cmds.connectionInfo(compound, isExactDestination=True):
+                source = cmds.connectionInfo(compound, sourceFromDestination=True)
+                if source:
+                    cmds.disconnectAttr(source, compound)
+        for plug in shear_plugs:
+            # Only the disposable copy is changed; the deformation checks below
+            # independently limit the effect of clearing this numerical noise.
+            destination = cmds.connectionInfo(plug, getExactDestination=True)
+            source = _source(plug)
+            cmds.setAttr(plug, lock=False)
+            if source:
+                cmds.disconnectAttr(source, destination)
+            cmds.setAttr(plug, 0)
+        report["cleared_shear_channels"] = len(shear_plugs)
+        report["max_sampled_shear"] = max_shear
         # The FBX plug-in warns about constraints anywhere in the scene, even
         # outside the selection. They are obsolete in this disposable baked scene.
         obsolete = (cmds.ls(type="constraint") or []) + (cmds.ls(type="ikHandle") or [])
@@ -476,6 +518,7 @@ def run_job(job_path):
             "FBXImport -f " + json.dumps(str(temporary_fbx).replace("\\", "/")) + ";"
         )
         mesh_map = {}
+        import_renames = {}
         for mesh in meshes:
             transform_name = mesh.rsplit("|", 2)[-2]
             transforms = cmds.ls(transform_name, long=True, type="transform") or []
@@ -489,11 +532,47 @@ def run_job(job_path):
                     or []
                 )
             ]
+            if not candidates:
+                # Maya can append a numeric suffix when an FBX material already
+                # claimed a mesh transform's name. Require matching parent and
+                # vertex count, then verify the actual deformation as usual.
+                parent = mesh.rsplit("|", 2)[0]
+                expected_count = len(reference[frames[0]][mesh])
+                renamed = [
+                    t
+                    for t in (
+                        cmds.ls(transform_name + "*", long=True, type="transform") or []
+                    )
+                    if t.rsplit("|", 1)[0] == parent
+                    and re.fullmatch(
+                        re.escape(transform_name) + r"\d+", t.rsplit("|", 1)[-1]
+                    )
+                ]
+                candidates = [
+                    m
+                    for t in renamed
+                    for m in (
+                        cmds.listRelatives(
+                            t,
+                            shapes=True,
+                            fullPath=True,
+                            noIntermediate=True,
+                            type="mesh",
+                        )
+                        or []
+                    )
+                    if cmds.polyEvaluate(m, vertex=True) == expected_count
+                ]
+                if len(candidates) == 1:
+                    import_renames[mesh] = candidates[0]
             if len(candidates) != 1:
                 raise RuntimeError(
                     "Missing or ambiguous mesh after FBX import: " + transform_name
                 )
             mesh_map[mesh] = candidates[0]
+        if len(set(mesh_map.values())) != len(mesh_map):
+            raise RuntimeError("Multiple source meshes mapped to one imported mesh")
+        report["import_mesh_renames"] = import_renames
         report["roundtrip_tolerance_cm"] = float(job.get("roundtrip_tolerance_cm", 0.1))
         report["roundtrip_max_error_cm"] = _check_capture(
             reference, mesh_map, report["roundtrip_tolerance_cm"]
