@@ -42,6 +42,7 @@ def create_window():
 
     #各レイアウト読み込み
     show_picker(main_layout)
+    unity_fbx_frame(main_layout)
     fbx_frame(main_layout)
     create_frame = cmds.frameLayout(label="リギング",parent=main_layout,collapsable=True)
     setup_list = humanoid_setup(create_frame)
@@ -69,6 +70,20 @@ def show_picker(parent_layout:str):
     picker_frame = cmds.frameLayout(label="Picker",parent=parent_layout,collapsable=True)
 
     cmds.button(label="Picker表示",h=50,command=lambda *_:picker.show_ui())
+
+def unity_fbx_frame(parent_layout:str):
+    frame = cmds.frameLayout(label="Unity FBX", parent=parent_layout, collapsable=True)
+    cmds.button(
+        label="Unity用FBXエクスポーターを開く",
+        parent=frame,
+        height=40,
+        annotation="元シーンを保護してアニメーション付きFBXを書き出す画面を開きます。",
+        command=_show_unity_fbx_export,
+    )
+
+def _show_unity_fbx_export(*_):
+    from . import unity_fbx_export
+    unity_fbx_export.show()
 
 def fbx_frame(parent_layout:str):
     """
