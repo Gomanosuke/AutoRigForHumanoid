@@ -32,8 +32,10 @@ importlib.reload(rig_import)
 
 #タブ・常設エリアの色分け(用途ごとの目印。数値はcmds.frameLayout等のbackgroundColor)
 _COLOR_PICKER = (0.42, 0.34, 0.20)       #常設: 最頻用のポーズ操作
-_COLOR_RIG = (0.24, 0.32, 0.40)          #タブ: リグ制作一式(初期設定〜書き出し)
-_COLOR_FBX = (0.24, 0.38, 0.30)          #タブ: FBX入出力
+_COLOR_RIG = (0.24, 0.32, 0.40)          #タブ: リグ制作一式
+_COLOR_ACCESSORY = (0.32, 0.32, 0.30)    #タブ: アクセサリ(小さな機能の寄せ集め、控えめな色)
+_COLOR_FBX_IMPORT = (0.22, 0.36, 0.38)   #タブ: FBXインポート(取り込み側、青緑系)
+_COLOR_FBX_EXPORT = (0.24, 0.38, 0.30)   #タブ: FBXエクスポート(書き出し側、緑系)
 _COLOR_BLENDSHAPE = (0.38, 0.28, 0.38)   #タブ: ブレンドシェイプ
 
 def create_window():
@@ -70,12 +72,16 @@ def create_window():
     tabs = cmds.tabLayout(parent=main_layout,innerMarginWidth=6,innerMarginHeight=6)
 
     rig_tab = _rig_tab(tabs)
-    fbx_tab = _fbx_tab(tabs)
+    accessory_tab = _accessory_tab(tabs)
+    fbx_import_tab = _fbx_import_tab(tabs)
+    fbx_export_tab = _fbx_export_tab(tabs)
     blendshape_tab_layout = _blendshape_tab(tabs)
 
     cmds.tabLayout(tabs,edit=True,tabLabel=(
         (rig_tab,"リグ制作"),
-        (fbx_tab,"FBX"),
+        (accessory_tab,"アクセサリ"),
+        (fbx_import_tab,"FBXインポート"),
+        (fbx_export_tab,"FBXエクスポート"),
         (blendshape_tab_layout,"ブレンドシェイプ"),
     ))
 
@@ -97,7 +103,8 @@ def create_window():
 def _rig_tab(tabs:str):
     """
     「リグ制作」タブ: キャラクター立ち上げ時に使う一連の機能をまとめる
-    (関節の割り当て→ガイド作成→リグ作成→シェイプ調整の引き継ぎ→他ファイルからの読み込み)。
+    (関節の割り当て→ガイド作成→リグ作成→シェイプ調整の引き継ぎ)。
+    他ファイルのリグ読み込みは機能が少なく毛色も違うため「アクセサリ」タブへ移した。
 
     Parameters
     ----------
@@ -114,13 +121,13 @@ def _rig_tab(tabs:str):
     setup_list = humanoid_setup(create_frame)
     autorig_frame(create_frame,setup_list[1],setup_list[0])
     control_shape_frame(create_frame)
-    rig_import_frame(create_frame)
 
     return tab
 
-def _fbx_tab(tabs:str):
+def _accessory_tab(tabs:str):
     """
-    「FBX」タブ: Unity等の外部ツールとの間でFBXをやり取りする機能をまとめる。
+    「アクセサリ」タブ: 単体では機能が少なく、他の主要タブに置くほどではない
+    小さな機能をまとめる(現状は他ファイルのリグ読み込みのみ)。
 
     Parameters
     ----------
@@ -133,9 +140,51 @@ def _fbx_tab(tabs:str):
     tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
     column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
 
-    fbx_group = cmds.frameLayout(label="FBX入出力",parent=column,collapsable=True,backgroundColor=_COLOR_FBX)
+    accessory_group = cmds.frameLayout(label="アクセサリ",parent=column,collapsable=True,backgroundColor=_COLOR_ACCESSORY)
+    rig_import_frame(accessory_group)
+
+    return tab
+
+def _fbx_import_tab(tabs:str):
+    """
+    「FBXインポート」タブ: FBXをシーンへ取り込む側の機能をまとめる。
+    書き出し(エクスポート)は全く別の作業タイミングで使うため、あえて別タブにしている。
+
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このタブの中身(scrollLayout)
+    """
+    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
+    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
+
+    fbx_import_frame(column)
+
+    return tab
+
+def _fbx_export_tab(tabs:str):
+    """
+    「FBXエクスポート」タブ: FBXを書き出す側の機能をまとめる(Unity向け書き出しと、
+    日本語名を含むFBXの名前変換)。取り込み(インポート)とは全く別の作業タイミングで
+    使うため、あえて別タブにしている。
+
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このタブの中身(scrollLayout)
+    """
+    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
+    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
+
+    fbx_group = cmds.frameLayout(label="FBXエクスポート",parent=column,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
     unity_fbx_frame(fbx_group)
-    fbx_frame(fbx_group)
+    fbx_rename_frame(fbx_group)
 
     return tab
 
@@ -190,9 +239,10 @@ def _show_unity_fbx_export(*_):
     from . import unity_fbx_export
     unity_fbx_export.show()
 
-def fbx_frame(parent_layout:str):
+def fbx_import_frame(parent_layout:str):
     """
-    FBXから日本語削除
+    FBXをシーンへ取り込む側の機能(実際にMayaへインポートする操作と、取り込み直後に
+    必要になりがちなスケール修正)。書き出し側は`fbx_rename_frame`/`unity_fbx_frame`参照。
 
     Parameters
     ----------
@@ -200,7 +250,30 @@ def fbx_frame(parent_layout:str):
 
     Returns
     -------
-        list [character_name,textField_dic]
+        無し
+    """
+    #フレーム
+    frame = cmds.frameLayout(label="FBXインポート",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_IMPORT)
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=frame)
+    cmds.button(label="Import FBX",command=lambda *_:fbx_shape_rename.import_fbx())
+
+    cmds.rowLayout(nc=1,adjustableColumn=1,p=frame)
+    cmds.button(label="Freeze Scale",command=lambda *_:fbx_shape_rename.fix_skin_scale_offset())
+
+def fbx_rename_frame(parent_layout:str):
+    """
+    FBX(ASCII)内のブレンドシェイプ名を一括置換し、書き出し用の別FBXを作る機能
+    (日本語名等、Unity側で問題になりがちな名前を仮の名前へ変換/復元する)。
+    現在のMayaシーンには触れず、ファイルからファイルへの変換のみを行う。
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+
+    Returns
+    -------
+        無し
     """
     #フレーム
     fbx_frame = cmds.frameLayout(label="FBX名の整形(日本語→仮名→復元)",parent=parent_layout,collapsable=True)
@@ -208,7 +281,7 @@ def fbx_frame(parent_layout:str):
     path_list=[]
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=fbx_frame)
-    cmds.text(label="Import FBX :")
+    cmds.text(label="変換元 FBX :")
     import_fbx_path = cmds.textField()
     path_list.append(import_fbx_path)
     cmds.button(label="参照",command=lambda *_:fbx_shape_rename.import_path(path_list))
@@ -220,7 +293,7 @@ def fbx_frame(parent_layout:str):
     cmds.button(label="参照",command=lambda *_:fbx_shape_rename.json_path(path_list))
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=fbx_frame)
-    cmds.text(label="Export FBX :")
+    cmds.text(label="変換後 FBX :")
     export_fbx_path = cmds.textField()
     path_list.append(export_fbx_path)
     cmds.button(label="参照",command=lambda *_:fbx_shape_rename.export_path(path_list))
@@ -233,12 +306,6 @@ def fbx_frame(parent_layout:str):
     cmds.menuItem( label="Kay To Value", )
     cmds.menuItem( label="Value To Kay", )
     cmds.button(label="FBX出力",command=lambda *_:fbx_shape_rename.export_fbx_init(path_list,cmds.optionMenu(option,q=True,sl=True)))
-
-    cmds.rowLayout(nc=1,adjustableColumn=1,p=fbx_frame)
-    cmds.button(label="Import FBX",command=lambda *_:fbx_shape_rename.import_fbx())
-
-    cmds.rowLayout(nc=1,adjustableColumn=1,p=fbx_frame)
-    cmds.button(label="Freeze Scale",command=lambda *_:fbx_shape_rename.fix_skin_scale_offset())
 
 def _joint_field(parent:str, label:str, key:str, textField_dic:dict, str_cw:int):
     """
@@ -502,7 +569,7 @@ def rig_import_frame(parent_layout:str):
         無し
     """
     #フレーム
-    import_frame = cmds.frameLayout(label="④ 別ファイルのリグを読み込む(UUID維持)",parent=parent_layout,collapsable=True,collapse=True)
+    import_frame = cmds.frameLayout(label="別ファイルのリグを読み込む(UUID維持)",parent=parent_layout,collapsable=True)
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=import_frame)
     cmds.text(label="Maya Scene : ")
