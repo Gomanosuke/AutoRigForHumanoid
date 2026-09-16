@@ -651,7 +651,169 @@ def launch(root, output, start, end):
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
     (folder / "pid.txt").write_text(str(process.pid))
+    _jobs[str(folder)] = {
+        "folder": folder,
+        "output": str(output),
+        "root": roots[0],
+        "started": time.monotonic(),
+        "process": process,
+        "report": {"status": "running", "stage": "starting"},
+    }
     return folder
+
+
+def _refresh_jobs():
+    """Poll every worker without opening modal UI or changing the source scene."""
+    for job in _jobs.values():
+        if job["report"].get("status") in ("complete", "failed"):
+            continue
+        report_file = job["folder"] / "report.json"
+        try:
+            job["report"] = json.loads(report_file.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            pass  # The worker may be starting or replacing its report.
+        process = job.get("process")
+        if (
+            process is not None
+            and process.poll() is not None
+            and job["report"].get("status") not in ("complete", "failed")
+        ):
+            job["report"] = {
+                "status": "failed",
+                "stage": "failed",
+                "error": "Worker exited without a final report (exit code %s). See worker.log."
+                % process.returncode,
+            }
+        if job["report"].get("status") in ("complete", "failed"):
+            job["finished"] = time.monotonic()
+    if _job_window is not None:
+        _job_window.refresh()
+    if _job_timer is not None and all(
+        j["report"].get("status") in ("complete", "failed") for j in _jobs.values()
+    ):
+        _job_timer.stop()
+
+
+def show_jobs(*_):
+    """A persistent, non-modal overview for concurrent exports."""
+    global _job_window, _job_timer
+    from maya import OpenMayaUI
+    from PySide6 import QtCore, QtWidgets
+    from shiboken6 import wrapInstance
+
+    if _job_window is None:
+
+        class JobWindow(QtWidgets.QDialog):
+            def __init__(self):
+                parent = wrapInstance(
+                    int(OpenMayaUI.MQtUtil.mainWindow()), QtWidgets.QWidget
+                )
+                super().__init__(parent)
+                self.setWindowTitle("Unity FBX - 書き出し状況")
+                self.resize(900, 400)
+                layout = QtWidgets.QVBoxLayout(self)
+                layout.addWidget(
+                    QtWidgets.QLabel(
+                        "各ジョブの処理段階と経過時間を表示します。全体の完了率ではありません。"
+                    )
+                )
+                self.table = QtWidgets.QTableWidget(0, 4)
+                self.table.setHorizontalHeaderLabels(
+                    ["出力ファイル", "対象", "処理段階", "経過時間"]
+                )
+                self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+                self.table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+                self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+                self.table.horizontalHeader().setSectionResizeMode(
+                    QtWidgets.QHeaderView.Stretch
+                )
+                layout.addWidget(self.table)
+                self.details = QtWidgets.QPlainTextEdit()
+                self.details.setReadOnly(True)
+                self.details.setMaximumHeight(120)
+                layout.addWidget(self.details)
+                row = QtWidgets.QHBoxLayout()
+                for label, filename in [
+                    ("ジョブフォルダを開く", None),
+                    ("ログを開く", "worker.log"),
+                ]:
+                    button = QtWidgets.QPushButton(label)
+                    button.clicked.connect(
+                        lambda checked=False, f=filename: self.open_path(f)
+                    )
+                    row.addWidget(button)
+                layout.addLayout(row)
+                self.table.itemSelectionChanged.connect(self.update_details)
+
+            def selected_job(self):
+                row = self.table.currentRow()
+                return list(_jobs.values())[row] if 0 <= row < len(_jobs) else None
+
+            def update_details(self):
+                job = self.selected_job()
+                if job:
+                    self.details.setPlainText(
+                        "出力: "
+                        + job["output"]
+                        + "\nジョブ: "
+                        + str(job["folder"])
+                        + "\n"
+                        + job["report"].get("error", "")
+                    )
+
+            def open_path(self, filename):
+                from PySide6 import QtGui
+
+                job = self.selected_job()
+                if job:
+                    path = job["folder"] / filename if filename else job["folder"]
+                    QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(path)))
+
+            def refresh(self):
+                labels = {
+                    "starting": "ワーカー起動中",
+                    "opening_snapshot": "シーン読み込み中",
+                    "capturing_reference": "元の変形を記録中",
+                    "cleaning_topology": "履歴整理中",
+                    "baking_animation": "アニメーションのベイク中",
+                    "writing_fbx": "FBX出力中",
+                    "roundtrip_validation": "再読み込み・検証中",
+                    "complete": "完了",
+                    "failed": "失敗",
+                }
+                self.table.setRowCount(len(_jobs))
+                for row, job in enumerate(_jobs.values()):
+                    elapsed = max(
+                        0, int(job.get("finished", time.monotonic()) - job["started"])
+                    )
+                    stage = job["report"].get("stage", "starting")
+                    values = [
+                        Path(job["output"]).name,
+                        job["root"],
+                        labels.get(stage, stage),
+                        "%02d:%02d:%02d"
+                        % (elapsed // 3600, elapsed // 60 % 60, elapsed % 60),
+                    ]
+                    for column, value in enumerate(values):
+                        item = self.table.item(row, column)
+                        if item is None:
+                            item = QtWidgets.QTableWidgetItem()
+                            self.table.setItem(row, column, item)
+                        item.setText(value)
+                        item.setToolTip(value)
+                if self.table.currentRow() < 0 and _jobs:
+                    self.table.selectRow(len(_jobs) - 1)
+                self.update_details()
+
+        _job_window = JobWindow()
+    if _job_timer is None:
+        _job_timer = QtCore.QTimer(_job_window)
+        _job_timer.timeout.connect(_refresh_jobs)
+    _job_timer.start(1000)
+    _refresh_jobs()
+    _job_window.show()
+    _job_window.raise_()
+    return _job_window
 
 
 def show():
@@ -711,43 +873,18 @@ def show():
             label="Export running. Backup, status and log:\n" + str(folder),
         )
         print("Unity FBX export job: " + str(folder))
-        from PySide6 import QtCore
-
-        timer = QtCore.QTimer()
-
-        def poll():
-            report_file = folder / "report.json"
-            if not report_file.exists():
-                return
-            try:
-                report = json.loads(report_file.read_text(encoding="utf-8"))
-            except (ValueError, OSError):
-                return
-            if cmds.control(status, exists=True):
-                cmds.text(
-                    status,
-                    edit=True,
-                    label=report.get("stage", "running") + "\n" + str(folder),
-                )
-            if report.get("status") in ("complete", "failed"):
-                timer.stop()
-                if report["status"] == "complete":
-                    cmds.confirmDialog(
-                        title="FBX export complete", message=report["output"]
-                    )
-                else:
-                    cmds.warning("FBX export failed. See " + str(report_file))
-
-        timer.timeout.connect(poll)
-        timer.start(2000)
-        _timers.append(timer)
+        show_jobs()
 
     cmds.button(label="Export and verify on a copy", command=export, height=35)
+    cmds.button(label="書き出し状況を表示", command=show_jobs, height=30)
     cmds.showWindow(window)
     return window
 
 
-_timers = []
+# Keep active jobs when this module is reloaded in a running Maya session.
+_jobs = globals().get("_jobs", {})
+_job_window = globals().get("_job_window")
+_job_timer = globals().get("_job_timer")
 
 if __name__ == "__main__":
     import maya.standalone
