@@ -73,15 +73,11 @@ def create_window():
 
     rig_tab = _rig_tab(tabs)
     accessory_tab = _accessory_tab(tabs)
-    fbx_import_tab = _fbx_import_tab(tabs)
-    fbx_export_tab = _fbx_export_tab(tabs)
     blendshape_tab_layout = _blendshape_tab(tabs)
 
     cmds.tabLayout(tabs,edit=True,tabLabel=(
         (rig_tab,"リグ制作"),
         (accessory_tab,"アクセサリ"),
-        (fbx_import_tab,"FBXインポート"),
-        (fbx_export_tab,"FBXエクスポート"),
         (blendshape_tab_layout,"ブレンドシェイプ"),
     ))
 
@@ -127,7 +123,9 @@ def _rig_tab(tabs:str):
 def _accessory_tab(tabs:str):
     """
     「アクセサリ」タブ: 単体では機能が少なく、他の主要タブに置くほどではない
-    小さな機能をまとめる(現状は他ファイルのリグ読み込みのみ)。
+    小さな機能をまとめる(他ファイルのリグ読み込み、FBXの入出力)。
+    FBXの入力・出力は全く別の作業タイミングで使うため、このタブの中でさらに
+    サブタブへ分けている。
 
     Parameters
     ----------
@@ -138,17 +136,22 @@ def _accessory_tab(tabs:str):
         string : このタブの中身(scrollLayout)
     """
     tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
-    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
 
-    accessory_group = cmds.frameLayout(label="アクセサリ",parent=column,collapsable=True,backgroundColor=_COLOR_ACCESSORY)
-    rig_import_frame(accessory_group)
+    sub_tabs = cmds.tabLayout(parent=tab,innerMarginWidth=6,innerMarginHeight=6)
+    rig_import_tab = _accessory_rig_import_tab(sub_tabs)
+    fbx_import_tab = _accessory_fbx_import_tab(sub_tabs)
+    fbx_export_tab = _accessory_fbx_export_tab(sub_tabs)
+    cmds.tabLayout(sub_tabs,edit=True,tabLabel=(
+        (rig_import_tab,"リグ読み込み"),
+        (fbx_import_tab,"FBXインポート"),
+        (fbx_export_tab,"FBXエクスポート"),
+    ))
 
     return tab
 
-def _fbx_import_tab(tabs:str):
+def _accessory_rig_import_tab(tabs:str):
     """
-    「FBXインポート」タブ: FBXをシーンへ取り込む側の機能をまとめる。
-    書き出し(エクスポート)は全く別の作業タイミングで使うため、あえて別タブにしている。
+    「アクセサリ」タブ内サブタブ「リグ読み込み」。
 
     Parameters
     ----------
@@ -156,20 +159,15 @@ def _fbx_import_tab(tabs:str):
 
     Returns
     -------
-        string : このタブの中身(scrollLayout)
+        string : このサブタブの中身(columnLayout)
     """
-    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
-    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
-
-    fbx_import_frame(column)
-
+    tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
+    rig_import_frame(tab)
     return tab
 
-def _fbx_export_tab(tabs:str):
+def _accessory_fbx_import_tab(tabs:str):
     """
-    「FBXエクスポート」タブ: FBXを書き出す側の機能をまとめる(Unity向け書き出しと、
-    日本語名を含むFBXの名前変換)。取り込み(インポート)とは全く別の作業タイミングで
-    使うため、あえて別タブにしている。
+    「アクセサリ」タブ内サブタブ「FBXインポート」。FBXをシーンへ取り込む側の機能。
 
     Parameters
     ----------
@@ -177,15 +175,28 @@ def _fbx_export_tab(tabs:str):
 
     Returns
     -------
-        string : このタブの中身(scrollLayout)
+        string : このサブタブの中身(columnLayout)
     """
-    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
-    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
+    tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
+    fbx_import_frame(tab)
+    return tab
 
-    fbx_group = cmds.frameLayout(label="FBXエクスポート",parent=column,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
-    unity_fbx_frame(fbx_group)
-    fbx_rename_frame(fbx_group)
+def _accessory_fbx_export_tab(tabs:str):
+    """
+    「アクセサリ」タブ内サブタブ「FBXエクスポート」。FBXを書き出す側の機能
+    (Unity向け書き出しと、日本語名を含むFBXの名前変換)。
 
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このサブタブの中身(columnLayout)
+    """
+    tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
+    unity_fbx_frame(tab)
+    fbx_rename_frame(tab)
     return tab
 
 def _blendshape_tab(tabs:str):
@@ -226,7 +237,7 @@ def show_picker(parent_layout:str):
     return picker_frame
 
 def unity_fbx_frame(parent_layout:str):
-    frame = cmds.frameLayout(label="Unity FBX 書き出し",parent=parent_layout,collapsable=True)
+    frame = cmds.frameLayout(label="Unity FBX 書き出し",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
     cmds.button(
         label="Unity用FBXエクスポーターを開く",
         parent=frame,
@@ -276,7 +287,7 @@ def fbx_rename_frame(parent_layout:str):
         無し
     """
     #フレーム
-    fbx_frame = cmds.frameLayout(label="FBX名の整形(日本語→仮名→復元)",parent=parent_layout,collapsable=True)
+    fbx_frame = cmds.frameLayout(label="FBX名の整形(日本語→仮名→復元)",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
 
     path_list=[]
 
@@ -569,7 +580,7 @@ def rig_import_frame(parent_layout:str):
         無し
     """
     #フレーム
-    import_frame = cmds.frameLayout(label="別ファイルのリグを読み込む(UUID維持)",parent=parent_layout,collapsable=True)
+    import_frame = cmds.frameLayout(label="別ファイルのリグを読み込む(UUID維持)",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_ACCESSORY)
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=import_frame)
     cmds.text(label="Maya Scene : ")
