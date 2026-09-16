@@ -36,21 +36,6 @@ _COLOR_RIG = (0.24, 0.32, 0.40)          #タブ: リグ制作一式(初期設�
 _COLOR_FBX = (0.24, 0.38, 0.30)          #タブ: FBX入出力
 _COLOR_BLENDSHAPE = (0.38, 0.28, 0.38)   #タブ: ブレンドシェイプ
 
-def _section_note(parent_layout:str, text:str):
-    """
-    タブ・フレームの先頭に添える一行説明。用途が一目で分かるようにするための小さな注記。
-
-    Parameters
-    ----------
-        string parent_layout : 親のレイアウト名
-        string text : 説明文
-
-    Returns
-    -------
-        無し
-    """
-    cmds.text(label=text,align="left",parent=parent_layout,height=18)
-
 def create_window():
     """
     ウィンドウを表示する
@@ -70,12 +55,16 @@ def create_window():
         cmds.deleteUI(windowname)
     cmds.window(windowname,title="AutoRigForHumanoid",widthHeight=(420,700))
 
-    main_layout = cmds.columnLayout(adjustableColumn=True,rowSpacing=2)
+    #columnLayoutだと子は各々の希望サイズのままにしかならず、tabLayout(=下のタブの
+    #中身)がウィンドウの余った縦幅まで伸びてくれない。formLayoutでPicker(上端に
+    #固定)とtabLayout(残り全部)を明示的に貼り付けて、タブの中のスクロールが
+    #ウィンドウを縦に広げた分だけちゃんと広がるようにする。
+    main_layout = cmds.formLayout()
 
     #Pickerは常設(タブ化しない。理由は本ファイル冒頭のコメント参照)
-    show_picker(main_layout)
+    picker_frame = show_picker(main_layout)
 
-    cmds.separator(height=8,style="in",parent=main_layout)
+    separator = cmds.separator(height=8,style="in",parent=main_layout)
 
     #用途ごとのタブ
     tabs = cmds.tabLayout(parent=main_layout,innerMarginWidth=6,innerMarginHeight=6)
@@ -89,6 +78,18 @@ def create_window():
         (fbx_tab,"FBX"),
         (blendshape_tab_layout,"ブレンドシェイプ"),
     ))
+
+    cmds.formLayout(main_layout,edit=True,
+        attachForm=[
+            (picker_frame,"top",4),(picker_frame,"left",4),(picker_frame,"right",4),
+            (separator,"left",4),(separator,"right",4),
+            (tabs,"left",0),(tabs,"right",0),(tabs,"bottom",0),
+        ],
+        attachControl=[
+            (separator,"top",4,picker_frame),
+            (tabs,"top",4,separator),
+        ],
+    )
 
     #タブの表示
     cmds.showWindow(windowname)
@@ -110,7 +111,6 @@ def _rig_tab(tabs:str):
     column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
 
     create_frame = cmds.frameLayout(label="リギング",parent=column,collapsable=True,backgroundColor=_COLOR_RIG)
-    _section_note(create_frame,"新規キャラクターのリグを作る一連の操作です。上から順に使います。")
     setup_list = humanoid_setup(create_frame)
     autorig_frame(create_frame,setup_list[1],setup_list[0])
     control_shape_frame(create_frame)
@@ -134,7 +134,6 @@ def _fbx_tab(tabs:str):
     column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
 
     fbx_group = cmds.frameLayout(label="FBX入出力",parent=column,collapsable=True,backgroundColor=_COLOR_FBX)
-    _section_note(fbx_group,"Unity向けの書き出しと、日本語名を含むFBXの整形・出力です。")
     unity_fbx_frame(fbx_group)
     fbx_frame(fbx_group)
 
@@ -168,13 +167,14 @@ def show_picker(parent_layout:str):
 
     Returns
     -------
-        list [character_name,textField_dic]
+        string : 作成したframeLayout(呼び出し元でformLayoutに貼り付けるため)
     """
     #フレーム
     picker_frame = cmds.frameLayout(label="Picker",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_PICKER)
-    _section_note(picker_frame,"リグ作成後、ポーズ付けで最もよく使う機能です。")
 
     cmds.button(label="Picker表示",h=50,backgroundColor=(0.6,0.48,0.24),command=lambda *_:picker.show_ui())
+
+    return picker_frame
 
 def unity_fbx_frame(parent_layout:str):
     frame = cmds.frameLayout(label="Unity FBX 書き出し",parent=parent_layout,collapsable=True)
@@ -527,7 +527,6 @@ def blendshape_frame(parent_layout:str,character_name:str):
     """
     #フレーム
     blendshape_frame = cmds.frameLayout(label="ブレンドシェイプコントローラー",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_BLENDSHAPE)
-    _section_note(blendshape_frame,"表情等のブレンドシェイプに、スライダー付きコントローラーを作ります。")
 
     width=360
 
