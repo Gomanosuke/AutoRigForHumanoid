@@ -18,6 +18,39 @@ importlib.reload(control_shape)
 from . import rig_import
 importlib.reload(rig_import)
 
+"""
+機能追加のたびに縦へ積み上がって使いにくくなっていたため、用途ごとにタブへ分け、
+それぞれに色を付けて見分けやすくした。
+
+- Picker(ポーズ操作)はリグ制作後に日常的に使う頻度が他と桁違いに高いため、
+  タブの中に隠さずウィンドウ上部に常設する。
+- それ以外(リグ制作一式・FBX入出力・ブレンドシェイプ)は、キャラクター立ち上げ時や
+  表情セットアップ時など「まとまった作業をする時だけ開く」ものなのでタブ化する。
+- 色はMayaのデフォルトのグレーから大きく外れない範囲の淡い色味に留め、
+  彩度を上げすぎてテキストが読みにくくならないようにしている。
+"""
+
+#タブ・常設エリアの色分け(用途ごとの目印。数値はcmds.frameLayout等のbackgroundColor)
+_COLOR_PICKER = (0.42, 0.34, 0.20)       #常設: 最頻用のポーズ操作
+_COLOR_RIG = (0.24, 0.32, 0.40)          #タブ: リグ制作一式(初期設定〜書き出し)
+_COLOR_FBX = (0.24, 0.38, 0.30)          #タブ: FBX入出力
+_COLOR_BLENDSHAPE = (0.38, 0.28, 0.38)   #タブ: ブレンドシェイプ
+
+def _section_note(parent_layout:str, text:str):
+    """
+    タブ・フレームの先頭に添える一行説明。用途が一目で分かるようにするための小さな注記。
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+        string text : 説明文
+
+    Returns
+    -------
+        無し
+    """
+    cmds.text(label=text,align="left",parent=parent_layout,height=18)
+
 def create_window():
     """
     ウィンドウを表示する
@@ -35,28 +68,99 @@ def create_window():
     #古いウィンドウ削除 新規作成
     if cmds.window(windowname, exists=True):
         cmds.deleteUI(windowname)
-    cmds.window(windowname)
+    cmds.window(windowname,title="AutoRigForHumanoid",widthHeight=(420,700))
 
-    # メインレイアウト作成
-    main_layout = cmds.scrollLayout(horizontalScrollBarThickness=16, verticalScrollBarThickness=16, childResizable=True)
+    main_layout = cmds.columnLayout(adjustableColumn=True,rowSpacing=2)
 
-    #各レイアウト読み込み
+    #Pickerは常設(タブ化しない。理由は本ファイル冒頭のコメント参照)
     show_picker(main_layout)
-    unity_fbx_frame(main_layout)
-    fbx_frame(main_layout)
-    create_frame = cmds.frameLayout(label="リギング",parent=main_layout,collapsable=True)
-    setup_list = humanoid_setup(create_frame)
-    autorig_frame(create_frame,setup_list[1],setup_list[0])
-    control_shape_frame(create_frame)
-    rig_import_frame(create_frame)
-    blendshape_frame(main_layout,setup_list[0])
+
+    cmds.separator(height=8,style="in",parent=main_layout)
+
+    #用途ごとのタブ
+    tabs = cmds.tabLayout(parent=main_layout,innerMarginWidth=6,innerMarginHeight=6)
+
+    rig_tab = _rig_tab(tabs)
+    fbx_tab = _fbx_tab(tabs)
+    blendshape_tab_layout = _blendshape_tab(tabs)
+
+    cmds.tabLayout(tabs,edit=True,tabLabel=(
+        (rig_tab,"リグ制作"),
+        (fbx_tab,"FBX"),
+        (blendshape_tab_layout,"ブレンドシェイプ"),
+    ))
 
     #タブの表示
     cmds.showWindow(windowname)
 
+def _rig_tab(tabs:str):
+    """
+    「リグ制作」タブ: キャラクター立ち上げ時に使う一連の機能をまとめる
+    (関節の割り当て→ガイド作成→リグ作成→シェイプ調整の引き継ぎ→他ファイルからの読み込み)。
+
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このタブの中身(scrollLayout)
+    """
+    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
+    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
+
+    create_frame = cmds.frameLayout(label="リギング",parent=column,collapsable=True,backgroundColor=_COLOR_RIG)
+    _section_note(create_frame,"新規キャラクターのリグを作る一連の操作です。上から順に使います。")
+    setup_list = humanoid_setup(create_frame)
+    autorig_frame(create_frame,setup_list[1],setup_list[0])
+    control_shape_frame(create_frame)
+    rig_import_frame(create_frame)
+
+    return tab
+
+def _fbx_tab(tabs:str):
+    """
+    「FBX」タブ: Unity等の外部ツールとの間でFBXをやり取りする機能をまとめる。
+
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このタブの中身(scrollLayout)
+    """
+    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
+    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
+
+    fbx_group = cmds.frameLayout(label="FBX入出力",parent=column,collapsable=True,backgroundColor=_COLOR_FBX)
+    _section_note(fbx_group,"Unity向けの書き出しと、日本語名を含むFBXの整形・出力です。")
+    unity_fbx_frame(fbx_group)
+    fbx_frame(fbx_group)
+
+    return tab
+
+def _blendshape_tab(tabs:str):
+    """
+    「ブレンドシェイプ」タブ: 表情等のブレンドシェイプ操作用コントローラー作成機能をまとめる。
+
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このタブの中身(scrollLayout)
+    """
+    tab = cmds.scrollLayout(parent=tabs,horizontalScrollBarThickness=16,verticalScrollBarThickness=16,childResizable=True)
+    column = cmds.columnLayout(parent=tab,adjustableColumn=True,rowSpacing=4)
+    blendshape_frame(column,"")
+
+    return tab
+
 def show_picker(parent_layout:str):
     """
-    ピッカー表示
+    ピッカー表示。他の機能より圧倒的に使用頻度が高いため、タブの外の常設エリアに置く。
 
     Parameters
     ----------
@@ -67,12 +171,13 @@ def show_picker(parent_layout:str):
         list [character_name,textField_dic]
     """
     #フレーム
-    picker_frame = cmds.frameLayout(label="Picker",parent=parent_layout,collapsable=True)
+    picker_frame = cmds.frameLayout(label="Picker",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_PICKER)
+    _section_note(picker_frame,"リグ作成後、ポーズ付けで最もよく使う機能です。")
 
-    cmds.button(label="Picker表示",h=50,command=lambda *_:picker.show_ui())
+    cmds.button(label="Picker表示",h=50,backgroundColor=(0.6,0.48,0.24),command=lambda *_:picker.show_ui())
 
 def unity_fbx_frame(parent_layout:str):
-    frame = cmds.frameLayout(label="Unity FBX", parent=parent_layout, collapsable=True)
+    frame = cmds.frameLayout(label="Unity FBX 書き出し",parent=parent_layout,collapsable=True)
     cmds.button(
         label="Unity用FBXエクスポーターを開く",
         parent=frame,
@@ -98,7 +203,7 @@ def fbx_frame(parent_layout:str):
         list [character_name,textField_dic]
     """
     #フレーム
-    fbx_frame = cmds.frameLayout(label="Edit FBX",parent=parent_layout,collapsable=True)
+    fbx_frame = cmds.frameLayout(label="FBX名の整形(日本語→仮名→復元)",parent=parent_layout,collapsable=True)
 
     path_list=[]
 
@@ -173,7 +278,7 @@ def humanoid_setup(parent_layout:str):
         list [character_name,textField_dic]
     """
     #フレーム
-    setup_frame = cmds.frameLayout(label="初期設定",parent=parent_layout,collapsable=True)
+    setup_frame = cmds.frameLayout(label="① 初期設定(関節の割り当て)",parent=parent_layout,collapsable=True)
     #名前幅
     str_cw=120
 
@@ -265,7 +370,8 @@ _METACARPAL_FINGERS = ("index","middle","ring","little")
 
 def hand_frame(setup_frame:str, str_cw:int, side:str, side_label:str):
     """
-    片手ぶんの指の入力欄(旧lefthand_frame/righthand_frameの共通実装)
+    片手ぶんの指の入力欄(旧lefthand_frame/righthand_frameの共通実装)。
+    項目数が多く一覧性を損ねやすいので、既定で折りたたんでおく。
 
     Parameters
     ----------
@@ -280,7 +386,7 @@ def hand_frame(setup_frame:str, str_cw:int, side:str, side_label:str):
     """
     textField_dic={}
 
-    hand_tab = cmds.frameLayout(label=f"{side_label} Hand",parent=setup_frame,collapsable=True,p=setup_frame)
+    hand_tab = cmds.frameLayout(label=f"{side_label} Hand",parent=setup_frame,collapsable=True,collapse=True,p=setup_frame)
 
     for finger in _FINGERS:
         for number,phalange_label in _PHALANGES:
@@ -323,7 +429,7 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
         無し
     """
     #フレーム
-    setup_frame = cmds.frameLayout(label="リグ制作",parent=parent_layout,collapsable=True)
+    setup_frame = cmds.frameLayout(label="② リグ制作(ガイド作成→リグ作成)",parent=parent_layout,collapsable=True)
 
     cmds.rowLayout(nc=2,p=setup_frame)
     primary_option = cmds.optionMenu(label="主軸")
@@ -339,7 +445,7 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
     cmds.button(label="Y",command=lambda *_:autorig_preparation.rotate_90("Y"),w=rotate_w)
     cmds.button(label="Z",command=lambda *_:autorig_preparation.rotate_90("Z"),w=rotate_w)
 
-    cmds.button(label="リグ作成",command=lambda *_:autorig_createBase.create_rig(textField_dic=textField_dic,character_name=character_name),p=setup_frame)
+    cmds.button(label="リグ作成",height=32,backgroundColor=(0.32,0.44,0.56),command=lambda *_:autorig_createBase.create_rig(textField_dic=textField_dic,character_name=character_name),p=setup_frame)
 
 def control_shape_frame(parent_layout:str):
     """
@@ -359,7 +465,7 @@ def control_shape_frame(parent_layout:str):
         無し
     """
     #フレーム
-    shape_frame = cmds.frameLayout(label="コントロールシェイプ",parent=parent_layout,collapsable=True)
+    shape_frame = cmds.frameLayout(label="③ コントロールシェイプの引き継ぎ(リグ作り直し時)",parent=parent_layout,collapsable=True,collapse=True)
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=shape_frame)
     cmds.text(label="Export Shape Path: ")
@@ -396,7 +502,7 @@ def rig_import_frame(parent_layout:str):
         無し
     """
     #フレーム
-    import_frame = cmds.frameLayout(label="リグ読み込み",parent=parent_layout,collapsable=True)
+    import_frame = cmds.frameLayout(label="④ 別ファイルのリグを読み込む(UUID維持)",parent=parent_layout,collapsable=True,collapse=True)
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=import_frame)
     cmds.text(label="Maya Scene : ")
@@ -420,7 +526,8 @@ def blendshape_frame(parent_layout:str,character_name:str):
         無し
     """
     #フレーム
-    blendshape_frame = cmds.frameLayout(label="ブレンドシェイプコントローラー",parent=parent_layout,collapsable=True)
+    blendshape_frame = cmds.frameLayout(label="ブレンドシェイプコントローラー",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_BLENDSHAPE)
+    _section_note(blendshape_frame,"表情等のブレンドシェイプに、スライダー付きコントローラーを作ります。")
 
     width=360
 
@@ -454,7 +561,7 @@ def blendshape_frame(parent_layout:str,character_name:str):
     cmds.button(label="適用",command=lambda *_:blendshape.setOptionMenu(optionMenus,blendShape))
 
     #1*1コントローラー
-    frame1x1 = cmds.frameLayout(label="1*1コントローラー",parent=blendshape_frame,collapsable=True)
+    frame1x1 = cmds.frameLayout(label="1*1コントローラー",parent=blendshape_frame,collapsable=True,collapse=True)
     cmds.rowLayout(nc=2,adjustableColumn=2,p=frame1x1)
     cmds.text(label="名前 : ")
     name1x1 = cmds.textField()
@@ -467,7 +574,7 @@ def blendshape_frame(parent_layout:str,character_name:str):
     cmds.button(label="作成",command=lambda *_:blendshape.create1x1con(blendShape,name1x1,color1x1,blendshape1_1x1))
 
     #2*1コントローラー
-    frame2x1 = cmds.frameLayout(label="2*1コントローラー",parent=blendshape_frame,collapsable=True)
+    frame2x1 = cmds.frameLayout(label="2*1コントローラー",parent=blendshape_frame,collapsable=True,collapse=True)
     cmds.rowLayout(nc=2,adjustableColumn=2,p=frame2x1)
     cmds.text(label="名前 : ")
     name2x1 = cmds.textField()
@@ -483,7 +590,7 @@ def blendshape_frame(parent_layout:str,character_name:str):
     cmds.button(label="作成",command=lambda *_:blendshape.create2x1con(blendShape,name2x1,color2x1,blendshape1_2x1,blendshape2_2x1))
 
     #1*2コントローラー
-    frame1x2 = cmds.frameLayout(label="1*2コントローラー",parent=blendshape_frame,collapsable=True)
+    frame1x2 = cmds.frameLayout(label="1*2コントローラー",parent=blendshape_frame,collapsable=True,collapse=True)
     cmds.rowLayout(nc=2,adjustableColumn=2,p=frame1x2)
     cmds.text(label="名前 : ")
     name1x2 = cmds.textField()
@@ -499,7 +606,7 @@ def blendshape_frame(parent_layout:str,character_name:str):
     cmds.button(label="作成",command=lambda *_:blendshape.create1x2con(blendShape,name1x2,color1x2,blendshape1_1x2,blendshape2_1x2))
 
     #2*2コントローラー
-    frame2x2 = cmds.frameLayout(label="2*2コントローラー",parent=blendshape_frame,collapsable=True)
+    frame2x2 = cmds.frameLayout(label="2*2コントローラー",parent=blendshape_frame,collapsable=True,collapse=True)
     cmds.rowLayout(nc=2,adjustableColumn=2,p=frame2x2)
     cmds.text(label="名前 : ")
     name2x2 = cmds.textField()
