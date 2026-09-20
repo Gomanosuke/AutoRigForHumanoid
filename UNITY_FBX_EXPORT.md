@@ -2,7 +2,7 @@
 
 Maya 2026 の作業中シーンを保護したまま、アニメーション付き FBX を生成します。
 
-AutoRigForHumanoid のメイン画面で、`Unity FBX` 欄の `Unity用FBXエクスポーターを開く` ボタンを押してください。Python から直接開くこともできます。
+AutoRigForHumanoid のメイン画面で、`アクセサリ` タブの `FBX` サブタブにある `Unity FBX 書き出し` 欄の `FBX Exporter For Unity` ボタンを押してください。Python から直接開くこともできます。
 
 ```python
 from AutoRigForHumanoid import unity_fbx_export
