@@ -1,0 +1,1 @@
+AutoRigForHumanoid For Maya
