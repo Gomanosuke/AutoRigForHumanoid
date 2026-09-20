@@ -139,12 +139,10 @@ def _accessory_tab(tabs:str):
 
     sub_tabs = cmds.tabLayout(parent=tab,innerMarginWidth=6,innerMarginHeight=6)
     rig_import_tab = _accessory_rig_import_tab(sub_tabs)
-    fbx_import_tab = _accessory_fbx_import_tab(sub_tabs)
-    fbx_export_tab = _accessory_fbx_export_tab(sub_tabs)
+    fbx_tab = _accessory_fbx_tab(sub_tabs)
     cmds.tabLayout(sub_tabs,edit=True,tabLabel=(
         (rig_import_tab,"リグ読み込み"),
-        (fbx_import_tab,"FBXインポート"),
-        (fbx_export_tab,"FBXエクスポート"),
+        (fbx_tab,"FBX"),
     ))
 
     return tab
@@ -165,23 +163,7 @@ def _accessory_rig_import_tab(tabs:str):
     rig_import_frame(tab)
     return tab
 
-def _accessory_fbx_import_tab(tabs:str):
-    """
-    「アクセサリ」タブ内サブタブ「FBXインポート」。FBXをシーンへ取り込む側の機能。
-
-    Parameters
-    ----------
-        string tabs : 親のtabLayout
-
-    Returns
-    -------
-        string : このサブタブの中身(columnLayout)
-    """
-    tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
-    fbx_import_frame(tab)
-    return tab
-
-def _accessory_fbx_export_tab(tabs:str):
+def _accessory_fbx_tab(tabs:str):
     """
     「アクセサリ」タブ内サブタブ「FBXエクスポート」。FBXを書き出す側の機能
     (Unity向け書き出しと、日本語名を含むFBXの名前変換)。
@@ -195,6 +177,7 @@ def _accessory_fbx_export_tab(tabs:str):
         string : このサブタブの中身(columnLayout)
     """
     tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
+    fbx_import_frame(tab)
     unity_fbx_frame(tab)
     fbx_rename_frame(tab)
     return tab
@@ -239,7 +222,7 @@ def show_picker(parent_layout:str):
 def unity_fbx_frame(parent_layout:str):
     frame = cmds.frameLayout(label="Unity FBX 書き出し",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
     cmds.button(
-        label="Unity用FBXエクスポーターを開く",
+        label="FBX Exporter For Unity",
         parent=frame,
         height=40,
         annotation="元シーンを保護してアニメーション付きFBXを書き出す画面を開きます。",
@@ -356,7 +339,7 @@ def humanoid_setup(parent_layout:str):
         list [character_name,textField_dic]
     """
     #フレーム
-    setup_frame = cmds.frameLayout(label="① 初期設定(関節の割り当て)",parent=parent_layout,collapsable=True)
+    setup_frame = cmds.frameLayout(label="初期設定",parent=parent_layout,collapsable=True)
     #名前幅
     str_cw=120
 
@@ -507,7 +490,7 @@ def autorig_frame(parent_layout:str,textField_dic:dict,character_name:str):
         無し
     """
     #フレーム
-    setup_frame = cmds.frameLayout(label="② リグ制作(ガイド作成→リグ作成)",parent=parent_layout,collapsable=True)
+    setup_frame = cmds.frameLayout(label="リグ制作",parent=parent_layout,collapsable=True)
 
     cmds.rowLayout(nc=2,p=setup_frame)
     primary_option = cmds.optionMenu(label="主軸")
@@ -543,7 +526,7 @@ def control_shape_frame(parent_layout:str):
         無し
     """
     #フレーム
-    shape_frame = cmds.frameLayout(label="③ コントロールシェイプの引き継ぎ(リグ作り直し時)",parent=parent_layout,collapsable=True,collapse=True)
+    shape_frame = cmds.frameLayout(label="コントロールシェイプ",parent=parent_layout,collapsable=True,collapse=True)
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=shape_frame)
     cmds.text(label="Export Shape Path: ")
@@ -580,7 +563,7 @@ def rig_import_frame(parent_layout:str):
         無し
     """
     #フレーム
-    import_frame = cmds.frameLayout(label="別ファイルのリグを読み込む(UUID維持)",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_ACCESSORY)
+    import_frame = cmds.frameLayout(label="別ファイルのリグを読み込む",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_ACCESSORY)
 
     cmds.rowLayout(nc=3,adjustableColumn=2,p=import_frame)
     cmds.text(label="Maya Scene : ")
