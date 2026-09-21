@@ -3918,6 +3918,326 @@ QPushButton:pressed {
     <string>Flat Shade</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="select_l_littlemetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>210</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Little Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_l_ringmetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>225</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Ring Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_l_middlemetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>240</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Middle Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_l_indexmetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>255</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Index Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_r_littlemetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>110</x>
+     <y>210</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Little Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_r_ringmetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>110</x>
+     <y>225</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Ring Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_r_middlemetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>110</x>
+     <y>240</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Middle Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="select_r_indexmetacarpal">
+   <property name="geometry">
+    <rect>
+     <x>110</x>
+     <y>255</y>
+     <width>20</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">/* 通常時 */
+QPushButton {
+    background-color: rgb(0, 190, 170);
+    border-radius: 5px;
+    color: white; 
+}
+
+/* マウスが乗った時（+20） */
+QPushButton:hover {
+    background-color: rgb(20, 210, 190);
+}
+
+/* クリックした時（-40） */
+QPushButton:pressed {
+    background-color:  rgb(0, 150, 130);
+}</string>
+   </property>
+   <property name="toolTip">
+    <string>Index Metacarpal</string>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
   <widget class="QPushButton" name="select_l_allfinger">
    <property name="geometry">
     <rect>

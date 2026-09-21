@@ -92,6 +92,14 @@ SELECT_CON_BUTTONS = [
     ("select_r_littleproximal", "LittleProximal", "R"),
     ("select_r_littleintermediate", "LittleIntermediate", "R"),
     ("select_r_littledistal", "LittleDistal", "R"),
+    ("select_l_indexmetacarpal", "IndexMetacarpal", "L"),
+    ("select_l_middlemetacarpal", "MiddleMetacarpal", "L"),
+    ("select_l_ringmetacarpal", "RingMetacarpal", "L"),
+    ("select_l_littlemetacarpal", "LittleMetacarpal", "L"),
+    ("select_r_indexmetacarpal", "IndexMetacarpal", "R"),
+    ("select_r_middlemetacarpal", "MiddleMetacarpal", "R"),
+    ("select_r_ringmetacarpal", "RingMetacarpal", "R"),
+    ("select_r_littlemetacarpal", "LittleMetacarpal", "R"),
 ]
 
 #(UIウィジェット名, Settingオブジェクトの可視性アトリビュート名) : switch_visボタンを一括接続するための対応表
@@ -196,6 +204,10 @@ class TRSConnectorWindow(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         obj_dic = self._load_obj_dic()
 
         select_obj = f"('Con', '{pos}', '{name}')"
+        #指のジョイントや中手骨が無いモデルで作ったリグにはキーそのものが無い
+        if(select_obj not in obj_dic):
+            cmds.warning(f"{pos}_{name}が見つかりません(このリグには作られていません)")
+            return
         obj=cmds.ls(obj_dic[select_obj])
         if(len(obj)==0):
             cmds.error(f"{pos}_{name}が見つかりません")
