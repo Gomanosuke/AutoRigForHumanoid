@@ -3936,19 +3936,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -3976,19 +3976,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -4016,19 +4016,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -4056,19 +4056,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -4096,19 +4096,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -4136,19 +4136,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -4176,19 +4176,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
@@ -4216,19 +4216,19 @@ QPushButton:pressed {
    <property name="styleSheet">
     <string notr="true">/* 通常時 */
 QPushButton {
-    background-color: rgb(0, 190, 170);
+    background-color: rgb(0, 170, 255);
     border-radius: 5px;
     color: white; 
 }
 
 /* マウスが乗った時（+20） */
 QPushButton:hover {
-    background-color: rgb(20, 210, 190);
+    background-color: rgb(20, 190, 255);
 }
 
 /* クリックした時（-40） */
 QPushButton:pressed {
-    background-color:  rgb(0, 150, 130);
+    background-color:  rgb(0, 130, 215);
 }</string>
    </property>
    <property name="toolTip">
