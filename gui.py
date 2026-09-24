@@ -270,7 +270,7 @@ def fbx_rename_frame(parent_layout:str):
         無し
     """
     #フレーム
-    fbx_frame = cmds.frameLayout(label="FBX名の整形(日本語→仮名→復元)",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
+    fbx_frame = cmds.frameLayout(label="FBXの変換",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
 
     path_list=[]
 
