@@ -703,7 +703,16 @@ def run_job(job_path):
         _export_fbx(target, temporary_fbx)
         # Check the default transforms actually written to the file.
         defaults = _read_fbx_defaults(temporary_fbx)
-        short_names = [n.rsplit("|", 1)[-1] for n in nodes]
+        # Names imported from FBX keep characters Maya cannot use as FBXASCnnn;
+        # the exporter writes the original characters back.
+        short_names = [
+            re.sub(
+                r"FBXASC(\d{3})",
+                lambda match: chr(int(match.group(1))),
+                n.rsplit("|", 1)[-1],
+            )
+            for n in nodes
+        ]
         rest_error = 0.0
         for node, name in zip(nodes, short_names):
             if short_names.count(name) != 1 or name not in defaults:
