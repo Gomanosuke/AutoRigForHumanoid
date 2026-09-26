@@ -71,11 +71,12 @@ def _capture(meshes, frames):
     return result
 
 
-def _check_capture(reference, meshes, tolerance):
+def _check_capture(reference, meshes, tolerance, offset=0.0):
+    """offset: where the reference frames are after moving the clip in time."""
     cmds, _, _, _ = _maya()
     worst = 0.0
     for frame, expected in reference.items():
-        cmds.currentTime(frame)
+        cmds.currentTime(frame + offset)
         for original, actual in meshes.items():
             error = _error(expected[original], _points(actual))
             worst = max(worst, error)
@@ -231,147 +232,70 @@ def _export_fbx(target, path):
     mel.eval("FBXExport -f " + json.dumps(str(path).replace("\\", "/")) + " -s;")
 
 
-def _read_fbx_defaults(path):
-    """Return {model name: {"Lcl Translation": (x, y, z), ...}} from a binary FBX.
+def _key_rest_pose(pose, curves, offset):
+    """Move the clip by offset frames and key the rest pose at frame 0.
 
-    These static Model properties are the pose Unity builds its Avatar from;
-    Maya's importer overwrites them with animation, so read the file directly.
-    """
-    import struct
-    import zlib
-
-    data = Path(path).read_bytes()
-    if not data.startswith(b"Kaydara FBX Binary  \x00"):
-        raise RuntimeError("Not a binary FBX: " + str(path))
-    header = "<QQQ" if struct.unpack_from("<I", data, 23)[0] >= 7500 else "<III"
-    header_size = struct.calcsize(header)
-    scalars = {"Y": "<h", "C": "<?", "I": "<i", "F": "<f", "D": "<d", "L": "<q"}
-    arrays = {"f": "f", "d": "d", "l": "q", "i": "i", "b": "?"}
-
-    def read_property(pos):
-        code = chr(data[pos])
-        pos += 1
-        if code in scalars:
-            return (
-                struct.unpack_from(scalars[code], data, pos)[0],
-                pos + struct.calcsize(scalars[code]),
-            )
-        if code in "SR":
-            size = struct.unpack_from("<I", data, pos)[0]
-            raw = data[pos + 4 : pos + 4 + size]
-            return (raw.decode("utf-8", "replace") if code == "S" else raw), pos + 4 + size
-        if code in arrays:
-            count, encoding, size = struct.unpack_from("<III", data, pos)
-            raw = data[pos + 12 : pos + 12 + size]
-            if encoding:
-                raw = zlib.decompress(raw)
-            return (
-                struct.unpack("<%d%s" % (count, arrays[code]), raw),
-                pos + 12 + size,
-            )
-        raise RuntimeError("Unknown FBX property type: " + code)
-
-    def read_node(pos):
-        end, count, _ = struct.unpack_from(header, data, pos)
-        if end == 0:
-            return None, pos + header_size + 1
-        name_size = data[pos + header_size]
-        pos += header_size + 1
-        name = data[pos : pos + name_size].decode("ascii")
-        pos += name_size
-        properties = []
-        for _ in range(count):
-            value, pos = read_property(pos)
-            properties.append(value)
-        children = []
-        while pos < end:
-            child, pos = read_node(pos)
-            if child is None:
-                break
-            children.append(child)
-        return (name, properties, children), end
-
-    # Only the Objects section is parsed; skip the others by their end offsets.
-    result = {}
-    pos = 27
-    while pos < len(data):
-        end = struct.unpack_from(header, data, pos)[0]
-        if end == 0:
-            break
-        name_size = data[pos + header_size]
-        name = data[pos + header_size + 1 : pos + header_size + 1 + name_size]
-        if name == b"Objects":
-            for kind, properties, children in read_node(pos)[0][2]:
-                if kind != "Model":
-                    continue
-                values = {}
-                for child_name, _, entries in children:
-                    if child_name == "Properties70":
-                        for _, entry, _ in entries:
-                            if entry[0].startswith("Lcl "):
-                                values[entry[0]] = tuple(entry[4:7])
-                result[properties[1].split("\x00\x01")[0]] = values
-        pos = end
-    return result
-
-
-def _apply_rest_pose(pose, frame, start, end):
-    """Make keyed channels evaluate to the rest pose at a frame outside the clip.
-
-    The FBX exporter writes each node's static (default) transform from the
-    current time. Linear infinity through the first key's in-tangent (or the last
-    key's out-tangent) is the only part of a curve that is not exported as clip
-    motion, so it can carry the rest pose without adding keys to the clip.
+    Unity builds a model's default pose (the base of a Humanoid Avatar) from the
+    animation at FBX time 0 when the take covers it, otherwise at the take's first
+    frame; the static FBX transforms of animated nodes are ignored (Unity 2022.3).
+    The clip is moved to start at frame 1 and the take is extended to frame 0.
     """
     cmds, _, _, _ = _maya()
-    before = frame < start
-    adjusted = 0
-    for plug, target in pose.items():
-        source = _source(plug)
-        if not source:
-            continue
-        curve = source.split(".")[0]
-        index = 0 if before else cmds.keyframe(curve, query=True, keyframeCount=True) - 1
-        tangent = "inAngle" if before else "outAngle"
 
-        def evaluate(angle):
-            cmds.keyTangent(curve, index=(index, index), **{tangent: angle})
-            return cmds.keyframe(curve, query=True, eval=True, time=(frame, frame))[0]
-
-        # Only the tangent facing away from the clip may change. Auto/spline
-        # tangents are recomputed when their neighbour changes, so pin both.
+    def edge_samples(curve, shift):
+        # The segments next to the clip ends are the only ones a new key at
+        # frame 0 can influence (through recomputed auto/spline tangents).
         times = cmds.keyframe(curve, query=True, timeChange=True)
-        inner = times[1 if before else -2] if len(times) > 1 else times[0]
-        span = [times[index] + (inner - times[index]) * i / 8 for i in range(9)]
+        spans = [(times[0], times[min(1, len(times) - 1)]),
+                 (times[max(len(times) - 2, 0)], times[-1])]
+        return [
+            cmds.keyframe(curve, query=True, eval=True, time=(t + shift, t + shift))[0]
+            for a, b in spans
+            for t in [a + (b - a) * i / 8 for i in range(9)]
+        ], times
 
-        def sample():
-            return [
-                cmds.keyframe(curve, query=True, eval=True, time=(t, t))[0]
-                for t in span
-            ]
-
-        before_values = sample()
-        angles = {
-            flag: cmds.keyTangent(curve, index=(index, index), query=True, **{flag: True})[0]
-            for flag in ("inAngle", "outAngle")
-        }
-        cmds.keyTangent(curve, index=(index, index), lock=False)
-        cmds.keyTangent(
-            curve, index=(index, index), inTangentType="fixed", outTangentType="fixed"
-        )
-        cmds.keyTangent(curve, index=(index, index), **angles)
-        cmds.setAttr(curve + (".preInfinity" if before else ".postInfinity"), 1)
-        # The value at the frame is linear in tan(angle); calibrate its units.
-        base = evaluate(0.0)
-        if abs(target - base) > 1e-12:
-            slope = evaluate(45.0) - base
-            evaluate(math.degrees(math.atan((target - base) / slope)))
-            adjusted += 1
-        else:
-            evaluate(0.0)
-        if max(abs(a - b) for a, b in zip(sample(), before_values)) > 1e-9:
-            raise RuntimeError("Rest pose tangent changed the clip: " + curve)
-    return adjusted
+    before = {c: edge_samples(c, 0.0) for c in curves}
+    if offset:
+        cmds.keyframe(curves, edit=True, relative=True, timeChange=offset)
+    for curve in curves:
+        count = cmds.keyframe(curve, query=True, keyframeCount=True)
+        for index in {0, count - 1}:
+            angles = {
+                flag: cmds.keyTangent(
+                    curve, index=(index, index), query=True, **{flag: True}
+                )[0]
+                for flag in ("inAngle", "outAngle")
+            }
+            cmds.keyTangent(curve, index=(index, index), lock=False)
+            cmds.keyTangent(
+                curve,
+                index=(index, index),
+                inTangentType="fixed",
+                outTangentType="fixed",
+            )
+            cmds.keyTangent(curve, index=(index, index), **angles)
+    keyed = 0
+    for plug, value in pose.items():
+        source = _source(plug)
+        if source:
+            cmds.setKeyframe(
+                source.split(".")[0],
+                time=0,
+                value=value,
+                inTangentType="linear",
+                outTangentType="step",
+            )
+            keyed += 1
+    for curve, (values, times) in before.items():
+        after = [
+            cmds.keyframe(curve, query=True, eval=True, time=(t, t))[0]
+            for a, b in [(times[0], times[min(1, len(times) - 1)]),
+                         (times[max(len(times) - 2, 0)], times[-1])]
+            for t in [a + offset + (b - a) * i / 8 for i in range(9)]
+        ]
+        if max(abs(x - y) for x, y in zip(values, after)) > 1e-9:
+            raise RuntimeError("Keying the rest pose changed the clip: " + curve)
+    return keyed
 
 
 def _repair_bind_poses(skins, nodes):
@@ -669,74 +593,51 @@ def run_job(job_path):
                 )
                 constant_count += 1
         report["constant_channels_reduced"] = constant_count
-        report["rest_pose_curves_extended"] = (
-            _apply_rest_pose(rest_pose, rest_frame, start, end)
-            if rest_frame < start or rest_frame > end
-            else 0
-        )
-        report["prepared_max_error_cm"] = _check_capture(
-            reference, {m: m for m in meshes}, tolerance
-        )
-        # Compare matrices: baking may choose equivalent Euler values (e.g. +360).
-        cmds.currentTime(rest_frame)
-        rest_error = max(
-            [
-                abs(a - b)
-                for n, m in rest_matrices.items()
-                for a, b in zip(cmds.getAttr(n + ".matrix"), m)
-            ]
-            + [
-                abs(cmds.getAttr(p) - v)
-                for p, v in rest_pose.items()
-                if p.split(".")[0] not in rest_matrices
-            ]
-        )
-        report["rest_pose_max_error"] = rest_error
-        if rest_error > 1e-5:
-            raise RuntimeError(
-                "Rest pose could not be reproduced at frame %g (error %g)"
-                % (rest_frame, rest_error)
+        offset = 0.0
+        if "rest_frame" in job:
+            # Unity reads the default pose at frame 0; see _key_rest_pose.
+            offset = 1 - start
+            curves = sorted(
+                set(_source(p).split(".")[0] for p in plugs if _source(p))
             )
-        rest_pose = {p: cmds.getAttr(p) for p in rest_pose}
+            report["clip_offset_frames"] = offset
+            report["exported_clip"] = [start + offset, end + offset]
+            report["rest_keys"] = _key_rest_pose(rest_pose, curves, offset)
+            cmds.playbackOptions(
+                minTime=0,
+                maxTime=end + offset,
+                animationStartTime=0,
+                animationEndTime=end + offset,
+            )
+        report["prepared_max_error_cm"] = _check_capture(
+            reference, {m: m for m in meshes}, tolerance, offset
+        )
+        if "rest_frame" in job:
+            # Compare matrices: baking may choose equivalent Euler values (+360).
+            cmds.currentTime(0)
+            rest_error = max(
+                [
+                    abs(a - b)
+                    for n, m in rest_matrices.items()
+                    for a, b in zip(cmds.getAttr(n + ".matrix"), m)
+                ]
+                + [
+                    abs(cmds.getAttr(p) - v)
+                    for p, v in rest_pose.items()
+                    if p.split(".")[0] not in rest_matrices
+                ]
+            )
+            report["rest_pose_max_error"] = rest_error
+            if rest_error > 1e-5:
+                raise RuntimeError(
+                    "Rest pose could not be reproduced at frame 0 (error %g)"
+                    % rest_error
+                )
+        else:
+            cmds.currentTime(start)
         stage("writing_fbx")
         temporary_fbx = job_path.parent / "candidate.fbx"
         _export_fbx(target, temporary_fbx)
-        # Check the default transforms actually written to the file.
-        defaults = _read_fbx_defaults(temporary_fbx)
-        # Names imported from FBX keep characters Maya cannot use as FBXASCnnn;
-        # the exporter writes the original characters back.
-        short_names = [
-            re.sub(
-                r"FBXASC(\d{3})",
-                lambda match: chr(int(match.group(1))),
-                n.rsplit("|", 1)[-1],
-            )
-            for n in nodes
-        ]
-        rest_error = 0.0
-        for node, name in zip(nodes, short_names):
-            if short_names.count(name) != 1 or name not in defaults:
-                if cmds.nodeType(node) == "joint":
-                    raise RuntimeError("Joint missing or ambiguous in FBX: " + name)
-                continue
-            # FBX omits properties that equal the FBX defaults.
-            for prefix, attribute, default in (
-                ("Lcl Translation", "t", 0.0),
-                ("Lcl Rotation", "r", 0.0),
-                ("Lcl Scaling", "s", 1.0),
-            ):
-                written = defaults[name].get(prefix, (default,) * 3)
-                for value, axis in zip(written, "xyz"):
-                    rest_error = max(
-                        rest_error,
-                        abs(value - rest_pose[node + "." + attribute + axis]),
-                    )
-        report["rest_pose_fbx_max_error"] = rest_error
-        if rest_error > 1e-4:
-            raise RuntimeError(
-                "FBX default pose differs from frame %g (error %g)"
-                % (rest_frame, rest_error)
-            )
         # Reimport in a fresh scene before publishing the candidate file.
         stage("roundtrip_validation")
         cmds.file(new=True, force=True)
@@ -802,8 +703,35 @@ def run_job(job_path):
         report["import_mesh_renames"] = import_renames
         report["roundtrip_tolerance_cm"] = float(job.get("roundtrip_tolerance_cm", 0.1))
         report["roundtrip_max_error_cm"] = _check_capture(
-            reference, mesh_map, report["roundtrip_tolerance_cm"]
+            reference, mesh_map, report["roundtrip_tolerance_cm"], offset
         )
+        if "rest_frame" in job:
+            # The pose Unity will see: the imported animation at frame 0.
+            # Names imported from FBX keep characters Maya cannot use as
+            # FBXASCnnn in both scenes, so short names still correspond.
+            cmds.currentTime(0)
+            rest_error = 0.0
+            for node, matrix in rest_matrices.items():
+                if cmds.nodeType(node) != "joint":
+                    continue
+                imported = cmds.ls(node.rsplit("|", 1)[-1], long=True, type="joint")
+                if len(imported) != 1:
+                    raise RuntimeError(
+                        "Joint missing or ambiguous after FBX import: " + node
+                    )
+                rest_error = max(
+                    [rest_error]
+                    + [
+                        abs(a - b)
+                        for a, b in zip(cmds.getAttr(imported[0] + ".matrix"), matrix)
+                    ]
+                )
+            report["rest_pose_fbx_max_error"] = rest_error
+            if rest_error > 1e-3:
+                raise RuntimeError(
+                    "FBX pose at frame 0 differs from the rest pose (error %g)"
+                    % rest_error
+                )
         actual_aliases = [
             (cmds.aliasAttr(n, query=True) or [])[::2]
             for n in cmds.ls(type="blendShape")
@@ -824,9 +752,9 @@ def run_job(job_path):
 def launch(root, output, start, end, rest_frame=None):
     """Snapshot the current scene and launch a separate worker; return job folder.
 
-    rest_frame: the frame whose pose becomes the FBX default pose (the pose Unity
-    builds a Humanoid Avatar from). None uses the start frame. It may lie outside
-    the exported clip.
+    rest_frame: the frame whose pose Unity should use as the default pose (the
+    base of a Humanoid Avatar). It is keyed at frame 0 and the clip is moved to
+    start at frame 1. It may lie outside the clip. None keeps the clip's frames.
     """
     cmds, _, _, _ = _maya()
     output = Path(output).resolve()
@@ -1098,8 +1026,8 @@ def show():
             else 0.0
         ),
         enable=rest_enabled,
-        annotation="このフレームのポーズをFBXのデフォルトポーズにします"
-        "(UnityのHumanoid設定の基準)。書き出し範囲の外でも指定できます。",
+        annotation="このフレームのポーズを0フレームに置き、アニメーションを1フレーム"
+        "から始まるように移動します(UnityのHumanoid設定の基準)。範囲外も指定できます。",
     )
     cmds.checkBox(
         label="Specify rest pose frame (off: start frame)",
