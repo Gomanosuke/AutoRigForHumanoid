@@ -231,6 +231,149 @@ def _export_fbx(target, path):
     mel.eval("FBXExport -f " + json.dumps(str(path).replace("\\", "/")) + " -s;")
 
 
+def _read_fbx_defaults(path):
+    """Return {model name: {"Lcl Translation": (x, y, z), ...}} from a binary FBX.
+
+    These static Model properties are the pose Unity builds its Avatar from;
+    Maya's importer overwrites them with animation, so read the file directly.
+    """
+    import struct
+    import zlib
+
+    data = Path(path).read_bytes()
+    if not data.startswith(b"Kaydara FBX Binary  \x00"):
+        raise RuntimeError("Not a binary FBX: " + str(path))
+    header = "<QQQ" if struct.unpack_from("<I", data, 23)[0] >= 7500 else "<III"
+    header_size = struct.calcsize(header)
+    scalars = {"Y": "<h", "C": "<?", "I": "<i", "F": "<f", "D": "<d", "L": "<q"}
+    arrays = {"f": "f", "d": "d", "l": "q", "i": "i", "b": "?"}
+
+    def read_property(pos):
+        code = chr(data[pos])
+        pos += 1
+        if code in scalars:
+            return (
+                struct.unpack_from(scalars[code], data, pos)[0],
+                pos + struct.calcsize(scalars[code]),
+            )
+        if code in "SR":
+            size = struct.unpack_from("<I", data, pos)[0]
+            raw = data[pos + 4 : pos + 4 + size]
+            return (raw.decode("utf-8", "replace") if code == "S" else raw), pos + 4 + size
+        if code in arrays:
+            count, encoding, size = struct.unpack_from("<III", data, pos)
+            raw = data[pos + 12 : pos + 12 + size]
+            if encoding:
+                raw = zlib.decompress(raw)
+            return (
+                struct.unpack("<%d%s" % (count, arrays[code]), raw),
+                pos + 12 + size,
+            )
+        raise RuntimeError("Unknown FBX property type: " + code)
+
+    def read_node(pos):
+        end, count, _ = struct.unpack_from(header, data, pos)
+        if end == 0:
+            return None, pos + header_size + 1
+        name_size = data[pos + header_size]
+        pos += header_size + 1
+        name = data[pos : pos + name_size].decode("ascii")
+        pos += name_size
+        properties = []
+        for _ in range(count):
+            value, pos = read_property(pos)
+            properties.append(value)
+        children = []
+        while pos < end:
+            child, pos = read_node(pos)
+            if child is None:
+                break
+            children.append(child)
+        return (name, properties, children), end
+
+    # Only the Objects section is parsed; skip the others by their end offsets.
+    result = {}
+    pos = 27
+    while pos < len(data):
+        end = struct.unpack_from(header, data, pos)[0]
+        if end == 0:
+            break
+        name_size = data[pos + header_size]
+        name = data[pos + header_size + 1 : pos + header_size + 1 + name_size]
+        if name == b"Objects":
+            for kind, properties, children in read_node(pos)[0][2]:
+                if kind != "Model":
+                    continue
+                values = {}
+                for child_name, _, entries in children:
+                    if child_name == "Properties70":
+                        for _, entry, _ in entries:
+                            if entry[0].startswith("Lcl "):
+                                values[entry[0]] = tuple(entry[4:7])
+                result[properties[1].split("\x00\x01")[0]] = values
+        pos = end
+    return result
+
+
+def _apply_rest_pose(pose, frame, start, end):
+    """Make keyed channels evaluate to the rest pose at a frame outside the clip.
+
+    The FBX exporter writes each node's static (default) transform from the
+    current time. Linear infinity through the first key's in-tangent (or the last
+    key's out-tangent) is the only part of a curve that is not exported as clip
+    motion, so it can carry the rest pose without adding keys to the clip.
+    """
+    cmds, _, _, _ = _maya()
+    before = frame < start
+    adjusted = 0
+    for plug, target in pose.items():
+        source = _source(plug)
+        if not source:
+            continue
+        curve = source.split(".")[0]
+        index = 0 if before else cmds.keyframe(curve, query=True, keyframeCount=True) - 1
+        tangent = "inAngle" if before else "outAngle"
+
+        def evaluate(angle):
+            cmds.keyTangent(curve, index=(index, index), **{tangent: angle})
+            return cmds.keyframe(curve, query=True, eval=True, time=(frame, frame))[0]
+
+        # Only the tangent facing away from the clip may change. Auto/spline
+        # tangents are recomputed when their neighbour changes, so pin both.
+        times = cmds.keyframe(curve, query=True, timeChange=True)
+        inner = times[1 if before else -2] if len(times) > 1 else times[0]
+        span = [times[index] + (inner - times[index]) * i / 8 for i in range(9)]
+
+        def sample():
+            return [
+                cmds.keyframe(curve, query=True, eval=True, time=(t, t))[0]
+                for t in span
+            ]
+
+        before_values = sample()
+        angles = {
+            flag: cmds.keyTangent(curve, index=(index, index), query=True, **{flag: True})[0]
+            for flag in ("inAngle", "outAngle")
+        }
+        cmds.keyTangent(curve, index=(index, index), lock=False)
+        cmds.keyTangent(
+            curve, index=(index, index), inTangentType="fixed", outTangentType="fixed"
+        )
+        cmds.keyTangent(curve, index=(index, index), **angles)
+        cmds.setAttr(curve + (".preInfinity" if before else ".postInfinity"), 1)
+        # The value at the frame is linear in tan(angle); calibrate its units.
+        base = evaluate(0.0)
+        if abs(target - base) > 1e-12:
+            slope = evaluate(45.0) - base
+            evaluate(math.degrees(math.atan((target - base) / slope)))
+            adjusted += 1
+        else:
+            evaluate(0.0)
+        if max(abs(a - b) for a, b in zip(sample(), before_values)) > 1e-9:
+            raise RuntimeError("Rest pose tangent changed the clip: " + curve)
+    return adjusted
+
+
 def _repair_bind_poses(skins, nodes):
     """Add grouping transforms to pose metadata without changing joint binds."""
     cmds, _, _, _ = _maya()
@@ -333,6 +476,29 @@ def run_job(job_path):
             (job_path.parent / "reference.json").write_text(
                 json.dumps(reference), encoding="utf-8"
             )
+        # The FBX default pose (what Unity builds a Humanoid Avatar from). Record
+        # it from the untouched rig: keys outside the clip are removed later.
+        rest_frame = float(job.get("rest_frame", start))
+        report["rest_frame"] = rest_frame
+        cmds.currentTime(rest_frame)
+        rest_matrices = {n: cmds.getAttr(n + ".matrix") for n in _export_nodes(target)}
+        rest_pose = {
+            n + "." + a: cmds.getAttr(n + "." + a)
+            for n in rest_matrices
+            for a in ("tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz")
+        }
+        rest_pose.update(
+            {
+                n + "." + a: cmds.getAttr(n + "." + a)
+                for n in set(
+                    h
+                    for m in meshes
+                    for h in (cmds.listHistory(m) or [])
+                    if cmds.nodeType(h) == "blendShape"
+                )
+                for a in (cmds.aliasAttr(n, query=True) or [])[::2]
+            }
+        )
         cmds.currentTime(start)
         stage("cleaning_topology")
         repaired = [m for m in meshes if _clean_deleted_topology(m)]
@@ -503,13 +669,65 @@ def run_job(job_path):
                 )
                 constant_count += 1
         report["constant_channels_reduced"] = constant_count
+        report["rest_pose_curves_extended"] = (
+            _apply_rest_pose(rest_pose, rest_frame, start, end)
+            if rest_frame < start or rest_frame > end
+            else 0
+        )
         report["prepared_max_error_cm"] = _check_capture(
             reference, {m: m for m in meshes}, tolerance
         )
-        cmds.currentTime(start)
+        # Compare matrices: baking may choose equivalent Euler values (e.g. +360).
+        cmds.currentTime(rest_frame)
+        rest_error = max(
+            [
+                abs(a - b)
+                for n, m in rest_matrices.items()
+                for a, b in zip(cmds.getAttr(n + ".matrix"), m)
+            ]
+            + [
+                abs(cmds.getAttr(p) - v)
+                for p, v in rest_pose.items()
+                if p.split(".")[0] not in rest_matrices
+            ]
+        )
+        report["rest_pose_max_error"] = rest_error
+        if rest_error > 1e-5:
+            raise RuntimeError(
+                "Rest pose could not be reproduced at frame %g (error %g)"
+                % (rest_frame, rest_error)
+            )
+        rest_pose = {p: cmds.getAttr(p) for p in rest_pose}
         stage("writing_fbx")
         temporary_fbx = job_path.parent / "candidate.fbx"
         _export_fbx(target, temporary_fbx)
+        # Check the default transforms actually written to the file.
+        defaults = _read_fbx_defaults(temporary_fbx)
+        short_names = [n.rsplit("|", 1)[-1] for n in nodes]
+        rest_error = 0.0
+        for node, name in zip(nodes, short_names):
+            if short_names.count(name) != 1 or name not in defaults:
+                if cmds.nodeType(node) == "joint":
+                    raise RuntimeError("Joint missing or ambiguous in FBX: " + name)
+                continue
+            # FBX omits properties that equal the FBX defaults.
+            for prefix, attribute, default in (
+                ("Lcl Translation", "t", 0.0),
+                ("Lcl Rotation", "r", 0.0),
+                ("Lcl Scaling", "s", 1.0),
+            ):
+                written = defaults[name].get(prefix, (default,) * 3)
+                for value, axis in zip(written, "xyz"):
+                    rest_error = max(
+                        rest_error,
+                        abs(value - rest_pose[node + "." + attribute + axis]),
+                    )
+        report["rest_pose_fbx_max_error"] = rest_error
+        if rest_error > 1e-4:
+            raise RuntimeError(
+                "FBX default pose differs from frame %g (error %g)"
+                % (rest_frame, rest_error)
+            )
         # Reimport in a fresh scene before publishing the candidate file.
         stage("roundtrip_validation")
         cmds.file(new=True, force=True)
@@ -594,8 +812,13 @@ def run_job(job_path):
     return report
 
 
-def launch(root, output, start, end):
-    """Snapshot the current scene and launch a separate worker; return job folder."""
+def launch(root, output, start, end, rest_frame=None):
+    """Snapshot the current scene and launch a separate worker; return job folder.
+
+    rest_frame: the frame whose pose becomes the FBX default pose (the pose Unity
+    builds a Humanoid Avatar from). None uses the start frame. It may lie outside
+    the exported clip.
+    """
     cmds, _, _, _ = _maya()
     output = Path(output).resolve()
     if output.exists():
@@ -632,6 +855,8 @@ def launch(root, output, start, end):
         "start": float(start),
         "end": float(end),
     }
+    if rest_frame is not None:
+        job["rest_frame"] = float(rest_frame)
     job_path = folder / "job.json"
     job_path.write_text(json.dumps(job, indent=2), encoding="utf-8")
     mayapy = (
@@ -822,7 +1047,7 @@ def show():
     if cmds.window(name, exists=True):
         cmds.deleteUI(name)
     window = cmds.window(
-        name, title="Unity FBX Export (isolated copy)", widthHeight=(560, 240)
+        name, title="Unity FBX Export (isolated copy)", widthHeight=(560, 280)
     )
     cmds.columnLayout(adjustableColumn=True, rowSpacing=10)
     cmds.text(
@@ -853,6 +1078,27 @@ def show():
         value1=cmds.playbackOptions(query=True, minTime=True),
         value2=cmds.playbackOptions(query=True, maxTime=True),
     )
+    # Remembered across sessions: the rest pose frame is usually fixed per project.
+    rest_enabled = bool(cmds.optionVar(query="ARFHUnityFbxRestFrameEnabled"))
+    rest_field = cmds.floatFieldGrp(
+        numberOfFields=1,
+        label="Rest pose frame",
+        value1=(
+            cmds.optionVar(query="ARFHUnityFbxRestFrame")
+            if cmds.optionVar(exists="ARFHUnityFbxRestFrame")
+            else 0.0
+        ),
+        enable=rest_enabled,
+        annotation="このフレームのポーズをFBXのデフォルトポーズにします"
+        "(UnityのHumanoid設定の基準)。書き出し範囲の外でも指定できます。",
+    )
+    cmds.checkBox(
+        label="Specify rest pose frame (off: start frame)",
+        value=rest_enabled,
+        changeCommand=lambda value: cmds.floatFieldGrp(
+            rest_field, edit=True, enable=value
+        ),
+    )
     status = cmds.text(label="Ready", align="left", wordWrap=True)
 
     def export(*_):
@@ -861,11 +1107,16 @@ def show():
         )
         if not paths:
             return
+        use_rest = cmds.floatFieldGrp(rest_field, query=True, enable=True)
+        rest_frame = cmds.floatFieldGrp(rest_field, query=True, value1=True)
+        cmds.optionVar(intValue=("ARFHUnityFbxRestFrameEnabled", int(use_rest)))
+        cmds.optionVar(floatValue=("ARFHUnityFbxRestFrame", rest_frame))
         folder = launch(
             cmds.textFieldButtonGrp(root_field, query=True, text=True),
             paths[0],
             cmds.floatFieldGrp(range_field, query=True, value1=True),
             cmds.floatFieldGrp(range_field, query=True, value2=True),
+            rest_frame if use_rest else None,
         )
         cmds.text(
             status,
