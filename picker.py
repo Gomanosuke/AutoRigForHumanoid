@@ -59,7 +59,7 @@ SELECT_CON_BUTTONS = [
     ("select_c_root1", "Root1", "C"),
     ("select_c_root2", "Root2", "C"),
     ("select_c_root3", "Root3", "C"),
-    ("select_c_setting", "UnitySetting", "C"),
+    ("select_c_setting", "Setting", "C"),
     ("select_l_fingerbundle", "FingerBundle", "L"),
     ("select_r_fingerbundle", "FingerBundle", "R"),
     ("select_l_thumbproximal", "ThumbProximal", "L"),

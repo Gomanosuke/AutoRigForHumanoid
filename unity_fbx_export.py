@@ -196,6 +196,282 @@ def _source(plug):
     )
 
 
+def _sample(plugs, frames):
+    """Evaluate plugs on each frame; returns one row of internal values per frame."""
+    cmds, _, om, oma = _maya()
+    selection = om.MSelectionList()
+    for plug in plugs:
+        selection.add(plug)
+    mplugs = [selection.getPlug(i) for i in range(len(plugs))]
+    unit = om.MTime.uiUnit()
+    control = oma.MAnimControl
+    # Parallel evaluation is faster on large rigs once unrelated characters are
+    # removed (_prune_unrelated); _bake re-reads frames in DG mode to confirm it.
+    mode = cmds.evaluationManager(query=True, mode=True)[0]
+    cmds.evaluationManager(mode="parallel")
+    try:
+        rows = []
+        for frame in frames:
+            control.setCurrentTime(om.MTime(frame, unit))
+            rows.append([plug.asDouble() for plug in mplugs])
+    finally:
+        cmds.evaluationManager(mode=mode)
+    return rows
+
+
+def _open_snapshot(path):
+    cmds, _, _, _ = _maya()
+    for plugin in ("matrixNodes", "quatNodes", "lookdevKit", "fbxmaya"):
+        cmds.loadPlugin(plugin, quiet=True)
+    cmds.file(path, open=True, force=True, prompt=False, executeScriptNodes=False)
+    cmds.undoInfo(stateWithoutFlush=False)
+
+
+def sample_task(task_path):
+    """Helper-process entry point: sample one part of the clip from the snapshot."""
+    import numpy
+
+    task = json.loads(Path(task_path).read_text(encoding="utf-8"))
+    _open_snapshot(task["snapshot"])
+    _prune_unrelated(task["target"], task["plugs"], task["meshes"])
+    rows = _sample(task["plugs"], range(task["first"], task["last"] + 1))
+    numpy.save(task["output"], numpy.array(rows))
+
+
+def _available_memory():
+    """Bytes of physical memory currently available, or None if unknown."""
+    if os.name != "nt":
+        return None
+    import ctypes
+
+    class Status(ctypes.Structure):
+        _fields_ = [
+            ("dwLength", ctypes.c_ulong),
+            ("dwMemoryLoad", ctypes.c_ulong),
+            ("ullTotalPhys", ctypes.c_ulonglong),
+            ("ullAvailPhys", ctypes.c_ulonglong),
+            ("ullTotalPageFile", ctypes.c_ulonglong),
+            ("ullAvailPageFile", ctypes.c_ulonglong),
+            ("ullTotalVirtual", ctypes.c_ulonglong),
+            ("ullAvailVirtual", ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+
+    status = Status()
+    status.dwLength = ctypes.sizeof(Status)
+    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+        return None
+    return status.ullAvailPhys
+
+
+def _sample_split(plugs, frames, context):
+    """Sample frames, sharing long clips across helper mayapy processes.
+
+    Rig evaluation dominates long exports and runs mostly on one core. Each
+    helper opens the same snapshot (about 15 s and several GB for a large scene)
+    and samples a contiguous part; this process samples the first part.
+    """
+    import numpy
+
+    count = min(8, max(1, (os.cpu_count() or 1) // 4), len(frames) // 5000)
+    if count >= 2 and context:
+        # A helper holding a 2 GB scene used about 4.7 GB; keep a margin so
+        # several exports running at once cannot exhaust memory.
+        per_helper = 3 * Path(context["snapshot"]).stat().st_size
+        available = _available_memory()
+        if available is not None:
+            count = min(count, 1 + int(available * 0.7 // max(per_helper, 1)))
+    if count < 2 or not context:
+        return _sample(plugs, frames), 1
+    bounds = [round(len(frames) * i / count) for i in range(count + 1)]
+    folder = Path(context["folder"])
+    helpers = []
+    try:
+        for index in range(1, count):
+            task = {
+                "snapshot": context["snapshot"],
+                "target": context["target"],
+                "meshes": context["meshes"],
+                "plugs": plugs,
+                "first": frames[bounds[index]],
+                "last": frames[bounds[index + 1] - 1],
+                "output": str(folder / ("samples_%d.npy" % index)),
+            }
+            task_path = folder / ("sample_task_%d.json" % index)
+            task_path.write_text(json.dumps(task), encoding="utf-8")
+            environment = os.environ.copy()
+            environment["MAYA_APP_DIR"] = str(folder / ("profile_sampler_%d" % index))
+            environment["MAYA_SKIP_USERSETUP_PY"] = "1"
+            log = (folder / ("sampler_%d.log" % index)).open("wb")
+            process = subprocess.Popen(
+                [_mayapy(), str(Path(__file__).resolve()), "--sample", str(task_path)],
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            helpers.append((process, log, task))
+        rows = _sample(plugs, frames[bounds[0] : bounds[1]])
+    finally:
+        for process, log, _ in helpers:
+            process.wait()
+            log.close()
+    for index, (process, _, task) in enumerate(helpers, 1):
+        part = Path(task["output"])
+        if process.returncode != 0 or not part.is_file():
+            raise RuntimeError(
+                "Sampling process %d failed (exit %s); see sampler_%d.log"
+                % (index, process.returncode, index)
+            )
+        values = numpy.load(part)
+        if values.shape != (task["last"] - task["first"] + 1, len(plugs)):
+            raise RuntimeError("Sampling process %d returned wrong data" % index)
+        rows.extend(values.tolist())
+        part.unlink()
+    return rows, count
+
+
+def _bake(plugs, start, end, offset=0.0, context=None):
+    """Replace each plug's input with a curve keyed on every frame.
+
+    Equivalent to bakeResults(simulation=True, preserveOutsideKeys=False,
+    disableImplicitControl=True, minimizeRotation=True) for a time-driven rig,
+    but bakeResults slows down more than linearly on long ranges (220 s for
+    67,685 frames vs 7 s for 10,000). Values are sampled per frame in the normal
+    context and every curve is created with one addKeys call, with its keys moved
+    by offset frames. Returns the sampled (min, max) per plug in internal units
+    and the number of sampling processes.
+    """
+    import numpy
+
+    cmds, _, om, oma = _maya()
+    selection = om.MSelectionList()
+    for plug in plugs:
+        selection.add(plug)
+    mplugs = [selection.getPlug(i) for i in range(len(plugs))]
+    unit = om.MTime.uiUnit()
+    frames = range(int(math.floor(start)), int(math.ceil(end)) + 1)
+    if frames[0] != start or frames[-1] != end:
+        raise RuntimeError("Start and end frames must be whole frames")
+    rows, processes = _sample_split(plugs, frames, context)
+    if len(rows) != len(frames):
+        raise RuntimeError("Sampled frame count does not match the clip")
+    # Re-read frames here in DG mode: confirms parallel evaluation and the helper
+    # processes (including each part boundary) evaluated this rig identically.
+    control = oma.MAnimControl
+    checks = set(round(i * (len(frames) - 1) / 8) for i in range(9))
+    checks.update(round(len(frames) * i / processes) for i in range(1, processes))
+    for index in sorted(checks):
+        control.setCurrentTime(om.MTime(frames[index], unit))
+        error = max(
+            (abs(p.asDouble() - v) for p, v in zip(mplugs, rows[index])),
+            default=0.0,
+        )
+        if error > 1e-6:
+            raise RuntimeError(
+                "Sampled values differ from DG evaluation at frame %s (%g)"
+                % (frames[index], error)
+            )
+    columns = numpy.array(rows).T
+    times = om.MTimeArray([om.MTime(f + offset, unit) for f in frames])
+    # Drivers may be connected to a compound (translate, shear) rather than the
+    # child plug; every child of such a compound must be in the baked set.
+    names = set(p.name() for p in mplugs)
+    disconnected = set()
+    modifier = om.MDGModifier()
+    for plug in mplugs:
+        for target in [plug] + ([plug.parent()] if plug.isChild else []):
+            source = target.source()
+            if source.isNull or target.name() in disconnected:
+                continue
+            disconnected.add(target.name())
+            if target.isCompound:
+                missing = [
+                    target.child(i).name()
+                    for i in range(target.numChildren())
+                    if target.child(i).name() not in names
+                ]
+                if missing:
+                    raise RuntimeError(
+                        "Cannot bake part of a driven compound: " + ", ".join(missing)
+                    )
+            modifier.disconnect(source, target)
+    modifier.doIt()
+    ranges = {}
+    for name, plug, column in zip(plugs, mplugs, columns):
+        curve = oma.MFnAnimCurve()
+        curve.create(plug)
+        if curve.animCurveType == oma.MFnAnimCurve.kAnimCurveTA:
+            # minimizeRotation: remove 360-degree jumps between frames, per channel.
+            column = numpy.unwrap(column)
+        ranges[name] = (float(column.min()), float(column.max()))
+        if not all(map(math.isfinite, ranges[name])):
+            raise RuntimeError("Non-finite sampled value: " + name)
+        if ranges[name][1] - ranges[name][0] <= 1e-10:
+            # Same result as keying every frame and reducing it afterwards.
+            curve.addKey(times[0], float(column[0]))
+            continue
+        curve.addKeys(
+            times,
+            column.tolist(),
+            oma.MFnAnimCurve.kTangentAuto,
+            oma.MFnAnimCurve.kTangentAuto,
+        )
+    return ranges, processes
+
+
+def _prune_unrelated(target, plugs, meshes):
+    """Delete top-level hierarchies the export does not depend on.
+
+    Only the disposable copy is changed. Other characters in the same scene cost
+    evaluation time on every baked frame, especially in parallel evaluation.
+    """
+    cmds, _, _, _ = _maya()
+    upstream = cmds.listHistory(
+        list(set(p.split(".")[0] for p in plugs)) + meshes + [target]
+    ) or []
+    keep = set(
+        n.split("|")[1] for n in cmds.ls(upstream, long=True, dag=True) + [target]
+    )
+    removed = []
+    for top in cmds.ls(assemblies=True, long=True):
+        name = top.split("|")[1]
+        cameras = cmds.listRelatives(top, shapes=True, type="camera") or []
+        if name in keep or (
+            cameras and cmds.camera(top, query=True, startupCamera=True)
+        ):
+            continue
+        if cmds.referenceQuery(top, isNodeReferenced=True):
+            continue
+        try:
+            cmds.lockNode(top, lock=False)
+            cmds.delete(top)
+            removed.append(name)
+        except RuntimeError:
+            pass  # Locked or protected content simply stays.
+    return removed
+
+
+def _mayapy():
+    return str(
+        Path(os.environ["MAYA_LOCATION"])
+        / "bin"
+        / ("mayapy.exe" if os.name == "nt" else "mayapy")
+    )
+
+
+def _curve(plug_or_node):
+    """MFnAnimCurve for an anim curve node name."""
+    _, _, om, oma = _maya()
+    selection = om.MSelectionList()
+    selection.add(plug_or_node)
+    return oma.MFnAnimCurve(selection.getDependNode(0))
+
+
+def _curve_values(curve):
+    return [curve.value(i) for i in range(curve.numKeys)]
+
+
 def _export_nodes(target):
     cmds, _, _, _ = _maya()
     nodes = [target] + [
@@ -232,48 +508,46 @@ def _export_fbx(target, path):
     mel.eval("FBXExport -f " + json.dumps(str(path).replace("\\", "/")) + " -s;")
 
 
-def _key_rest_pose(pose, curves, offset):
-    """Move the clip by offset frames and key the rest pose at frame 0.
+def _key_rest_pose(pose, curves):
+    """Key the rest pose at frame 0 without changing the clip.
 
     Unity builds a model's default pose (the base of a Humanoid Avatar) from the
     animation at FBX time 0 when the take covers it, otherwise at the take's first
     frame; the static FBX transforms of animated nodes are ignored (Unity 2022.3).
-    The clip is moved to start at frame 1 and the take is extended to frame 0.
+    The caller moves the clip to start at frame 1 and extends the take to 0.
     """
-    cmds, _, _, _ = _maya()
+    cmds, _, om, oma = _maya()
+    unit = om.MTime.uiUnit()
 
-    def edge_samples(curve, shift):
+    def edge_times(fn):
         # The segments next to the clip ends are the only ones a new key at
         # frame 0 can influence (through recomputed auto/spline tangents).
-        times = cmds.keyframe(curve, query=True, timeChange=True)
-        spans = [(times[0], times[min(1, len(times) - 1)]),
-                 (times[max(len(times) - 2, 0)], times[-1])]
+        last = fn.numKeys - 1
+        spans = [(0, min(1, last)), (max(last - 1, 0), last)]
         return [
-            cmds.keyframe(curve, query=True, eval=True, time=(t + shift, t + shift))[0]
-            for a, b in spans
-            for t in [a + (b - a) * i / 8 for i in range(9)]
-        ], times
+            a + (b - a) * i / 8
+            for a, b in [
+                (fn.input(x).asUnits(unit), fn.input(y).asUnits(unit)) for x, y in spans
+            ]
+            for i in range(9)
+        ]
 
-    before = {c: edge_samples(c, 0.0) for c in curves}
-    if offset:
-        cmds.keyframe(curves, edit=True, relative=True, timeChange=offset)
-    for curve in curves:
-        count = cmds.keyframe(curve, query=True, keyframeCount=True)
-        for index in {0, count - 1}:
-            angles = {
-                flag: cmds.keyTangent(
-                    curve, index=(index, index), query=True, **{flag: True}
-                )[0]
-                for flag in ("inAngle", "outAngle")
-            }
-            cmds.keyTangent(curve, index=(index, index), lock=False)
-            cmds.keyTangent(
-                curve,
-                index=(index, index),
-                inTangentType="fixed",
-                outTangentType="fixed",
-            )
-            cmds.keyTangent(curve, index=(index, index), **angles)
+    def sample(fn, times, shift):
+        return [fn.evaluate(om.MTime(t + shift, unit)) for t in times]
+
+    functions = {c: _curve(c) for c in curves}
+    before = {}
+    for curve, fn in functions.items():
+        times = edge_times(fn)
+        before[curve] = (times, sample(fn, times, 0.0))
+    for fn in functions.values():
+        for index in {0, fn.numKeys - 1}:
+            angles = [fn.getTangentAngleWeight(index, side)[0] for side in (True, False)]
+            fn.setTangentsLocked(index, False)
+            fn.setInTangentType(index, oma.MFnAnimCurve.kTangentFixed)
+            fn.setOutTangentType(index, oma.MFnAnimCurve.kTangentFixed)
+            fn.setAngle(index, angles[0], True)
+            fn.setAngle(index, angles[1], False)
     keyed = 0
     for plug, value in pose.items():
         source = _source(plug)
@@ -286,13 +560,8 @@ def _key_rest_pose(pose, curves, offset):
                 outTangentType="step",
             )
             keyed += 1
-    for curve, (values, times) in before.items():
-        after = [
-            cmds.keyframe(curve, query=True, eval=True, time=(t, t))[0]
-            for a, b in [(times[0], times[min(1, len(times) - 1)]),
-                         (times[max(len(times) - 2, 0)], times[-1])]
-            for t in [a + offset + (b - a) * i / 8 for i in range(9)]
-        ]
+    for curve, (times, values) in before.items():
+        after = sample(functions[curve], times, 0.0)
         if max(abs(x - y) for x, y in zip(values, after)) > 1e-9:
             raise RuntimeError("Keying the rest pose changed the clip: " + curve)
     return keyed
@@ -331,7 +600,15 @@ def run_job(job_path):
     report_path = job_path.parent / "report.json"
     report = {"status": "running"}
 
+    clock = [time.time()]
+
     def stage(name, **values):
+        # Seconds spent in each finished stage, to find what dominates a job.
+        if "stage" in report:
+            report.setdefault("stage_seconds", {})[report["stage"]] = round(
+                time.time() - clock[0], 2
+            )
+        clock[0] = time.time()
         report["stage"] = name
         report.update(values)
         report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -503,24 +780,33 @@ def run_job(job_path):
             joints=sum(cmds.nodeType(n) == "joint" for n in nodes),
             blendshape_targets=sum(map(len, shape_aliases.values())),
         )
+        report["pruned_hierarchies"] = _prune_unrelated(target, plugs, meshes)
         started = time.time()
-        if unsupported:
-            cmds.bakeResults(
+        # Sampled (min, max) per baked plug, in internal units.
+        # With a rest pose, Unity reads it at frame 0 (see _key_rest_pose), so the
+        # clip is moved to start at frame 1 while baking.
+        offset = 1 - start if "rest_frame" in job else 0.0
+        baked_ranges, processes = (
+            _bake(
                 unsupported,
-                time=(start, end),
-                sampleBy=1,
-                simulation=True,
-                preserveOutsideKeys=False,
-                sparseAnimCurveBake=False,
-                disableImplicitControl=True,
-                minimizeRotation=True,
+                start,
+                end,
+                offset,
+                {
+                    "folder": str(job_path.parent),
+                    "snapshot": job["snapshot"],
+                    "target": target,
+                    "meshes": meshes,
+                },
             )
+            if unsupported
+            else ({}, 0)
+        )
+        report["sampling_processes"] = processes
         report["bake_seconds"] = time.time() - started
         max_shear = 0.0
         for plug in shear_plugs:
-            values = cmds.keyframe(plug, query=True, valueChange=True) or [
-                cmds.getAttr(plug)
-            ]
+            values = baked_ranges.get(plug) or [cmds.getAttr(plug)]
             if not all(math.isfinite(value) for value in values):
                 raise RuntimeError("Non-finite shear animation: " + plug)
             magnitude = max(abs(value) for value in values)
@@ -553,9 +839,20 @@ def run_job(job_path):
         obsolete = (cmds.ls(type="constraint") or []) + (cmds.ls(type="ikHandle") or [])
         if obsolete:
             cmds.delete(obsolete)
-        report["bake_max_error"] = _check_capture(
-            reference, {m: m for m in meshes}, tolerance
+        # Move directly keyed channels with the baked ones.
+        keyed_curves = sorted(
+            set(
+                _source(p).split(".")[0]
+                for p in plugs
+                if _source(p) and p not in baked_ranges
+            )
         )
+        if offset and keyed_curves:
+            cmds.keyframe(keyed_curves, edit=True, relative=True, timeChange=offset)
+        report["bake_max_error"] = _check_capture(
+            reference, {m: m for m in meshes}, tolerance, offset
+        )
+        start, end = start + offset, end + offset
         remaining = [
             p
             for p in plugs
@@ -573,7 +870,9 @@ def run_job(job_path):
         )
         # Restrict directly keyed channels too: FBX otherwise includes keys outside
         # the requested clip even when the playback range has been changed.
-        animated = [p for p in plugs if _source(p)]
+        # Baked channels already hold exactly the clip; only keyed ones need it.
+        baked = set(unsupported)
+        animated = [p for p in plugs if _source(p) and p not in baked]
         for boundary in (start, end):
             cmds.currentTime(boundary)
             for plug in animated:
@@ -581,33 +880,27 @@ def run_job(job_path):
         if animated:
             cmds.cutKey(animated, time=(-1e10, start - 0.0001), clear=True)
             cmds.cutKey(animated, time=(end + 0.0001, 1e10), clear=True)
-        constant_count = 0
+        constant_count = sum(hi - lo <= 1e-10 for lo, hi in baked_ranges.values())
         for plug in animated:
             source = _source(plug)
             if not source:
                 continue
-            values = cmds.keyframe(plug, query=True, valueChange=True) or []
+            values = _curve_values(_curve(source.split(".")[0]))
             if values and max(values) - min(values) <= 1e-10:
                 cmds.cutKey(
                     source.split(".")[0], time=(start + 0.0001, 1e10), clear=True
                 )
                 constant_count += 1
         report["constant_channels_reduced"] = constant_count
-        offset = 0.0
         if "rest_frame" in job:
-            # Unity reads the default pose at frame 0; see _key_rest_pose.
-            offset = 1 - start
             curves = sorted(
                 set(_source(p).split(".")[0] for p in plugs if _source(p))
             )
             report["clip_offset_frames"] = offset
-            report["exported_clip"] = [start + offset, end + offset]
-            report["rest_keys"] = _key_rest_pose(rest_pose, curves, offset)
+            report["exported_clip"] = [start, end]
+            report["rest_keys"] = _key_rest_pose(rest_pose, curves)
             cmds.playbackOptions(
-                minTime=0,
-                maxTime=end + offset,
-                animationStartTime=0,
-                animationEndTime=end + offset,
+                minTime=0, maxTime=end, animationStartTime=0, animationEndTime=end
             )
         report["prepared_max_error_cm"] = _check_capture(
             reference, {m: m for m in meshes}, tolerance, offset
@@ -796,11 +1089,7 @@ def launch(root, output, start, end, rest_frame=None):
         job["rest_frame"] = float(rest_frame)
     job_path = folder / "job.json"
     job_path.write_text(json.dumps(job, indent=2), encoding="utf-8")
-    mayapy = (
-        Path(os.environ["MAYA_LOCATION"])
-        / "bin"
-        / ("mayapy.exe" if os.name == "nt" else "mayapy")
-    )
+    mayapy = _mayapy()
     environment = os.environ.copy()
     environment["MAYA_APP_DIR"] = str(folder / "profile")
     environment["MAYA_SKIP_USERSETUP_PY"] = "1"
@@ -1079,6 +1368,27 @@ if __name__ == "__main__":
 
     maya.standalone.initialize(name="python")
     try:
-        run_job(sys.argv[1])
-    finally:
-        maya.standalone.uninitialize()
+        if sys.argv[1] == "--sample":
+            sample_task(sys.argv[2])
+        else:
+            run_job(sys.argv[1])
+        code = 0
+    except Exception:
+        traceback.print_exc()
+        code = 1
+    # The report is final. maya.standalone.uninitialize() and even os._exit can
+    # crash in plug-in unload handlers (Maya 2026, large scenes), which starts
+    # Maya's crash handler; leave without any shutdown sequence.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if os.name == "nt":
+        # os._exit still runs DLL unload handlers, where the crash occurs.
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.windll.kernel32
+        # Without these, the 64-bit pseudo handle is truncated and the call fails.
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
+        kernel.TerminateProcess(kernel.GetCurrentProcess(), code)
+    os._exit(code)
