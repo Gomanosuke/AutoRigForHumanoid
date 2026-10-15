@@ -186,7 +186,7 @@ def _connect_bidirectional_axis(controller_attr:str, blendshape:str, shape_pos:s
         string shape_neg : 負方向で駆動するターゲット名
     """
     #正方向 (値 > 0 のときだけそのまま流す)
-    condition_pos = cmds.createNode("condition")
+    condition_pos = autorig_utility.util_node("condition",controller_attr.split('.')[0],shape_pos)
     cmds.connectAttr(controller_attr,f"{condition_pos}.firstTerm")
     cmds.setAttr(F"{condition_pos}.operation",2)  #Greater Than
     cmds.connectAttr(controller_attr,f"{condition_pos}.colorIfTrueR")
@@ -195,8 +195,8 @@ def _connect_bidirectional_axis(controller_attr:str, blendshape:str, shape_pos:s
     cmds.connectAttr(f"{condition_pos}.outColorR",f"{blendshape}.{shape_pos}",f=True)
 
     #負方向 (値 < 0 のときだけ符号反転(×-1)して流す)
-    condition_neg = cmds.createNode("condition")
-    floatMath_neg = cmds.createNode("floatMath")
+    condition_neg = autorig_utility.util_node("condition",controller_attr.split('.')[0],f"{shape_neg}Negative")
+    floatMath_neg = autorig_utility.util_node("floatMath",controller_attr.split('.')[0],shape_neg)
     cmds.connectAttr(controller_attr,f"{condition_neg}.firstTerm")
     cmds.setAttr(F"{condition_neg}.operation",4)  #Less Than
     cmds.connectAttr(controller_attr,f"{condition_neg}.colorIfTrueR")

@@ -49,6 +49,7 @@ def create_rig(textField_dic:dict,character_name:str):
     try:
         try:
             cmds.refresh(suspend=True)
+            existing_unit_conversions = set(cmds.ls(type="unitConversion"))
             root_grp = cmds.group(em=True,n=f"{character_name}_Rig")
             cmds.setAttr(f"{root_grp}.t",lock=True)
             cmds.setAttr(f"{root_grp}.r",lock=True)
@@ -57,6 +58,8 @@ def create_rig(textField_dic:dict,character_name:str):
             orientation_dic = get_orientation(character_name)
             pos_dic = get_pos(character_name)
             autorig_createRig.init_createRig(humanoid_dummy_joint,character_name,root_grp,orientation_dic,pos_dic)
+            #connectAttrでMayaが自動挿入したunitConversionも命名規則に合わせる
+            autorig_utility.rename_unit_conversions(set(cmds.ls(type="unitConversion"))-existing_unit_conversions)
         finally:
             # refresh is not queryable. Keep its undoable calls inside this chunk.
             try:
@@ -149,23 +152,23 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
 
     for k in duplicate_joint_dic:
         #トランスフォームの一致
-        multMatrix = cmds.shadingNode("multMatrix",asUtility=True)
+        multMatrix = autorig_utility.util_node("multMatrix",joint_dic[k],"follow",as_utility=True)
         cmds.connectAttr(f"{joint_dic[k]}.parentInverseMatrix[0]",f"{multMatrix}.matrixIn[1]")
         cmds.connectAttr(f"{duplicate_joint_dic[k]}.worldMatrix[0]",f"{multMatrix}.matrixIn[0]")
-        decomposeMatrix = cmds.createNode("decomposeMatrix")
+        decomposeMatrix = autorig_utility.util_node("decomposeMatrix",joint_dic[k],"follow")
         cmds.connectAttr(f"{multMatrix}.matrixSum",f"{decomposeMatrix}.inputMatrix")
         cmds.connectAttr(f"{decomposeMatrix}.outputTranslate",f"{joint_dic[k]}.t")
         cmds.connectAttr(f"{decomposeMatrix}.outputScale",f"{joint_dic[k]}.s")
         cmds.connectAttr(f"{joint_dic[k]}.rotateOrder",f"{decomposeMatrix}.inputRotateOrder")
-        quatProd = cmds.createNode("quatProd")
+        quatProd = autorig_utility.util_node("quatProd",joint_dic[k],"removeJointOrient")
         cmds.connectAttr(f"{decomposeMatrix}.outputQuat",f"{quatProd}.input1Quat")
-        quatToEuler = cmds.createNode("quatToEuler")
+        quatToEuler = autorig_utility.util_node("quatToEuler",joint_dic[k],"rotate")
         cmds.connectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
         cmds.connectAttr(f"{joint_dic[k]}.rotateOrder",f"{quatToEuler}.inputRotateOrder")
-        eulerToQuat = cmds.createNode("eulerToQuat")
+        eulerToQuat = autorig_utility.util_node("eulerToQuat",joint_dic[k],"jointOrient")
         cmds.connectAttr(f"{joint_dic[k]}.rotateOrder",f"{eulerToQuat}.inputRotateOrder")
         cmds.connectAttr(f"{joint_dic[k]}.jointOrient",f"{eulerToQuat}.inputRotate")
-        quatInvert = cmds.createNode("quatInvert")
+        quatInvert = autorig_utility.util_node("quatInvert",joint_dic[k],"jointOrientInverse")
         cmds.connectAttr(f"{eulerToQuat}.outputQuat",f"{quatInvert}.inputQuat")
         cmds.connectAttr(f"{quatInvert}.outputQuat",f"{quatProd}.input2Quat")
         cmds.connectAttr(f"{quatToEuler}.outputRotate",f"{joint_dic[k]}.r")

@@ -11,6 +11,65 @@ with open(f"{Path(__file__).resolve().parent}/joint_name.json", mode="rt", encod
 with open(f"{Path(__file__).resolve().parent}/nurvs_shape.json", mode="rt", encoding="utf-8") as f:
     nurvs_shape = json.load(f)
 
+def _owner_name(owner:str):
+    """ノード名の先頭に使う持ち主名(フルパス・ネームスペースを除いた短い名前)"""
+    return owner.split("|")[-1].replace(":","_")
+
+def util_node(node_type:str, owner:str, purpose:str, as_utility=False):
+    """
+    DAG以外のノードを「<持ち主>_<用途>_<ノードタイプ>」の名前で作成する
+
+    Parameters
+    ----------
+        string node_type : ノードタイプ(名前の末尾にもそのまま使う。略さない)
+        string owner : このノードが働きかけるDAGオブジェ(フルパス可)
+        string purpose : 出力が何を表すか(camelCaseの1語)
+        bool as_utility : TrueならshadingNode(asUtility=True)で作成する
+
+    Returns
+    -------
+        string : 作成したノード名(同名があればpurposeの後ろに2から番号を付ける)
+    """
+    base = f"{_owner_name(owner)}_{purpose}"
+    name = f"{base}_{node_type}"
+    index = 2
+    while cmds.objExists(name):
+        name = f"{base}{index}_{node_type}"
+        index += 1
+    if(as_utility):
+        return cmds.shadingNode(node_type,asUtility=True,name=name)
+    return cmds.createNode(node_type,name=name)
+
+def rename_unit_conversions(nodes):
+    """
+    connectAttrでMayaが自動挿入したunitConversionを「<接続先>_<接続先アトリビュート>_unitConversion」へ改名する
+    接続先がDAG以外のノードなら、その名前から末尾のノードタイプを除いた部分を持ち主にする
+
+    Parameters
+    ----------
+        list nodes : 対象のunitConversion
+    """
+    for node in nodes:
+        if(not cmds.objExists(node) or cmds.nodeType(node)!="unitConversion"):
+            continue
+        destinations = cmds.listConnections(f"{node}.output",s=False,d=True,plugs=True,skipConversionNodes=False) or []
+        if(not destinations):
+            continue
+        dst_node, dst_attr = destinations[0].split(".",1)
+        if(cmds.objectType(dst_node,isAType="dagNode")):
+            owner = dst_node
+        else:
+            suffix = f"_{cmds.nodeType(dst_node)}"
+            owner = dst_node[:-len(suffix)] if dst_node.endswith(suffix) else dst_node
+        attr = dst_attr.replace("[","").replace("]","").replace(".","_")
+        base = f"{_owner_name(owner)}_{attr}"
+        name = f"{base}_unitConversion"
+        index = 2
+        while cmds.objExists(name):
+            name = f"{base}{index}_unitConversion"
+            index += 1
+        cmds.rename(node,name)
+
 def create_nurvs(name="", shape="", position=(0,0,0), rotate=(0,0,0), size=(1,1,1), pos_CLR="C"):
     """
     コントローラのナーブスを作成して返す
@@ -65,7 +124,7 @@ def _advance_blend_axis(con_attr:str, drv_attr:str, setting:str, neutral:float):
         string setting : SettingObject(.advanceを持つ)
         float neutral : advance=0のときの値
     """
-    floatComposite = cmds.createNode("floatComposite")
+    floatComposite = util_node("floatComposite",drv_attr.split('.')[0],f"{drv_attr.split('.')[-1]}Advance")
     cmds.setAttr(f"{floatComposite}.operation",2)
     cmds.setAttr(f"{floatComposite}.floatA",neutral)
     cmds.connectAttr(con_attr,f"{floatComposite}.floatB")
@@ -103,7 +162,7 @@ def _connect_advance_vector(ConObj:str, DrvObj:str, channel:str, con_advance, se
     axis_suffix = {"translate":("tx","ty","tz"), "rotate":("rx","ry","rz")}[channel]
 
     if(all(con_advance)):
-        blend = cmds.createNode("blendColors")
+        blend = util_node("blendColors",DrvObj,f"{channel}Advance")
         cmds.setAttr(f"{blend}.color2",*neutral,type="double3")
         cmds.connectAttr(f"{ConObj}.{channel}",f"{blend}.color1")
         cmds.connectAttr(f"{setting}.advance",f"{blend}.blender")
@@ -148,7 +207,7 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
 
     if(all(con_advance_scl) or not any(con_advance_scl)):
         if(all(con_advance_scl)):
-            blend = cmds.createNode("blendColors")
+            blend = util_node("blendColors",DrvObj,"scaleAdvance")
             cmds.setAttr(f"{blend}.color2",1,1,1,type="double3")
             for axis,c in zip(axis_suffix,color_children):
                 cmds.connectAttr(f"{ConObj}.{axis}",f"{blend}.color1{c}")
@@ -164,7 +223,7 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
                 for axis in axis_suffix:
                     cmds.connectAttr(f"{ConObj}.{axis}",f"{DrvObj}.{axis}")
         else:
-            multiplyDivide = cmds.createNode("multiplyDivide")
+            multiplyDivide = util_node("multiplyDivide",DrvObj,"scaleOffset")
             cmds.setAttr(f"{multiplyDivide}.operation",1)  #Multiply
             if(blended_attr is not None):
                 cmds.connectAttr(blended_attr,f"{multiplyDivide}.input1")
@@ -179,7 +238,7 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
             con_attr=f"{ConObj}.{axis}"
             drv_attr=f"{DrvObj}.{axis}"
             if(con_advance_scl[i]==True):
-                floatComposite = cmds.createNode("floatComposite")
+                floatComposite = util_node("floatComposite",DrvObj,f"{axis}Advance")
                 cmds.setAttr(f"{floatComposite}.operation",2)
                 cmds.setAttr(f"{floatComposite}.floatA",1)
                 cmds.connectAttr(con_attr,f"{floatComposite}.floatB")
@@ -190,7 +249,7 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
             if(drv_scale_offset[i]==1):
                 cmds.connectAttr(src_attr,drv_attr)
             else:
-                floatMath = cmds.createNode("floatMath")
+                floatMath = util_node("floatMath",DrvObj,f"{axis}Offset")
                 cmds.setAttr(f"{floatMath}.operation",2)
                 cmds.connectAttr(src_attr,f"{floatMath}.floatA")
                 cmds.setAttr(f"{floatMath}.floatB",drv_scale_offset[i])
@@ -326,18 +385,18 @@ def layerd_scale(parent_grp:str, parent_drv:str, obj_grp:str, obj_con:str):
         (multMatrix1, multMatrix2, multMatrix3, multMatrix4, decomposeMatrix1, decomposeMatrix2, decomposeMatrix3, decomposeMatrix4, composeMatrix1, composeMatrix2, composeMatrix3, blendColor)
     """
     #スケーリング
-    multMatrix1 = cmds.createNode("multMatrix")
-    multMatrix2 = cmds.createNode("multMatrix")
-    multMatrix3 = cmds.createNode("multMatrix")
-    multMatrix4 = cmds.createNode("multMatrix")
-    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-    composeMatrix1 = cmds.createNode("composeMatrix")
-    composeMatrix2 = cmds.createNode("composeMatrix")
-    composeMatrix3 = cmds.createNode("composeMatrix")
-    blendColor = cmds.createNode("blendColors")
+    multMatrix1 = util_node("multMatrix",obj_con,"offset")
+    multMatrix2 = util_node("multMatrix",obj_grp,"worldNoScale")
+    multMatrix3 = util_node("multMatrix",obj_grp,"world")
+    multMatrix4 = util_node("multMatrix",obj_grp,"offset")
+    decomposeMatrix1 = util_node("decomposeMatrix",obj_grp,"parentWorld")
+    decomposeMatrix2 = util_node("decomposeMatrix",obj_grp,"parentGrpWorld")
+    decomposeMatrix3 = util_node("decomposeMatrix",obj_grp,"worldNoScale")
+    decomposeMatrix4 = util_node("decomposeMatrix",obj_grp,"world")
+    composeMatrix1 = util_node("composeMatrix",obj_con,"layeredScale")
+    composeMatrix2 = util_node("composeMatrix",obj_grp,"parentNoScale")
+    composeMatrix3 = util_node("composeMatrix",obj_grp,"noScale")
+    blendColor = util_node("blendColors",obj_con,"layeredScale")
     #アトリビュート作成
     cmds.addAttr(obj_con,ln="LayeredScale",at="double",min=0,max=1,dv=0)
     cmds.setAttr(f"{obj_con}.LayeredScale",1,k=True)
@@ -386,19 +445,19 @@ def layerd_scale_rotate(parent_grp:str, parent_drv:str, obj_grp:str, obj_con:str
         (multMatrix1, multMatrix2, multMatrix3, multMatrix4, decomposeMatrix1, decomposeMatrix2, decomposeMatrix3, decomposeMatrix4, composeMatrix1, composeMatrix2, composeMatrix3, blendColor)
     """
     #スケーリング
-    multMatrix1 = cmds.createNode("multMatrix")
-    multMatrix2 = cmds.createNode("multMatrix")
-    multMatrix3 = cmds.createNode("multMatrix")
-    multMatrix4 = cmds.createNode("multMatrix")
-    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix2 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix3 = cmds.createNode("decomposeMatrix")
-    decomposeMatrix4 = cmds.createNode("decomposeMatrix")
-    composeMatrix1 = cmds.createNode("composeMatrix")
-    composeMatrix2 = cmds.createNode("composeMatrix")
-    composeMatrix3 = cmds.createNode("composeMatrix")
-    blendColor = cmds.createNode("blendColors")
-    quatSlerp = cmds.createNode("quatSlerp")
+    multMatrix1 = util_node("multMatrix",obj_con,"offset")
+    multMatrix2 = util_node("multMatrix",obj_grp,"worldNoScale")
+    multMatrix3 = util_node("multMatrix",obj_grp,"world")
+    multMatrix4 = util_node("multMatrix",obj_grp,"offset")
+    decomposeMatrix1 = util_node("decomposeMatrix",obj_grp,"parentWorld")
+    decomposeMatrix2 = util_node("decomposeMatrix",obj_grp,"parentGrpWorld")
+    decomposeMatrix3 = util_node("decomposeMatrix",obj_grp,"worldNoScale")
+    decomposeMatrix4 = util_node("decomposeMatrix",obj_grp,"world")
+    composeMatrix1 = util_node("composeMatrix",obj_con,"layeredScale")
+    composeMatrix2 = util_node("composeMatrix",obj_grp,"parentLayeredRotate")
+    composeMatrix3 = util_node("composeMatrix",obj_grp,"noScale")
+    blendColor = util_node("blendColors",obj_con,"layeredScale")
+    quatSlerp = util_node("quatSlerp",obj_grp,"layeredRotate")
     #アトリビュート作成
     cmds.addAttr(obj_con,ln="LayeredRotate",at="double",min=0,max=1,dv=0)
     cmds.setAttr(f"{obj_con}.LayeredRotate",1,k=True)
@@ -459,7 +518,7 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
     """
 
     dvn_matrix = cmds.xform(dvn_con,q=True,ws=True,m=True)
-    outputComposeMatrix = cmds.createNode("composeMatrix")
+    outputComposeMatrix = util_node("composeMatrix",dvn_grp,"switchParent")
     cmds.setAttr(f"{outputComposeMatrix}.useEulerRotation",0)
 
     #位置
@@ -468,8 +527,8 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
     matrix = OpenMaya.MMatrix(dvn_matrix)*OpenMaya.MMatrix(posA_matrix).inverse()
     matrix = list(matrix)
     cmds.setAttr(f"{dvn_con}.posAMatrix",matrix,typ="matrix",l=True)
-    multMatrixA = cmds.createNode("multMatrix")
-    decomposeMatrixA = cmds.createNode("decomposeMatrix")
+    multMatrixA = util_node("multMatrix",dvn_grp,"posParentA")
+    decomposeMatrixA = util_node("decomposeMatrix",dvn_grp,"posParentA")
     cmds.connectAttr(f"{dvn_con}.posAMatrix",f"{multMatrixA}.matrixIn[0]")
     cmds.connectAttr(f"{posA}.worldMatrix[0]",f"{multMatrixA}.matrixIn[1]")
     cmds.connectAttr(f"{multMatrixA}.matrixSum",f"{decomposeMatrixA}.inputMatrix")
@@ -481,13 +540,13 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
         matrix = OpenMaya.MMatrix(dvn_matrix)*OpenMaya.MMatrix(posB_matrix).inverse()
         matrix = list(matrix)
         cmds.setAttr(f"{dvn_con}.posBMatrix",matrix,typ="matrix",l=True)
-        multMatrixB = cmds.createNode("multMatrix")
-        decomposeMatrixB = cmds.createNode("decomposeMatrix")
+        multMatrixB = util_node("multMatrix",dvn_grp,"posParentB")
+        decomposeMatrixB = util_node("decomposeMatrix",dvn_grp,"posParentB")
         cmds.connectAttr(f"{dvn_con}.posBMatrix",f"{multMatrixB}.matrixIn[0]")
         cmds.connectAttr(f"{posB}.worldMatrix[0]",f"{multMatrixB}.matrixIn[1]")
         cmds.connectAttr(f"{multMatrixB}.matrixSum",f"{decomposeMatrixB}.inputMatrix")
 
-        blendColors = cmds.createNode("blendColors")
+        blendColors = util_node("blendColors",dvn_grp,"posParent")
         cmds.connectAttr(f"{decomposeMatrixA}.outputTranslate",f"{blendColors}.color2")
         cmds.connectAttr(f"{decomposeMatrixB}.outputTranslate",f"{blendColors}.color1")
 
@@ -502,8 +561,8 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
     matrix = OpenMaya.MMatrix(dvn_matrix)*OpenMaya.MMatrix(rotA_matrix).inverse()
     matrix = list(matrix)
     cmds.setAttr(f"{dvn_con}.rotAMatrix",matrix,typ="matrix",l=True)
-    multMatrixA = cmds.createNode("multMatrix")
-    decomposeMatrixA = cmds.createNode("decomposeMatrix")
+    multMatrixA = util_node("multMatrix",dvn_grp,"rotParentA")
+    decomposeMatrixA = util_node("decomposeMatrix",dvn_grp,"rotParentA")
     cmds.connectAttr(f"{dvn_con}.rotAMatrix",f"{multMatrixA}.matrixIn[0]")
     cmds.connectAttr(f"{rotA}.worldMatrix[0]",f"{multMatrixA}.matrixIn[1]")
     cmds.connectAttr(f"{multMatrixA}.matrixSum",f"{decomposeMatrixA}.inputMatrix")
@@ -515,13 +574,13 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
         matrix = OpenMaya.MMatrix(dvn_matrix)*OpenMaya.MMatrix(rotB_matrix).inverse()
         matrix = list(matrix)
         cmds.setAttr(f"{dvn_con}.rotBMatrix",matrix,typ="matrix",l=True)
-        multMatrixB = cmds.createNode("multMatrix")
-        decomposeMatrixB = cmds.createNode("decomposeMatrix")
+        multMatrixB = util_node("multMatrix",dvn_grp,"rotParentB")
+        decomposeMatrixB = util_node("decomposeMatrix",dvn_grp,"rotParentB")
         cmds.connectAttr(f"{dvn_con}.rotBMatrix",f"{multMatrixB}.matrixIn[0]")
         cmds.connectAttr(f"{rotB}.worldMatrix[0]",f"{multMatrixB}.matrixIn[1]")
         cmds.connectAttr(f"{multMatrixB}.matrixSum",f"{decomposeMatrixB}.inputMatrix")
 
-        quatSlerp=cmds.createNode("quatSlerp")
+        quatSlerp=util_node("quatSlerp",dvn_grp,"rotParent")
         cmds.connectAttr(f"{decomposeMatrixA}.outputQuat",f"{quatSlerp}.input1Quat")
         cmds.connectAttr(f"{decomposeMatrixB}.outputQuat",f"{quatSlerp}.input2Quat")
 
@@ -531,16 +590,16 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
     cmds.setAttr(f"{dvn_grp}.r",0,0,0)
 
     #スケール
-    decomposeMatrixA = cmds.createNode("decomposeMatrix")
+    decomposeMatrixA = util_node("decomposeMatrix",dvn_grp,"sclParentA")
     cmds.connectAttr(f"{sclA}.worldMatrix[0]",f"{decomposeMatrixA}.inputMatrix")
     outputScale=""
     if(sclB==""):
         outputScale = f"{decomposeMatrixA}.outputScale"
     else:
-        decomposeMatrixB = cmds.createNode("decomposeMatrix")
+        decomposeMatrixB = util_node("decomposeMatrix",dvn_grp,"sclParentB")
         cmds.connectAttr(f"{sclB}.worldMatrix[0]",f"{decomposeMatrixB}.inputMatrix")
 
-        blendColors = cmds.createNode("blendColors")
+        blendColors = util_node("blendColors",dvn_grp,"sclParent")
         cmds.connectAttr(f"{decomposeMatrixA}.outputScale",f"{blendColors}.color2")
         cmds.connectAttr(f"{decomposeMatrixB}.outputScale",f"{blendColors}.color1")
 
@@ -554,9 +613,9 @@ def switch_parent(dvn_grp:str, dvn_con:str, posA="",posB="",rotA="",rotB="",sclA
         cmds.connectAttr(f"{outputComposeMatrix}.outputMatrix",f"{dvn_grp}.offsetParentMatrix",f=True)
 
     else:
-        scaleComposeMatrix = cmds.createNode("composeMatrix")
+        scaleComposeMatrix = util_node("composeMatrix",dvn_grp,"sclParent")
         cmds.connectAttr(outputScale,f"{scaleComposeMatrix}.inputScale")
-        multMatrix = cmds.createNode("multMatrix")
+        multMatrix = util_node("multMatrix",dvn_grp,"postScaleOffset")
         cmds.connectAttr(f"{dvn_con}.inverseMatrix",f"{multMatrix}.matrixIn[0]")
         cmds.connectAttr(f"{scaleComposeMatrix}.outputMatrix",f"{multMatrix}.matrixIn[1]")
         cmds.connectAttr(f"{dvn_con}.matrix",f"{multMatrix}.matrixIn[2]")
@@ -579,9 +638,9 @@ def postScale_parent(dvn_grp:str, dvn_con:str ,drv_drv:str):
     -------
         無し
     """
-    decomposeMatrix = cmds.createNode("decomposeMatrix")
-    scaleComposeMatrix = cmds.createNode("composeMatrix")
-    posRotComposeMatrix = cmds.createNode("composeMatrix")
+    decomposeMatrix = util_node("decomposeMatrix",dvn_grp,"parentWorld")
+    scaleComposeMatrix = util_node("composeMatrix",dvn_grp,"parentScale")
+    posRotComposeMatrix = util_node("composeMatrix",dvn_grp,"parentPosRot")
     cmds.connectAttr(f"{drv_drv}.worldMatrix[0]",f"{decomposeMatrix}.inputMatrix")
     cmds.setAttr(f"{scaleComposeMatrix}.useEulerRotation",0)
     cmds.setAttr(f"{posRotComposeMatrix}.useEulerRotation",0)
@@ -589,7 +648,7 @@ def postScale_parent(dvn_grp:str, dvn_con:str ,drv_drv:str):
     cmds.connectAttr(f"{decomposeMatrix}.outputQuat",f"{posRotComposeMatrix}.inputQuat")
     cmds.connectAttr(f"{decomposeMatrix}.outputTranslate",f"{posRotComposeMatrix}.inputTranslate")
 
-    multMatrix = cmds.createNode("multMatrix")
+    multMatrix = util_node("multMatrix",dvn_grp,"offset")
     cmds.connectAttr(f"{dvn_con}.inverseMatrix",f"{multMatrix}.matrixIn[0]")
     cmds.connectAttr(f"{scaleComposeMatrix}.outputMatrix",f"{multMatrix}.matrixIn[1]")
     cmds.connectAttr(f"{dvn_con}.matrix",f"{multMatrix}.matrixIn[2]")
@@ -627,9 +686,9 @@ def matrix_constraint(Drv_Obj:str,Dvn_Obj:str):
     cmds.setAttr(f"{Dvn_Obj}.WorldBindMatrix",lock=True, keyable=False)
     cmds.setAttr(f"{Dvn_Obj}.jointOrient" ,*(0,0,0),typ="double3")
     #計算
-    multMatrix2 = cmds.createNode("multMatrix")
-    decomposeMatrix1 = cmds.createNode("decomposeMatrix")
-    inverseMatrix = cmds.createNode("inverseMatrix")
+    multMatrix2 = util_node("multMatrix",Dvn_Obj,"constraint")
+    decomposeMatrix1 = util_node("decomposeMatrix",Dvn_Obj,"constraint")
+    inverseMatrix = util_node("inverseMatrix",Dvn_Obj,"drvBindInverse")
     cmds.connectAttr(f"{Drv_Obj}.WorldBindMatrix",f"{inverseMatrix}.inputMatrix",f=True)
     cmds.connectAttr(f"{Dvn_Obj}.WorldBindMatrix",f"{multMatrix2}.matrixIn[0]",f=True)
     cmds.connectAttr(f"{inverseMatrix}.outputMatrix",f"{multMatrix2}.matrixIn[1]")
@@ -756,16 +815,16 @@ def create_controller_legacy(  con_name="",
     #Unityのコントローラー無効化
     if(scale_unable == True or pos_unable == True and create_drv==True):
         if(pos_unable == True):
-            move_blendColor = cmds.shadingNode("blendColors",asUtility=True)
+            move_blendColor = util_node("blendColors",nurvs,"moveEnable",as_utility=True)
             cmds.setAttr(f"{move_blendColor}.color2",*(0,0,0),typ="double3")
         if(scale_unable == True):
-            scale_blendColor = cmds.shadingNode("blendColors",asUtility=True)
+            scale_blendColor = util_node("blendColors",nurvs,"scaleEnable",as_utility=True)
             cmds.setAttr(f"{scale_blendColor}.color2",*(1,1,1),typ="double3")
         if(True in rot_unable):
-            rot_blendColor = cmds.shadingNode("blendColors",asUtility=True)
+            rot_blendColor = util_node("blendColors",nurvs,"rotateEnable",as_utility=True)
             cmds.setAttr(f"{rot_blendColor}.color2",*(0,0,0),typ="double3")
-        composeMatrix = cmds.createNode("composeMatrix")
-        multMatrix = cmds.shadingNode("multMatrix",asUtility=True)
+        composeMatrix = util_node("composeMatrix",nurvs,"local")
+        multMatrix = util_node("multMatrix",nurvs,"offset",as_utility=True)
 
         if(pos_unable == True):
             cmds.connectAttr(f"{unity_setting}.Moveable",f"{move_blendColor}.blender")

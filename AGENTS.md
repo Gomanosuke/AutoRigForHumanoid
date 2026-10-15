@@ -61,6 +61,17 @@ AutoRigForHumanoid/
 - **IK の曲がる側**: RP ソルバーでは `preferredAngle` を手掛かりにしても曲がる側は安定しない。一直線に近いチェーンでは、`autorig_utility.set_ik_preferred_angle()` が希望する世界方向(脚は +Z、腕は −Z)を、ジョイント自身の `worldMatrix` の逆行列でローカルへ変換し、約 1° の曲げを `jointOrient` へ直接焼き込む。Pole Vector の縮退時のフォールバックも同じ方向を使う。
 - `IKFK` アトリビュート: 腕は `Con_*_Shoulder`(初期値 1 = FK)、脚は `Con_*_LegRoot`(初期値 0 = IK)。
 
+### ユーティリティノードの命名
+
+DAG 以外のノード(multMatrix・floatMath など)は `cmds.createNode` を直接呼ばず、`autorig_utility.util_node(ノードタイプ, 持ち主, 用途)` で作ります。名前は `<持ち主>_<用途>_<ノードタイプ>` になります(例: `Grp_L_LegIkHandle_smoothT_floatMath`、`Drv_C_Hips_translateAdvance_blendColors`)。
+
+- 持ち主: そのノードが最終的に動かす DAG ノード。1 つのジョイントだけを動かすならそのジョイント、複数で共有するなら読み取り元。フルパスを渡してよく、短い名前の `:` は `_` に置き換わる。持ち主のグループがまだ無い時点で作る場合は、そのグループの名前を文字列で渡す(`f"Grp_{clr}_ArmPV"`)。
+- 用途: 出力が何を表すかを camelCase の 1 語で書く(`offset`、`rotParentA`、`stretchRatio` など)。計算手順ではなく意味で付ける。
+- ノードタイプ: 略さずにそのまま付ける(`_dm` ではなく `_decomposeMatrix`)。
+- 同じ名前が既にあると、用途の後ろに 2 から番号が付く(2 体目のキャラクターなど)。同じ持ち主・同じ用途を 2 回作らないよう、用途の語を分ける。
+- `connectAttr` で Maya が自動挿入する unitConversion は、`create_rig` の最後に `rename_unit_conversions()` が `<接続先>_<接続先アトリビュート>_unitConversion` へ改名する。接続先が DAG 以外なら、その名前から末尾のノードタイプを除いた部分を持ち主にする。
+- IK ソルバー(`ikRPsolver` など)は Maya が管理する共有ノードなので改名しない。
+
 ### Picker(`picker.py`)
 
 - コントローラーは `ARFH_information` の辞書から UUID で引く。指のジョイントが無いリグではキーが無いため、`cmds.error` でなく `cmds.warning` でスキップする。
