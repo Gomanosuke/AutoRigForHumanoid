@@ -112,6 +112,41 @@ def create_nurvs(name="", shape="", position=(0,0,0), rotate=(0,0,0), size=(1,1,
 
     return nurvs
 
+#create_shapeの法線軸ごとの回転(nurvs_shape.jsonの形状はXZ平面上、法線+Y)
+_SHAPE_AXIS_ROTATE = {"X":(0,0,-90), "Y":(0,0,0), "Z":(90,0,0)}
+
+def create_shape(name="", shape="circle", pos_CLR="C", size=1.0, axis="Y", color=(1,1,0)):
+    """
+    手作業のリギング用に、create_nurvsでコントローラーのナーブスを作る
+    選択があれば選択したオブジェクトごとに1つ作り、位置と回転を合わせる(フリーズはしない)
+
+    Parameters
+    ----------
+        string name : 名前(Con_<pos_CLR>_<name>)。空なら選択したオブジェクトの短い名前、選択も無ければshape名
+        string shape : シェイプの形状(nurvs_shape.jsonのキー)
+        string pos_CLR : "C", "L", "R"のどれか
+        float size : 均一スケール(CVへ焼き込む)
+        string axis : シェイプの法線にする軸 "X", "Y", "Z"
+        (r, g, b) color : 0~1でRGB
+
+    Returns
+    -------
+        list : 作成したナーブスのTransformNode
+    """
+    targets = cmds.ls(sl=True,type="transform",l=True) or [None]
+    created = []
+    for target in targets:
+        con_name = name or (_owner_name(target) if target else shape)
+        nurvs = create_nurvs(con_name,shape,rotate=_SHAPE_AXIS_ROTATE[axis],size=(size,size,size),pos_CLR=pos_CLR)
+        cmds.setAttr(f"{nurvs}.overrideEnabled", 1)
+        cmds.setAttr(f"{nurvs}.overrideRGBColors", 1)
+        cmds.setAttr(f"{nurvs}.overrideColorRGB", *color)
+        if(target):
+            cmds.matchTransform(nurvs,target,position=True,rotation=True)
+        created.append(nurvs)
+    cmds.select(created,r=True)
+    return created
+
 def _advance_blend_axis(con_attr:str, drv_attr:str, setting:str, neutral:float):
     """
     1軸ぶんのadvanceブレンド(con_advance_*が軸ごとに混在するときのfallback専用)。

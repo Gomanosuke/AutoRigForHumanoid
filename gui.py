@@ -17,6 +17,8 @@ from . import control_shape
 importlib.reload(control_shape)
 from . import rig_import
 importlib.reload(rig_import)
+from . import autorig_utility
+importlib.reload(autorig_utility)
 
 """
 機能追加のたびに縦へ積み上がって使いにくくなっていたため、用途ごとにタブへ分け、
@@ -37,6 +39,7 @@ _COLOR_ACCESSORY = (0.32, 0.32, 0.30)    #タブ: アクセサリ(小さな機�
 _COLOR_FBX_IMPORT = (0.22, 0.36, 0.38)   #タブ: FBXインポート(取り込み側、青緑系)
 _COLOR_FBX_EXPORT = (0.24, 0.38, 0.30)   #タブ: FBXエクスポート(書き出し側、緑系)
 _COLOR_BLENDSHAPE = (0.38, 0.28, 0.38)   #タブ: ブレンドシェイプ
+_COLOR_SHAPE = (0.36, 0.34, 0.24)        #タブ: シェイプ作成(手作業のリギング用)
 
 def create_window():
     """
@@ -140,9 +143,11 @@ def _accessory_tab(tabs:str):
     sub_tabs = cmds.tabLayout(parent=tab,innerMarginWidth=6,innerMarginHeight=6)
     rig_import_tab = _accessory_rig_import_tab(sub_tabs)
     fbx_tab = _accessory_fbx_tab(sub_tabs)
+    shape_tab = _accessory_shape_tab(sub_tabs)
     cmds.tabLayout(sub_tabs,edit=True,tabLabel=(
         (rig_import_tab,"リグ読み込み"),
         (fbx_tab,"FBX"),
+        (shape_tab,"シェイプ"),
     ))
 
     return tab
@@ -180,6 +185,22 @@ def _accessory_fbx_tab(tabs:str):
     fbx_import_frame(tab)
     unity_fbx_frame(tab)
     fbx_rename_frame(tab)
+    return tab
+
+def _accessory_shape_tab(tabs:str):
+    """
+    「アクセサリ」タブ内サブタブ「シェイプ」。手作業のリギング用にコントローラーのナーブスを作る。
+
+    Parameters
+    ----------
+        string tabs : 親のtabLayout
+
+    Returns
+    -------
+        string : このサブタブの中身(columnLayout)
+    """
+    tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
+    shape_create_frame(tab)
     return tab
 
 def _blendshape_tab(tabs:str):
@@ -543,6 +564,50 @@ def control_shape_frame(parent_layout:str):
 
     cmds.rowLayout(nc=1,adjustableColumn=1,p=shape_frame)
     cmds.button(label="Import Shape",command=lambda *_:control_shape.import_shapes(cmds.textField(import_path_field,q=True,tx=True)))
+
+def shape_create_frame(parent_layout:str):
+    """
+    autorig_utility.create_shape()を呼ぶGUI。選択したオブジェクトごとに、その位置と回転で作る。
+
+    Parameters
+    ----------
+        string parent_layout : 親のレイアウト名
+
+    Returns
+    -------
+        無し
+    """
+    #フレーム
+    frame = cmds.frameLayout(label="シェイプ作成",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_SHAPE)
+
+    cmds.rowLayout(nc=2,adjustableColumn=2,p=frame)
+    cmds.text(label="名前 : ")
+    name_field = cmds.textField(placeholderText="選択の名前")
+
+    cmds.rowLayout(nc=1,p=frame)
+    shape_option = cmds.optionMenu(label="形状")
+    for shape in autorig_utility.nurvs_shape:
+        cmds.menuItem(label=shape)
+
+    cmds.rowLayout(nc=2,p=frame)
+    clr_option = cmds.optionMenu(label="サイド")
+    for clr in ("C","L","R"):
+        cmds.menuItem(label=clr)
+    axis_option = cmds.optionMenu(label="法線")
+    for axis in ("X","Y","Z"):
+        cmds.menuItem(label=axis)
+    cmds.optionMenu(axis_option,edit=True,value="Y")
+
+    size_field = cmds.floatSliderGrp(label="サイズ",field=True,value=1.0,minValue=0.01,maxValue=10.0,fieldMaxValue=10000.0,precision=2,columnWidth3=(60,60,100),adjustableColumn=3,p=frame)
+    color_slider = cmds.colorSliderGrp(label="カラー",rgbValue=(1,1,0),columnWidth3=(60,60,100),adjustableColumn=3,p=frame)
+
+    cmds.button(label="シェイプを作成",height=32,p=frame,command=lambda *_:autorig_utility.create_shape(
+        name=cmds.textField(name_field,q=True,tx=True).strip(),
+        shape=cmds.optionMenu(shape_option,q=True,value=True),
+        pos_CLR=cmds.optionMenu(clr_option,q=True,value=True),
+        size=cmds.floatSliderGrp(size_field,q=True,value=True),
+        axis=cmds.optionMenu(axis_option,q=True,value=True),
+        color=cmds.colorSliderGrp(color_slider,q=True,rgbValue=True)))
 
 def rig_import_frame(parent_layout:str):
     """

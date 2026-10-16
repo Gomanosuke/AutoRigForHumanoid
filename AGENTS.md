@@ -48,7 +48,7 @@ AutoRigForHumanoid/
 ### メインウィンドウ(`gui.py`)
 
 - ウィンドウ直下は `formLayout`。Picker フレームを上端に、`tabLayout` を残り全域に `attachForm` / `attachControl` で貼る。`columnLayout` だとタブの中身が希望サイズ止まりで、縦が極端に短くなる。
-- タブ: `リグ制作` / `アクセサリ`(サブタブ `リグ読み込み`・`FBX`)/ `ブレンドシェイプ`。Picker は使用頻度が高いためタブに入れず常設。
+- タブ: `リグ制作` / `アクセサリ`(サブタブ `リグ読み込み`・`FBX`・`シェイプ`)/ `ブレンドシェイプ`。Picker は使用頻度が高いためタブに入れず常設。
 - 色は `_COLOR_*` 定数。Maya 既定のグレーから大きく外れない淡い色に留める。
 - GUI に説明文の行は置かない方針(利用者の要望)。
 - ボタンの `command=` は各機能モジュールの関数を直接呼ぶだけにし、GUI 側にロジックを持たせない。
@@ -71,6 +71,13 @@ DAG 以外のノード(multMatrix・floatMath など)は `cmds.createNode` を�
 - 同じ名前が既にあると、用途の後ろに 2 から番号が付く(2 体目のキャラクターなど)。同じ持ち主・同じ用途を 2 回作らないよう、用途の語を分ける。
 - `connectAttr` で Maya が自動挿入する unitConversion は、`create_rig` の最後に `rename_unit_conversions()` が `<接続先>_<接続先アトリビュート>_unitConversion` へ改名する。接続先が DAG 以外なら、その名前から末尾のノードタイプを除いた部分を持ち主にする。
 - IK ソルバー(`ikRPsolver` など)は Maya が管理する共有ノードなので改名しない。
+
+### 手作業リギング用のシェイプ作成(`autorig_utility.create_shape`)
+
+- `アクセサリ` → `シェイプ` サブタブから呼ぶ。中身は `create_nurvs()`(リグ作成と同じ `nurvs_shape.json`)に色付けと配置を足しただけ。
+- 選択した transform(ジョイント含む)ごとに 1 つ作り、`matchTransform` で位置と回転を合わせる。フリーズしないので、そのまま Grp を挟んでオフセットに使える。形状・サイズ・法線軸は `create_nurvs` 内の `makeIdentity` で CV に焼き込む。
+- 法線軸: json の形状は XZ 平面(法線 +Y)。X は Z 軸 -90°、Z は X 軸 +90° 回転で作る。
+- `Grp`/`Drv` は作らず、`ARFH_information` にも登録しない(Picker の対象外)。
 
 ### Picker(`picker.py`)
 
