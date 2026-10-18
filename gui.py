@@ -567,7 +567,8 @@ def control_shape_frame(parent_layout:str):
 
 def shape_create_frame(parent_layout:str):
     """
-    autorig_utility.create_shape()を呼ぶGUI。選択したオブジェクトごとに、その位置と回転で作る。
+    autorig_utility.create_shape()/replace_shape()を呼ぶGUI。作成は選択したオブジェクトごとにその位置と回転で作り、
+    置き換えは選択したカーブのシェイプだけを差し替える。
 
     Parameters
     ----------
@@ -605,6 +606,12 @@ def shape_create_frame(parent_layout:str):
         name=cmds.textField(name_field,q=True,tx=True).strip(),
         shape=cmds.optionMenu(shape_option,q=True,value=True),
         pos_CLR=cmds.optionMenu(clr_option,q=True,value=True),
+        size=cmds.floatSliderGrp(size_field,q=True,value=True),
+        axis=cmds.optionMenu(axis_option,q=True,value=True),
+        color=cmds.colorSliderGrp(color_slider,q=True,rgbValue=True)))
+
+    cmds.button(label="選択したカーブのシェイプを置き換え",height=32,p=frame,command=lambda *_:autorig_utility.replace_shape(
+        shape=cmds.optionMenu(shape_option,q=True,value=True),
         size=cmds.floatSliderGrp(size_field,q=True,value=True),
         axis=cmds.optionMenu(axis_option,q=True,value=True),
         color=cmds.colorSliderGrp(color_slider,q=True,rgbValue=True)))

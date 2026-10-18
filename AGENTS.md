@@ -78,6 +78,8 @@ DAG 以外のノード(multMatrix・floatMath など)は `cmds.createNode` を�
 - 選択した transform(ジョイント含む)ごとに 1 つ作り、`matchTransform` で位置と回転を合わせる。フリーズしないので、そのまま Grp を挟んでオフセットに使える。形状・サイズ・法線軸は `create_nurvs` 内の `makeIdentity` で CV に焼き込む。
 - 法線軸: json の形状は XZ 平面(法線 +Y)。X は Z 軸 -90°、Z は X 軸 +90° 回転で作る。
 - `Grp`/`Drv` は作らず、`ARFH_information` にも登録しない(Picker の対象外)。
+- 置き換え(`replace_shape`): 選択のうち nurbsCurve シェイプを持つ transform だけが対象。一時ナーブスを作り、元のシェイプを全部削除してから新しいシェイプを `parent -r -s` で移し、最初の元シェイプ名へ改名する。色は transform の `overrideColorRGB` に設定する。
+- `create_shape` / `replace_shape` はどちらも `undoInfo` の 1 チャンクにまとめ、Ctrl+Z 1 回で戻る(mayapy で確認)。
 
 ### Picker(`picker.py`)
 

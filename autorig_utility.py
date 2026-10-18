@@ -135,17 +135,65 @@ def create_shape(name="", shape="circle", pos_CLR="C", size=1.0, axis="Y", color
     """
     targets = cmds.ls(sl=True,type="transform",l=True) or [None]
     created = []
-    for target in targets:
-        con_name = name or (_owner_name(target) if target else shape)
-        nurvs = create_nurvs(con_name,shape,rotate=_SHAPE_AXIS_ROTATE[axis],size=(size,size,size),pos_CLR=pos_CLR)
-        cmds.setAttr(f"{nurvs}.overrideEnabled", 1)
-        cmds.setAttr(f"{nurvs}.overrideRGBColors", 1)
-        cmds.setAttr(f"{nurvs}.overrideColorRGB", *color)
-        if(target):
-            cmds.matchTransform(nurvs,target,position=True,rotation=True)
-        created.append(nurvs)
-    cmds.select(created,r=True)
+    #1回のUndoで全部戻るようにまとめる
+    cmds.undoInfo(openChunk=True,chunkName="create_shape")
+    try:
+        for target in targets:
+            con_name = name or (_owner_name(target) if target else shape)
+            nurvs = create_nurvs(con_name,shape,rotate=_SHAPE_AXIS_ROTATE[axis],size=(size,size,size),pos_CLR=pos_CLR)
+            cmds.setAttr(f"{nurvs}.overrideEnabled", 1)
+            cmds.setAttr(f"{nurvs}.overrideRGBColors", 1)
+            cmds.setAttr(f"{nurvs}.overrideColorRGB", *color)
+            if(target):
+                cmds.matchTransform(nurvs,target,position=True,rotation=True)
+            created.append(nurvs)
+        cmds.select(created,r=True)
+    finally:
+        cmds.undoInfo(closeChunk=True)
     return created
+
+def replace_shape(shape="circle", size=1.0, axis="Y", color=(1,1,0)):
+    """
+    選択したカーブのシェイプを、create_nurvsの形状に置き換える
+    トランスフォーム(位置・回転・接続・子)はそのまま残し、元のシェイプ名を引き継ぐ
+
+    Parameters
+    ----------
+        string shape : シェイプの形状(nurvs_shape.jsonのキー)
+        float size : 均一スケール(CVへ焼き込む)
+        string axis : シェイプの法線にする軸 "X", "Y", "Z"
+        (r, g, b) color : 0~1でRGB
+
+    Returns
+    -------
+        list : シェイプを置き換えたTransformNode
+    """
+    targets = [t for t in (cmds.ls(sl=True,type="transform",l=True) or [])
+               if cmds.listRelatives(t,shapes=True,type="nurbsCurve",fullPath=True)]
+    if(not targets):
+        cmds.warning("カーブを選択してください")
+        return []
+    replaced = []
+    #1回のUndoで全部戻るようにまとめる
+    cmds.undoInfo(openChunk=True,chunkName="replace_shape")
+    try:
+        for target in targets:
+            old_shapes = cmds.listRelatives(target,shapes=True,type="nurbsCurve",fullPath=True)
+            shape_name = old_shapes[0].split("|")[-1]
+            temp = create_nurvs("replaceShapeTemp",shape,rotate=_SHAPE_AXIS_ROTATE[axis],size=(size,size,size))
+            new_shape = cmds.listRelatives(temp,shapes=True,fullPath=True)[0]
+            cmds.delete(old_shapes)
+            new_shape = cmds.parent(new_shape,target,relative=True,shape=True)[0]
+            cmds.delete(temp)
+            cmds.rename(new_shape,shape_name)
+            cmds.setAttr(f"{target}.overrideEnabled", 1)
+            cmds.setAttr(f"{target}.overrideRGBColors", 1)
+            cmds.setAttr(f"{target}.overrideColorRGB", *color)
+            replaced.append(target)
+        cmds.select(replaced,r=True)
+    finally:
+        cmds.undoInfo(closeChunk=True)
+    return replaced
 
 def _advance_blend_axis(con_attr:str, drv_attr:str, setting:str, neutral:float):
     """
