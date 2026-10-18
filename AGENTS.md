@@ -91,6 +91,8 @@ DAG 以外のノード(multMatrix・floatMath など)は `cmds.createNode` を�
 - Maya の `cmds.file(..., i=True)` は UUID を維持しない。`ARFH_information` に記録した UUID とノードのフルパス名の対応から、インポート直後に `MFnDependencyNode.setUuid()` で復元する。
 - 既存の `ARFH_information` がある場合、Maya は読み込み側を「<ファイル名>_ARFH_information」のようにリネームして取り込む(連番ではない)。復元後にその内容を既存側へ統合し、重複ノードを削除する。
 - ノード名の記録が無い古い形式のリグは復元対象外。
+- `reference_rig()`(**Reference Rig**): リファレンスはファイル側の UUID を保持するので復元しない。ネームスペースはファイル名(衝突時は Maya が連番を付けるので `cmds.file(q=True, namespace=True)` で実際の値を取る)。Picker はシーン直下の `ARFH_information` しか読まないため、`<ns>:ARFH_information` のキャラクター記録(`{tuple_key: UUID}`)をシーン直下へコピーする(無ければ作成し、そのときだけ `characterName` を設定。同名キーは上書き)。`_names` はコピーしない。
+- 同じファイルを2回リファレンスすると全コピーが同じ UUID になり、`setUuid()` で変えても開き直すとファイル側の値に戻る(mayapy で確認)。2回読まない前提とし、Picker は変更していない(ユーザー指示、2026-10-18)。
 
 ### コントロールシェイプ(`control_shape.py`)
 

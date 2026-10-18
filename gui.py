@@ -624,7 +624,8 @@ def rig_import_frame(parent_layout:str):
     インポートでは(Mayaのインポートは名前の衝突が無くてもUUIDを再割り当てして
     しまうため)読み込み後にPickerが対象を見つけられなくなる。ここから読み込むと、
     リグ作成時に記録されている元のUUIDへ復元してから読み込みを完了する
-    (詳細はrig_import.py参照)。
+    (詳細はrig_import.py参照)。Reference Rigはリファレンスとして読み込む
+    (UUIDはファイル側の値が保持される)。
 
     Parameters
     ----------
@@ -642,8 +643,9 @@ def rig_import_frame(parent_layout:str):
     import_rig_path_field = cmds.textField()
     cmds.button(label="参照",command=lambda *_:rig_import.browse_import_rig_path(import_rig_path_field))
 
-    cmds.rowLayout(nc=1,adjustableColumn=1,p=import_frame)
+    cmds.rowLayout(nc=2,adjustableColumn=1,columnAttach2=("both","both"),p=import_frame)
     cmds.button(label="Import Rig",command=lambda *_:rig_import.import_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
+    cmds.button(label="Reference Rig",command=lambda *_:rig_import.reference_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
 
 def blendshape_frame(parent_layout:str,character_name:str):
     """

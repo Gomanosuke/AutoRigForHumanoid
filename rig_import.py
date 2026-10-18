@@ -1,6 +1,7 @@
 from maya import cmds
 from maya.api import OpenMaya
 import json
+import os
 
 """
 別ファイルで作成済みのrig(ARFH_informationを含む)を現在のシーンへインポートし、
@@ -155,6 +156,96 @@ def _merge_into_existing_info(src_info:str, dst_info:str):
 
     cmds.delete(src_info)
     print(f"{src_info} の{character_name}ぶんの記録を{dst_info}へ統合しました(現在Pickerが対象にしているキャラクターは変更していません)")
+
+def reference_rig(path:str):
+    """
+    別ファイルで作成したrigを現在のシーンへリファレンスとして読み込み、Pickerから使えるよう
+    シーン直下のARFH_informationへキャラクターぶんの記録を追加する。
+
+    リファレンスはインポートと違い、ファイル側のUUIDをそのまま保持するため復元は不要
+    (mayapy standaloneで実測確認)。ただし同じファイルを複数回リファレンスすると
+    全てのコピーが同じUUIDを持ちPickerが区別できないため、同じrigは1回だけ読み込む前提。
+
+    リファレンスしたノードはネームスペース付き("<ネームスペース>:ARFH_information")になり、
+    Pickerはシーン直下の"ARFH_information"しか見ないため、記録をそこへコピーする
+    (無ければ作成する)。同じキャラクター名の記録が既にあれば上書きする。シーン直下の
+    characterName(現在Pickerが対象にしているキャラクター)は、ノードを新規作成した
+    場合を除いて書き換えない。
+
+    Parameters
+    ----------
+        string path : 読み込むrigファイル(.ma/.mb)のパス
+
+    Returns
+    -------
+        list[str] : シーン直下のARFH_informationへ登録したキャラクター名
+    """
+    if(not path):
+        cmds.warning("読み込むrigファイルが指定されていません")
+        return []
+
+    namespace = os.path.splitext(os.path.basename(path))[0]
+    ref_file = cmds.file(path,reference=True,namespace=namespace,ignoreVersion=True)
+    #同名のネームスペースが既にあると、Mayaは"<名前>1"のように連番を付けるため、実際の値を問い合わせる
+    namespace = cmds.file(ref_file,query=True,namespace=True)
+    print(f"リファレンスとして読み込みました(ネームスペース : {namespace}) : {path}")
+
+    ref_info = f"{namespace}:ARFH_information"
+    if(not cmds.objExists(ref_info)):
+        cmds.warning(f"{path} : ARFH_informationが見つからないため、Pickerへの登録をスキップしました(このファイルはAutoRigForHumanoidで作成されたrigではない可能性があります)")
+        return []
+
+    info_obj = "ARFH_information"
+    created = not cmds.objExists(info_obj)
+    if(created):
+        info_obj = cmds.group(em=True,n=info_obj)
+        cmds.setAttr(f"{info_obj}.t",k=False,l=True,cb=True)
+        cmds.setAttr(f"{info_obj}.s",k=False,l=True,cb=True)
+        cmds.setAttr(f"{info_obj}.r",k=False,l=True,cb=True)
+        cmds.setAttr(f"{info_obj}.v",0,k=False,l=True,cb=True)
+        cmds.addAttr(info_obj,ln="characterName",dt="string")
+
+    added=[]
+    for character_name in _character_names(ref_info):
+        _set_string_attr(info_obj,character_name,cmds.getAttr(f"{ref_info}.{character_name}"))
+        added.append(character_name)
+
+    if(created and added):
+        cmds.setAttr(f"{info_obj}.characterName",added[0],typ="string")
+    print(f"{info_obj}へ登録しました : {', '.join(added) or '無し'}")
+    return added
+
+def _character_names(info_obj:str):
+    """
+    ARFH_informationノードに記録されているキャラクター名を列挙する。
+    (characterName・<キャラクター名>_names以外で、
+    {tuple_key: UUID}のJSONを持つ文字列属性がキャラクターの記録)
+
+    Parameters
+    ----------
+        string info_obj : ARFH_informationノード
+
+    Returns
+    -------
+        list[str] : キャラクター名
+    """
+    names=[]
+    for attr in cmds.listAttr(info_obj,userDefined=True) or []:
+        if(attr=="characterName" or attr.endswith("_names")):
+            continue
+        if(cmds.getAttr(f"{info_obj}.{attr}",type=True)!="string"):
+            continue
+        try:
+            if(isinstance(json.loads(cmds.getAttr(f"{info_obj}.{attr}") or ""),dict)):
+                names.append(attr)
+        except ValueError:
+            continue
+    return names
+
+def _set_string_attr(node:str, attr:str, value:str):
+    if(not cmds.attributeQuery(attr,node=node,exists=True)):
+        cmds.addAttr(node,ln=attr,dt="string")
+    cmds.setAttr(f"{node}.{attr}",value,typ="string")
 
 def browse_import_rig_path(path_field:str):
     """
