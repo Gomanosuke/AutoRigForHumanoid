@@ -103,7 +103,6 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
     for key in joint_dic:
         joint = joint_dic[key]
         world_matrix = cmds.xform(joint,q=True,ws=True,m=True)
-        cmds.setAttr(f"{joint}.jointOrient",0,0,0,type="double3")
         cmds.xform(joint,ws=True,m=world_matrix)
         #アトリビュート作成
         cmds.addAttr(joint,ln="name",dt="string")
@@ -182,9 +181,9 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
         cmds.connectAttr(f"{duplicate_joint_dic[k]}.rotatePivot",f"{joint_dic[k]}.rotatePivot")
         cmds.connectAttr(f"{duplicate_joint_dic[k]}.rotatePivotTranslate",f"{joint_dic[k]}.rotatePivotTranslate")
         cmds.connectAttr(f"{duplicate_joint_dic[k]}.rotateQuaternion",f"{joint_dic[k]}.rotateQuaternion")
-        cmds.connectAttr(f"{duplicate_joint_dic[k]}.jointOrient",f"{joint_dic[k]}.jointOrient")
         cmds.connectAttr(f"{joint_dic[k]}.bindPose",f"{duplicate_joint_dic[k]}.bindPose")
         cmds.connectAttr(f"{duplicate_joint_dic[k]}.segmentScaleCompensate",f"{joint_dic[k]}.segmentScaleCompensate")
+
 
         cmds.connectAttr(f"{decomposeMatrix}.outputShear",f"{joint_dic[k]}.shear")
 
