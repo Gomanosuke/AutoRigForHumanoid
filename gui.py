@@ -643,9 +643,13 @@ def rig_import_frame(parent_layout:str):
     import_rig_path_field = cmds.textField()
     cmds.button(label="参照",command=lambda *_:rig_import.browse_import_rig_path(import_rig_path_field))
 
-    cmds.rowLayout(nc=2,adjustableColumn=1,columnAttach2=("both","both"),p=import_frame)
-    cmds.button(label="Import Rig",command=lambda *_:rig_import.import_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
-    cmds.button(label="Reference Rig",command=lambda *_:rig_import.reference_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
+    #2つのボタンを左右半分ずつにする
+    button_form = cmds.formLayout(numberOfDivisions=100,p=import_frame)
+    import_button = cmds.button(label="Import Rig",command=lambda *_:rig_import.import_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
+    reference_button = cmds.button(label="Reference Rig",command=lambda *_:rig_import.reference_rig(cmds.textField(import_rig_path_field,q=True,tx=True)))
+    cmds.formLayout(button_form,edit=True,
+        attachForm=[(import_button,"left",0),(import_button,"top",0),(reference_button,"right",0),(reference_button,"top",0)],
+        attachPosition=[(import_button,"right",1,50),(reference_button,"left",1,50)])
 
 def blendshape_frame(parent_layout:str,character_name:str):
     """
