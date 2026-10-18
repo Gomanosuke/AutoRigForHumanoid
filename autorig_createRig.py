@@ -2191,7 +2191,9 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
             pv_pos = [((lowerArm_pos[i]-upperArm_pos[i])-pos[i])*baitiru+(pos[i]+upperArm_pos[i]) for i in range(3) ]
 
 
-        create_obj_dic |= autorig_utility.create_controller("ArmPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=[pv_pos[i]-(pos[i]+upperArm_pos[i]) for i in range(3)],
+        con_pos = [pv_pos[i]-(pos[i]+upperArm_pos[i]) for i in range(3)]
+        con_pos[0]*=scl
+        create_obj_dic |= autorig_utility.create_controller("ArmPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=con_pos,
                                                             setting=setting,uniform_scale=True,connect_drv=False)
         
         cmds.connectAttr(F"{composeMatrix1}.outputMatrix",f"{create_obj_dic[('Grp',clr,'ArmPV')]}.offsetParentMatrix")
