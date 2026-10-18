@@ -1210,12 +1210,14 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
             baitiru = (total_leg_length*0.6)/length
             pv_pos = [((lowerLeg_pos[i]-upperLeg_pos[i])-pos[i])*baitiru+(pos[i]+upperLeg_pos[i]) for i in range(3) ]
 
-        create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=[pv_pos[i]-(pos[i]+upperLeg_pos[i]) for i in range(3)],
+        con_pos = [pv_pos[i]-(pos[i]+upperLeg_pos[i]) for i in range(3)]
+        con_pos[0] *= scl
+        create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=con_pos,
                                                             setting=setting,connect_drv=False,uniform_scale=True)
         cmds.xform(f"{create_obj_dic[('Grp',clr,'LegPV')]}",t=[pos[i]+upperLeg_pos[i] for i in range(3) ],ws=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.matrix",f"{create_obj_dic[('Drv',clr,'LegPV')]}.offsetParentMatrix",)
-        cmds.xform(f"{create_obj_dic[('Drv',clr,'LegPV')]}",t=pv_pos,ws=True)
         cmds.setAttr(F"{create_obj_dic[('Grp',clr,'LegPV')]}.sx",scl)
+        cmds.xform(f"{create_obj_dic[('Drv',clr,'LegPV')]}",t=pv_pos,ws=True)
         cmds.poleVectorConstraint(create_obj_dic[('Drv',clr,'LegPV')],ikHandle)
 
         outputComposeMatrix = autorig_utility.util_node("composeMatrix",create_obj_dic[('Grp',clr,'LegPV')],"offset")
