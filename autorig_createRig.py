@@ -2301,6 +2301,18 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         finger_name_list = ("Thumb","Index","Middle","Ring","Little")
         number_name_list=("Root","Proximal","Intermediate","Distal")
 
+        #中手骨一括操作コントローラー
+        exist_metacarpal = 0
+        for finger in finger_name_list:
+            if(f'{clr_lower}_{finger.lower()}0' in joint_dic):
+                exist_metacarpal = 1
+        if(exist_metacarpal == 1):
+            create_obj_dic |= autorig_utility.create_controller("MetacarpalBundle",root_obj,pos_CLR=clr,con_color=(0.8,0.2,0.2),con_shape="cube",con_scl=(2,2,2),con_rot=(-90,0,0),
+                                                                setting=setting,drv_scale_offset=(1,scl,1),con_pos_lock=(True,True,True),con_scl_lock=(True,True,True))
+            cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'Wrist')]}.worldMatrix",f"{create_obj_dic[('Grp',clr,'MetacarpalBundle')]}.offsetParentMatrix")
+            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'MetacarpalBundle')]}.tx",2)
+            cmds.setAttr(F"{create_obj_dic[('Grp',clr,'MetacarpalBundle')]}.sy",scl)
+
 
         for finger in finger_name_list:
             #Proximal(付け根)が無いモデル(デフォルメモデル等、末端がHandでそこから先に指の
@@ -2334,6 +2346,19 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                                   dvn_con=create_obj_dic[('Grp',clr,name)],dvn_grp=create_obj_dic[('Grp',clr,name)])
                         cmds.addAttr(create_obj_dic[('Con',clr,metacarpal_name)],ln="rotParent",at="float",max=1,min=0,k=True)
                         cmds.connectAttr(F"{create_obj_dic[('Con',clr,metacarpal_name)]}.rotParent",F"{create_obj_dic[('Grp',clr,name)]}.rotParent")
+
+                        #Bundle用
+                        create_obj_dic[('Dvn',clr,metacarpal_name)]=cmds.group(em=True,n=f"Dvn_{clr}_{metacarpal_name}",p=create_obj_dic[('Grp',clr,metacarpal_name)])
+                        create_obj_dic.update({('Con',clr,metacarpal_name):cmds.parent(create_obj_dic[('Con',clr,metacarpal_name)],create_obj_dic[('Dvn',clr,metacarpal_name)])[0]})
+                        create_obj_dic.update({('Drv',clr,metacarpal_name):cmds.parent(create_obj_dic[('Drv',clr,metacarpal_name)],create_obj_dic[('Dvn',clr,metacarpal_name)])[0]})
+                        cmds.connectAttr(F"{create_obj_dic[('Con',clr,'MetacarpalBundle')]}.rotateOrder",F"{create_obj_dic[('Dvn',clr,metacarpal_name)]}.rotateOrder")
+                        metacarpalBundle_con = create_obj_dic[('Con',clr,'MetacarpalBundle')]
+                        multiplyDivide = autorig_utility.util_node("multiplyDivide",create_obj_dic[('Dvn',clr,metacarpal_name)],f"bundleWeight")
+                        for i1 in ("X","Y","Z"):
+                            cmds.addAttr(metacarpalBundle_con,ln=f"{metacarpal_name}{i1}",at="double",dv=1)
+                            cmds.connectAttr(f"{metacarpalBundle_con}.{metacarpal_name}{i1}",f"{multiplyDivide}.input2{i1}")
+                        cmds.connectAttr(f"{metacarpalBundle_con}.r",f"{multiplyDivide}.input1")
+                        cmds.connectAttr(f"{multiplyDivide}.output",f"{create_obj_dic[('Dvn',clr,metacarpal_name)]}.r")
 
                         joint=joint_dic[f'{clr_lower}_{finger.lower()}{0}']
                         autorig_utility.matrix_constraint(f"{create_obj_dic[('Drv',clr,metacarpal_name)]}",joint)
