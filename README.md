@@ -3,6 +3,8 @@
 
 # AutoRigForHumanoid
 
+<img src="preview.png" width="900">
+
 ## 📕 概要
 
 Unity HUmanoid規格に準拠して作成された3Dモデルへのリギング、およびリギングされた3Dモデルのアニメーション作業をサポートする。
