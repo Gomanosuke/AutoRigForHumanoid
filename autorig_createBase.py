@@ -165,7 +165,8 @@ def create_dummyHumanoid(joint_dic:dict,character_name:str,parent:str):
         cmds.connectAttr(f"{quatProd}.outputQuat",f"{quatToEuler}.inputQuat")
         cmds.connectAttr(f"{joint_dic[k]}.rotateOrder",f"{quatToEuler}.inputRotateOrder")
         eulerToQuat = autorig_utility.util_node("eulerToQuat",joint_dic[k],"jointOrient")
-        cmds.connectAttr(f"{joint_dic[k]}.rotateOrder",f"{eulerToQuat}.inputRotateOrder")
+        # jointOrient is always evaluated in xyz, independent of rotateOrder.
+        cmds.setAttr(f"{eulerToQuat}.inputRotateOrder",0)
         cmds.connectAttr(f"{joint_dic[k]}.jointOrient",f"{eulerToQuat}.inputRotate")
         quatInvert = autorig_utility.util_node("quatInvert",joint_dic[k],"jointOrientInverse")
         cmds.connectAttr(f"{eulerToQuat}.outputQuat",f"{quatInvert}.inputQuat")
