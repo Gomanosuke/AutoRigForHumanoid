@@ -39,8 +39,7 @@ AutoRigForHumanoid/
 ├─ fbx_shape_rename.py     FBX インポート補助、ブレンドシェイプ名の変換
 ├─ blendshape_name.json    ブレンドシェイプ名の変換表
 ├─ unity_fbx_export.py     Unity 向け FBX 書き出し(別プロセスで検証)
-├─ unity/Editor/           Unity 側のインポート補助スクリプト
-└─ tests/maya_regression.py  mayapy 用の回帰テスト
+└─ unity/Editor/           Unity 側のインポート補助スクリプト
 ```
 
 ## 設計上の要点
@@ -101,12 +100,6 @@ DAG 以外のノード(multMatrix・floatMath など)は `cmds.createNode` を�
 - 対象は選択(またはその子孫)の `Con_*`。選択に `Con_*` が無い場合は警告して、シーン内の全 `Con_*` へフォールバックする。
 
 ## テスト
-
-`tests/maya_regression.py` は `mayapy` で実行する回帰テストです。使い捨てシーンの出力先フォルダを引数に渡します。既存ファイルは上書きせずエラーにします。
-
-```bash
-"C:/Program Files/Autodesk/Maya2025/bin/mayapy.exe" tests/maya_regression.py <出力フォルダ>
-```
 
 `mayapy` で `gui.create_window()` を呼ぶと、GUI フラグ名の誤りなど Python レベルのエラーは検出できます。
 
