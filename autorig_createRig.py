@@ -115,24 +115,24 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
     chest_matrix = cmds.xform(orientation_dic["c_chest"],m=True,ws=True,q=True)
 
     #腰親作成
-    create_obj_dic |= autorig_utility.create_controller("Waist",root_obj,pos_CLR="C",con_color=(0.8,0.8,0.2),con_shape="arrorFour",con_scl=(10,10,10),con_rot=(0,0,90),
+    create_obj_dic |= autorig_utility.create_controller("Waist",root_obj,rotate_order="zyx",pos_CLR="C",con_color=(0.8,0.8,0.2),con_shape="arrorFour",con_scl=(10,10,10),con_rot=(0,0,90),
                                                         uniform_scale=True,setting=setting,con_advance_scl=(True,True,True))
     cmds.connectAttr(f"{obj_dic[('Drv','C','Root3')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Waist')]}.offsetParentMatrix")
     cmds.xform(create_obj_dic[('Grp','C','Waist')],m=spine_matrix,ws=True)
 
     #尻コントローラー
-    create_obj_dic |= autorig_utility.create_controller("Hips",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.2),con_shape="cube",con_scl=(7,13,13),con_pos=(-4,0,0),
+    create_obj_dic |= autorig_utility.create_controller("Hips",root_obj,rotate_order="zyx",pos_CLR="C",con_color=(0.2,0.8,0.2),con_shape="cube",con_scl=(7,13,13),con_pos=(-4,0,0),
                                                         setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
     cmds.connectAttr(f"{create_obj_dic[('Drv','C','Waist')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','Hips')]}.offsetParentMatrix")
 
     #胴体FK
     #Spine
-    create_obj_dic |= autorig_utility.create_controller("SpineFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
+    create_obj_dic |= autorig_utility.create_controller("SpineFK",root_obj,rotate_order="zyx",pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
                                                         setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
     cmds.connectAttr(f"{create_obj_dic[('Drv','C','Waist')]}.worldMatrix[0]",f"{create_obj_dic[('Grp','C','SpineFK')]}.offsetParentMatrix")
     cmds.xform(create_obj_dic[('Grp','C','SpineFK')],m=spine_matrix,ws=True)
     #ChestFK
-    create_obj_dic |= autorig_utility.create_controller("ChestFK",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
+    create_obj_dic |= autorig_utility.create_controller("ChestFK",root_obj,rotate_order="zyx",pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(9,9,9),con_rot=(0,0,90),
                                                         setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True))
     cmds.xform(create_obj_dic[('Grp','C','ChestFK')],m=chest_matrix,ws=True)
     autorig_utility.switch_parent(posA=create_obj_dic[('Drv','C','SpineFK')],
@@ -141,13 +141,13 @@ def create_body(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                                   dvn_con=create_obj_dic[('Con','C','ChestFK')],dvn_grp=create_obj_dic[('Grp','C','ChestFK')],postScl=True)
     
     #IK
-    create_obj_dic |= autorig_utility.create_controller("ChestIK",root_obj,pos_CLR="C",con_shape="cube",con_color=(0.2,0.8,0.2),con_scl=(13,13,13),con_pos=(8,0,0),
+    create_obj_dic |= autorig_utility.create_controller("ChestIK",root_obj,rotate_order="zyx",pos_CLR="C",con_shape="cube",con_color=(0.2,0.8,0.2),con_scl=(13,13,13),con_pos=(8,0,0),
                                                             setting=setting,con_advance_scl=(True,True,True))
     autorig_utility.postScale_parent(dvn_con=create_obj_dic[('Con','C','ChestIK')],dvn_grp=create_obj_dic[('Grp','C','ChestIK')]
                                      ,drv_drv=create_obj_dic[('Drv','C','ChestFK')])
     cmds.xform(create_obj_dic[('Grp','C','ChestIK')],m=chest_matrix,ws=True)
 
-    create_obj_dic |= autorig_utility.create_controller("SpineIK",root_obj,pos_CLR="C",con_shape="fatCross",con_color=(0.2,0.8,0.2),con_scl=(4,4,4),con_rot=(0,0,90),
+    create_obj_dic |= autorig_utility.create_controller("SpineIK",root_obj,rotate_order="zyx",pos_CLR="C",con_shape="fatCross",con_color=(0.2,0.8,0.2),con_scl=(4,4,4),con_rot=(0,0,90),
                                                             setting=setting,con_advance_scl=(True,True,True),con_advance_pos=(True,True,True),con_advance_rot=(False,True,True))
     aimMatrix = autorig_utility.util_node("aimMatrix",create_obj_dic[('Grp','C','SpineIK')],"aim")
     multMatrix1 = autorig_utility.util_node("multMatrix",create_obj_dic[('Grp','C','SpineIK')],"aimUp")
@@ -350,7 +350,7 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
         upperChest_matrix = cmds.xform(orientation_dic["c_upperChest"],m=True,ws=True,q=True)
 
     #Neck
-    create_obj_dic |= autorig_utility.create_controller("Neck",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(0,0,90),
+    create_obj_dic |= autorig_utility.create_controller("Neck",root_obj,rotate_order="zyx",pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(0,0,90),
                                                         setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True))
     cmds.xform(create_obj_dic[('Grp','C','Neck')],m=neck_matrix,ws=True)
     
@@ -367,7 +367,7 @@ def create_head(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
 
 
     #Head
-    create_obj_dic |= autorig_utility.create_controller("Head",root_obj,pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(8,8,8),con_pos=(15,0,0),con_rot=(0,0,90),
+    create_obj_dic |= autorig_utility.create_controller("Head",root_obj,rotate_order="zyx",pos_CLR="C",con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(8,8,8),con_pos=(15,0,0),con_rot=(0,0,90),
                                                         setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),uniform_scale=True)
     
     outputComposeMatrix = autorig_utility.util_node("composeMatrix",create_obj_dic[('Grp','C','Head')],"offset")
@@ -584,7 +584,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         toes_matrix = cmds.xform(orientation_dic[f"{clr_lower}_toes"],m=True,ws=True,q=True)
 
         #LegRoot
-        create_obj_dic |= autorig_utility.create_controller("LegRoot",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="fatCross",con_scl=(0.8,0.8,0.8),con_rot=(90,0,0),con_pos=(0,-4,0),
+        create_obj_dic |= autorig_utility.create_controller("LegRoot",root_obj,rotate_order="zyx",pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="fatCross",con_scl=(0.8,0.8,0.8),con_rot=(90,0,0),con_pos=(0,-4,0),
                                                             setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),uniform_scale=True,drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'LegRoot')],m=upperLeg_matrix,ws=True)
         autorig_utility.switch_parent(posA=obj_dic[('Drv','C','Hips')],sclA=obj_dic[('Drv','C','Root3')],
@@ -670,13 +670,13 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
         #FK作成
         #UpperLeg
-        create_obj_dic |= autorig_utility.create_controller("UpperLegFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+        create_obj_dic |= autorig_utility.create_controller("UpperLegFK",root_obj,rotate_order="zyx",pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
                                                                 setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.connectAttr(f"{create_obj_dic[('Drv',clr,'LegRoot')]}.worldMatrix[0]",f"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.offsetParentMatrix")
         cmds.xform(create_obj_dic[('Grp',clr,'UpperLegFK')],m=upperLeg_matrix,ws=True)
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'UpperLegFK')]}.sy",scl)
         #lowerleg
-        create_obj_dic |= autorig_utility.create_controller("LowerLegFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+        create_obj_dic |= autorig_utility.create_controller("LowerLegFK",root_obj,rotate_order="zxy",pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
                                                                 setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'LowerLegFK')],m=lowerLeg_matrix,ws=True)
         autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'UpperLegFK')],
@@ -685,7 +685,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
                                       dvn_con=create_obj_dic[('Con',clr,'LowerLegFK')],dvn_grp=create_obj_dic[('Grp',clr,'LowerLegFK')],postScl=True)
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'LowerLegFK')]}.sy",scl)
         #foot
-        create_obj_dic |= autorig_utility.create_controller("FootFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+        create_obj_dic |= autorig_utility.create_controller("FootFK",root_obj,rotate_order="zyx",pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
                                                                 setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'FootFK')],m=foot_matrix,ws=True)
         autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'LowerLegFK')],
@@ -694,7 +694,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
                                       dvn_con=create_obj_dic[('Con',clr,'FootFK')],dvn_grp=create_obj_dic[('Grp',clr,'FootFK')],postScl=True)
         cmds.setAttr(f"{create_obj_dic[('Grp',clr,'FootFK')]}.sy",scl)
         #toes
-        create_obj_dic |= autorig_utility.create_controller("ToesFK",root_obj,pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
+        create_obj_dic |= autorig_utility.create_controller("ToesFK",root_obj,rotate_order="xzy",pos_CLR=clr,con_color=(0.2,0.8,0.8),con_shape="circle",con_scl=(3,3,3),con_rot=(90,90,0),con_pos=(9,0,0),
                                                                 setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'ToesFK')],m=toes_matrix,ws=True)
         autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,'FootFK')],
@@ -732,7 +732,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         autorig_utility.matrix_constraint(foot_ik_dummy,foot_ik)
 
         #メインコントローラー
-        create_obj_dic |= autorig_utility.create_controller("LegIK",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="cube",con_scl=(5,5,5),con_rot=(90,90,0),
+        create_obj_dic |= autorig_utility.create_controller("LegIK",root_obj,rotate_order="zxy",pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="cube",con_scl=(5,5,5),con_rot=(90,90,0),
                                                             setting=setting,uniform_scale=True,connect_drv=False,con_advance_scl=(True,True,True))
         cmds.xform(create_obj_dic[('Grp',clr,'LegIK')],ws=True,t=[foot_matrix[12],foot_matrix[13],foot_matrix[14]])
         autorig_utility.switch_parent(posA=obj_dic[('Drv','C','Root3')],posB=create_obj_dic[('Drv',clr,'LegRoot')],
@@ -1212,7 +1212,7 @@ def create_leg(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
 
         con_pos = [pv_pos[i]-(pos[i]+upperLeg_pos[i]) for i in range(3)]
         con_pos[0] *= scl
-        create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=con_pos,
+        create_obj_dic |= autorig_utility.create_controller("LegPV",root_obj,rotate_order="zxy",pos_CLR=clr,con_color=(0.8,0.8,0),con_shape="dia1",con_scl=(2,2,2),con_pos=con_pos,
                                                             setting=setting,connect_drv=False,uniform_scale=True)
         cmds.xform(f"{create_obj_dic[('Grp',clr,'LegPV')]}",t=[pos[i]+upperLeg_pos[i] for i in range(3) ],ws=True)
         cmds.connectAttr(f"{create_obj_dic[('Con',clr,'LegPV')]}.matrix",f"{create_obj_dic[('Drv',clr,'LegPV')]}.offsetParentMatrix",)
@@ -1359,7 +1359,7 @@ def create_arm(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,ori
         hand_matrix = cmds.xform(orientation_dic[f"{clr_lower}_hand"],m=True,ws=True,q=True)
 
         #Shoulder
-        create_obj_dic |= autorig_utility.create_controller("Shoulder",root_obj,pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="cube",con_scl=(3,3,3),con_rot=(0,0,0),
+        create_obj_dic |= autorig_utility.create_controller("Shoulder",root_obj,rotate_order="xzy",pos_CLR=clr,con_color=(0.8,0.8,0.2),con_shape="cube",con_scl=(3,3,3),con_rot=(0,0,0),
                                                             setting=setting,con_advance_pos=(True,True,True),con_advance_scl=(True,True,True),drv_scale_offset=(1,scl,1))
         cmds.xform(create_obj_dic[('Grp',clr,'Shoulder')],m=shoulder_matrix,ws=True)
 
