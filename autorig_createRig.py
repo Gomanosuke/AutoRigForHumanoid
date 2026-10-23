@@ -2358,6 +2358,15 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                         for i1 in ("X","Y","Z"):
                             cmds.addAttr(metacarpalBundle_con,ln=f"{metacarpal_name}{i1}",at="double",dv=1,k=1)
                             cmds.connectAttr(f"{metacarpalBundle_con}.{metacarpal_name}{i1}",f"{multiplyDivide}.input2{i1}")
+
+                            if(finger == "Index"):
+                                if(i1 == "X" or i1 == "Z"):
+                                    cmds.setAttr(f"{metacarpalBundle_con}.{metacarpal_name}{i1}",-1)
+                            elif(finger == "Middle"):
+                                cmds.setAttr(f"{metacarpalBundle_con}.{metacarpal_name}{i1}",0)
+                            elif(finger == "Little"):
+                                cmds.setAttr(f"{metacarpalBundle_con}.{metacarpal_name}{i1}",2)
+
                         cmds.connectAttr(f"{metacarpalBundle_con}.r",f"{multiplyDivide}.input1")
                         cmds.connectAttr(f"{multiplyDivide}.output",f"{create_obj_dic[('Dvn',clr,metacarpal_name)]}.r")
 
