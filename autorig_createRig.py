@@ -2344,7 +2344,8 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                         autorig_utility.switch_parent(posA=create_obj_dic[('Drv',clr,metacarpal_name)],sclA=create_obj_dic[('Drv',clr,metacarpal_name)],
                                   rotA=create_obj_dic[('Drv',clr,'Wrist')],rotB=create_obj_dic[('Drv',clr,metacarpal_name)],
                                   dvn_con=create_obj_dic[('Grp',clr,name)],dvn_grp=create_obj_dic[('Grp',clr,name)])
-                        cmds.addAttr(create_obj_dic[('Con',clr,metacarpal_name)],ln="rotParent",at="float",max=1,min=0,k=True)
+                        cmds.addAttr(create_obj_dic[('Con',clr,metacarpal_name)],ln="rotParent",at="float",max=1,min=0)
+                        cmds.setAttr(f"{create_obj_dic[('Con',clr,metacarpal_name)]}.rotParent",1,l=True)
                         cmds.connectAttr(F"{create_obj_dic[('Con',clr,metacarpal_name)]}.rotParent",F"{create_obj_dic[('Grp',clr,name)]}.rotParent")
 
                         #Bundle用
@@ -2355,7 +2356,7 @@ def create_hand(character_name:str, parent:str, obj_dic:dict, joint_dic:dict ,or
                         metacarpalBundle_con = create_obj_dic[('Con',clr,'MetacarpalBundle')]
                         multiplyDivide = autorig_utility.util_node("multiplyDivide",create_obj_dic[('Dvn',clr,metacarpal_name)],f"bundleWeight")
                         for i1 in ("X","Y","Z"):
-                            cmds.addAttr(metacarpalBundle_con,ln=f"{metacarpal_name}{i1}",at="double",dv=1)
+                            cmds.addAttr(metacarpalBundle_con,ln=f"{metacarpal_name}{i1}",at="double",dv=1,k=1)
                             cmds.connectAttr(f"{metacarpalBundle_con}.{metacarpal_name}{i1}",f"{multiplyDivide}.input2{i1}")
                         cmds.connectAttr(f"{metacarpalBundle_con}.r",f"{multiplyDivide}.input1")
                         cmds.connectAttr(f"{multiplyDivide}.output",f"{create_obj_dic[('Dvn',clr,metacarpal_name)]}.r")
