@@ -338,6 +338,9 @@ def _connect_advance_scale(ConObj:str, DrvObj:str, con_advance_scl, setting:str,
                 cmds.setAttr(f"{floatMath}.floatB",drv_scale_offset[i])
                 cmds.connectAttr(f"{floatMath}.outFloat",drv_attr)
 
+#rotateOrderの列挙値の並び(create_controllerのrotate_order用)
+_ROTATE_ORDERS = ("xyz","yzx","zxy","xzy","yxz","zyx")
+
 def create_controller(  con_name="",
                         parent_name="",
                         pos=(0,0,0),rot=(0,0,0),scl=(1,1,1),
@@ -350,7 +353,8 @@ def create_controller(  con_name="",
                         con_pos_lock=(False,False,False), con_rot_lock=(False,False,False), con_scl_lock=(False,False,False),
                         uniform_scale=False,
                         con_advance_pos=(False,False,False), con_advance_rot=(False,False,False), con_advance_scl=(False,False,False),
-                        drv_scale_offset=(1,1,1),setting="",connect_drv=True):
+                        drv_scale_offset=(1,1,1),setting="",connect_drv=True,
+                        rotate_order="xyz"):
     """
     [Grp↳Con
         ↳Drv]構成のコントローラーの生成
@@ -377,6 +381,7 @@ def create_controller(  con_name="",
         (bool,bool,bool) con_advance_scl : TrueになったScaleはadvance時のみ有効
         str setting : SettingObject
         bool connect_drv : FalseにするとDrvに何も接続しない
+        string rotate_order : Conの回転順序の初期値 "xyz", "yzx", "zxy", "xzy", "yxz", "zyx"(0~5の数値も可)。DrvはConに接続して追従する
 
     Returns
     -------
@@ -416,6 +421,8 @@ def create_controller(  con_name="",
     if(con_rot_lock[0]==True):cmds.setAttr( f"{ConObj}.rx", lock=True, keyable=False, channelBox=False)
     if(con_rot_lock[1]==True):cmds.setAttr( f"{ConObj}.ry", lock=True, keyable=False, channelBox=False)
     if(con_rot_lock[2]==True):cmds.setAttr( f"{ConObj}.rz", lock=True, keyable=False, channelBox=False)
+    #回転順序の初期値
+    cmds.setAttr(f"{ConObj}.rotateOrder", _ROTATE_ORDERS.index(rotate_order) if isinstance(rotate_order,str) else rotate_order)
     #回転順序のAttr必要か調べる
     if(con_rot_lock.count(True)<2):cmds.setAttr( f"{ConObj}.rotateOrder", keyable=True)
 

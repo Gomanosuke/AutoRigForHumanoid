@@ -59,6 +59,7 @@ AutoRigForHumanoid/
 - 作成全体を `undoInfo` の 1 チャンクにまとめ、例外時は `cmds.undo()` で元のジョイントへの変更ごと戻す。
 - `ARFH_information` ノードにコントローラー等の辞書(`obj_dic`)を UUID で記録し、`<characterName>_names` 属性にノード名との対応を持つ。Picker と `rig_import.py` はこれを参照する。`characterName` を書き換えると Picker の対象キャラクターを切り替えられる。
 - **IK の曲がる側**: RP ソルバーでは `preferredAngle` を手掛かりにしても曲がる側は安定しない。一直線に近いチェーンでは、`autorig_utility.set_ik_preferred_angle()` が希望する世界方向(脚は +Z、腕は −Z)を、ジョイント自身の `worldMatrix` の逆行列でローカルへ変換し、約 1° の曲げを `jointOrient` へ直接焼き込む。Pole Vector の縮退時のフォールバックも同じ方向を使う。
+- `create_controller(rotate_order=...)`: Con の回転順序の初期値(`"xyz"` などの文字列か 0～5)。既定は `"xyz"`。Drv は Con の `rotateOrder` に接続されて追従するので、Con だけに設定する。
 - `IKFK` アトリビュート: 腕は `Con_*_Shoulder`(初期値 1 = FK)、脚は `Con_*_LegRoot`(初期値 0 = IK)。
 
 ### ユーティリティノードの命名
