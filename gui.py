@@ -171,7 +171,7 @@ def _accessory_rig_import_tab(tabs:str):
 def _accessory_fbx_tab(tabs:str):
     """
     「アクセサリ」タブ内サブタブ「FBXエクスポート」。FBXを書き出す側の機能
-    (Unity向け書き出しと、日本語名を含むFBXの名前変換)。
+    (日本語名を含むFBXの名前変換)。
 
     Parameters
     ----------
@@ -183,7 +183,6 @@ def _accessory_fbx_tab(tabs:str):
     """
     tab = cmds.columnLayout(parent=tabs,adjustableColumn=True,rowSpacing=4)
     fbx_import_frame(tab)
-    unity_fbx_frame(tab)
     fbx_rename_frame(tab)
     return tab
 
@@ -240,24 +239,10 @@ def show_picker(parent_layout:str):
 
     return picker_frame
 
-def unity_fbx_frame(parent_layout:str):
-    frame = cmds.frameLayout(label="Unity FBX 書き出し",parent=parent_layout,collapsable=True,backgroundColor=_COLOR_FBX_EXPORT)
-    cmds.button(
-        label="FBX Exporter For Unity",
-        parent=frame,
-        height=40,
-        annotation="元シーンを保護してアニメーション付きFBXを書き出す画面を開きます。",
-        command=_show_unity_fbx_export,
-    )
-
-def _show_unity_fbx_export(*_):
-    from . import unity_fbx_export
-    unity_fbx_export.show()
-
 def fbx_import_frame(parent_layout:str):
     """
     FBXをシーンへ取り込む側の機能(実際にMayaへインポートする操作と、取り込み直後に
-    必要になりがちなスケール修正)。書き出し側は`fbx_rename_frame`/`unity_fbx_frame`参照。
+    必要になりがちなスケール修正)。書き出し側は`fbx_rename_frame`参照。
 
     Parameters
     ----------
